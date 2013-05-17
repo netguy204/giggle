@@ -49,12 +49,7 @@ C_OBJS=\
 
 EXE_OBJS+=$(C_OBJS) gambitmain.o
 
-all: $(OGG_HEADER) $(BIN) resources
-
-%.png: %.psd
-	osascript tools/psdconvert.scpt $(PWD)/$< $(PWD)/$@
-
-include Resources.mk
+all: $(OGG_HEADER) $(BIN)
 
 $(BIN): $(EXE_OBJS) $(LUA_LIB)
 	$(CXX) -o $@ $(EXE_OBJS) $(LDFLAGS) $(CXXFLAGS)
@@ -79,11 +74,11 @@ sfmt/SFMT.o: sfmt/SFMT.c
 GAME_OBJS=$(patsubst %.cpp,%.o,$(GAME_SRC))
 
 clean:
-	rm -rf *.o $(BIN) buildatlas test items_bin $(BUILT_RESOURCES)
+	rm -rf *.o $(BIN) buildatlas test items_bin
 
 distclean: clean
 	rm -rf $(C_OBJS)
 	(cd vender/libogg-1.3.0 ; make distclean)
 	(cd vender/lua-5.2.1 ; make clean)
 
-.phony: all resources pngs
+.phony: all pngs

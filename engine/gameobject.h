@@ -419,7 +419,7 @@ class Universe : public Object {
  public:
   OBJECT_PROTO(Universe);
 
-  Universe(void* empty);
+  Universe(void* path);
   ~Universe();
 
   SpriteAtlas atlas(const char* atlas);
@@ -430,15 +430,6 @@ class Universe : public Object {
 
   virtual void update(long delta);
 
-  /*
-  // pretend private
-  void init_world();
-
-  Pipeline* pipeline;
-  World* current_world;
-  WorldPipelineDelegate* world_delegate;
-  int reset_world;
-  */
   AudioHandle* play_sound(Sound* sound, int channel);
   AudioHandle* stream_sound(const char* fname, long start);
   AudioHandle* sound_handle(long handle);
@@ -446,6 +437,7 @@ class Universe : public Object {
   SoundMgr sound;
 
   LString* stash;
+  LString* lua_path;
 
   NameToAtlas name_to_atlas;
   NameToEntity name_to_entity;

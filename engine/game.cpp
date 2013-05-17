@@ -34,8 +34,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <math.h>
-
-#define ATLAS "resources/images_default"
+#include <libgen.h>
 
 World* world = NULL;
 WorldPipelineDelegate* world_delegate;
@@ -1012,10 +1011,17 @@ void CTire::update(float dt) {
 
 }
 
-void game_init() {
+void game_init(int argc, char** argv) {
+  // build up the default lua path
+  char buffer[1024];
+  char* mydir = dirname(strdup(argv[0]));
+  snprintf(buffer, sizeof(buffer), "%s/../resources/?.lua;%s/../engine_resources/?.lua", mydir, mydir);
+  free(mydir);
+
+  // initialize globals
   game_support_init();
   pipeline = new Pipeline();
-  universe = new Universe(NULL);
+  universe = new Universe(buffer);
 
   init_world();
   set_game_step(game_step);

@@ -1392,6 +1392,11 @@ void init_lua(World* world) {
   world->L = L;
 
   luaL_openlibs(L);
+  if(world->universe->lua_path) {
+    lua_getglobal(L, "package");
+    LCpush_lstring(L, world->universe->lua_path);
+    lua_setfield(L, -2, "path");
+  }
 
   static const luaL_Reg world_m[] = {
     {"create_go", Lworld_create_go},
@@ -1773,9 +1778,15 @@ void WorldPipelineDelegate::update(long delta) {
 
 OBJECT_IMPL(Universe, Object);
 OBJECT_PROPERTY(Universe, stash);
+OBJECT_PROPERTY(Universe, lua_path);
 
-Universe::Universe(void* empty)
+Universe::Universe(void* _path)
   : stash(NULL) {
+  if(_path) {
+    lua_path = malloc_lstring((char*)_path, strlen((char*)_path));
+  } else {
+    lua_path = NULL;
+  }
 }
 
 Universe::~Universe() {

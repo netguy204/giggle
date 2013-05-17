@@ -304,7 +304,7 @@ class CTire : public Component {
   float max_lateral_impulse;
 };
 
-void game_init();
+void game_init(int argc, char** argv);
 void game_shutdown();
 
 GO* platform_make(float x, float y, float w, float h);

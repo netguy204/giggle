@@ -79,7 +79,7 @@ int loop_once() {
 
 int real_main(int argc, char ** argv) {
   lib_init();
-  game_init();
+  game_init(argc, argv);
 
   while(loop_once()) {}
 
