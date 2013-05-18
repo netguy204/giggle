@@ -24,6 +24,10 @@
 
 Entity* spriter_load(const char* compiled_spriter, SpriteAtlas atlas) {
   FILE* cs = fopen(compiled_spriter, "rb");
+  if(!cs) {
+    fail_exit("failed to load %s", compiled_spriter);
+  }
+
   Entity* ent = (Entity*)malloc(sizeof(Entity));
 
   read_ushort(cs, &ent->nanimations);

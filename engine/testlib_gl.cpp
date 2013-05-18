@@ -221,8 +221,8 @@ Program* get_program(ProgramLoader loader) {
 }
 
 Program* standard_program_loader() {
-  Program *program = renderer_link_shader("resources/standard.vert",
-                                          "resources/standard.frag",
+  Program *program = renderer_link_shader("engine_resources/standard.vert",
+                                          "engine_resources/standard.frag",
                                           GLPARAM_VERTEX, "vertex",
                                           GLPARAM_TEXCOORD0, "tex_coord0",
                                           GLPARAM_DONE);
@@ -235,8 +235,8 @@ Program* standard_program_loader() {
 }
 
 Program* solid_program_loader() {
-  Program *program = renderer_link_shader("resources/standard.vert",
-                                          "resources/solid.frag",
+  Program *program = renderer_link_shader("engine_resources/standard.vert",
+                                          "engine_resources/solid.frag",
                                           GLPARAM_VERTEX, "vertex",
                                           GLPARAM_DONE);
   program_bind_uniforms(program,
@@ -247,8 +247,8 @@ Program* solid_program_loader() {
 }
 
 Program* standard_color_program_loader() {
-  Program *program = renderer_link_shader("resources/standard_color.vert",
-                                          "resources/standard_color.frag",
+  Program *program = renderer_link_shader("engine_resources/standard_color.vert",
+                                          "engine_resources/standard_color.frag",
                                           GLPARAM_VERTEX, "vertex",
                                           GLPARAM_TEXCOORD0, "tex_coord0",
                                           GLPARAM_OTHER0, "color_coord0",
@@ -261,8 +261,8 @@ Program* standard_color_program_loader() {
 }
 
 Program* tile_program_loader() {
-  Program *program = renderer_link_shader("resources/tile.vert",
-                                          "resources/tile.frag",
+  Program *program = renderer_link_shader("engine_resources/tile.vert",
+                                          "engine_resources/tile.frag",
                                           GLPARAM_VERTEX, "vertex",
                                           GLPARAM_TEXCOORD0, "tex_coord0",
                                           GLPARAM_DONE);

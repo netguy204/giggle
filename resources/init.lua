@@ -14,6 +14,8 @@ local level_number = 1
 local kills_remaining = 0
 local sounds = {}
 
+local ATLAS = 'resources/default'
+
 function play_sound(name)
    local opts = sounds[name]
    if not opts then
@@ -78,7 +80,7 @@ function Enemy:init(go, dir, w, h)
 
    self.dir = dir
    self.speed = level_data.speed
-   self._anim = world:animation('resources/enemy.cs', constant.ATLAS, 'NewAnimation')
+   self._anim = world:animation('resources/enemy.cs', ATLAS, 'NewAnimation')
    self.speed_scales = {{0,0.5}, {0.279, 0}, {0.230, 1.0}, {0.550, 1.5}, {0.551, 0.5}, {0.840, 0}}
 
    self:setup_go()
@@ -330,7 +332,7 @@ function game()
 
    local score = stage:add_component('CDrawText',
                                      {offset={screen_width/2 - 32, screen_height - 128},
-                                     atlas=constant.ATLAS,
+                                     atlas=ATLAS,
                                      message=string.format("%d", kills_remaining),
                                      color={1.0,1.0,1.0,1.0}})
 
@@ -339,7 +341,7 @@ function game()
    local bar = Bar(gobar, screen_width-32, 16)
 
    local player = world:create_go()
-   local _smoke = world:atlas_entry(constant.ATLAS, 'steam')
+   local _smoke = world:atlas_entry(ATLAS, 'steam')
    local _psystem = player:add_component('CParticleSystem',
                                       {def=
                                        {n=1000,
@@ -376,8 +378,8 @@ function game()
    --                                      color={0.9, 0.9, 0.9, 1.0}})
    local pformer = player:add_component('CPlatformer', {w=pdim, h=pdim})
 
-   local _idle_anim = world:animation('resources/PlayerIdle.cs', constant.ATLAS, 'Idle')
-   local _jump_anim = world:animation('resources/PlayerJump.cs', constant.ATLAS, 'NewAnimation')
+   local _idle_anim = world:animation('resources/PlayerIdle.cs', ATLAS, 'Idle')
+   local _jump_anim = world:animation('resources/PlayerJump.cs', ATLAS, 'NewAnimation')
 
    local anim = player:add_component('CSpriterSprite',
                                      {animation=_idle_anim,
@@ -523,12 +525,12 @@ end
 
 function menu_screen(message, offset, fn)
    local title = stage:add_component('CDrawText', {offset={screen_width/2 - 128, screen_height * 2.0 / 3.0},
-                                                   atlas=constant.ATLAS,
+                                                   atlas=ATLAS,
                                                    message="Press Z",
                                                    color={1.0,0.0,0.0,1.0}})
 
    stage:add_component('CDrawText', {offset=offset,
-                                     atlas=constant.ATLAS,
+                                     atlas=ATLAS,
                                      message=message,
                                      color={1.0,1.0,1.0,1.0}})
    set_transform(0, screen_width, 0, screen_height)
@@ -593,7 +595,7 @@ function game_init()
                go_to_game)
 
    stage:add_component('CDrawText', {offset={screen_width/2 - 128, screen_height / 3.0},
-                                     atlas=constant.ATLAS,
+                                     atlas=ATLAS,
                                      message=string.format('Level %d', level_number),
                                      color={0.6,0.6,0.6,1.0}})
 
