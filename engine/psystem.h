@@ -107,8 +107,11 @@ class ParticleActivator : public ParticleSystemComponent {
   int enabled;
 };
 
-class SystemDefinition {
+class SystemDefinition : public Object {
  public:
+  OBJECT_PROTO(SystemDefinition);
+  SystemDefinition(void* empty);
+
   SystemDefinition(unsigned int n);
   ~SystemDefinition();
 
@@ -328,6 +331,16 @@ class PSConstantRateActivator : public ParticleActivator {
   float bucket;
 };
 
+template<>
+inline void LCpush<ParticleSystemComponent*>(lua_State* L, ParticleSystemComponent* comp) {
+  LCpush_lut(L, LUT_PSCOMPONENT, comp);
+}
+
+template<>
+inline void LCcheck<ParticleSystemComponent*>(lua_State* L, ParticleSystemComponent** comp, int pos) {
+  *comp = (ParticleSystemComponent*)LCcheck_lut(L, LUT_PSCOMPONENT, pos);
+}
+
 // template magic to make SystemDefinition settable from lua
 template<>
 inline void LCpush<SystemDefinition*>(lua_State* L, SystemDefinition* def) {
@@ -336,6 +349,11 @@ inline void LCpush<SystemDefinition*>(lua_State* L, SystemDefinition* def) {
 
 template<>
 inline void LCcheck<SystemDefinition*>(lua_State* L, SystemDefinition** def, int pos) {
+  if(lua_isuserdata(L, pos)) {
+    *def = (SystemDefinition*)LCcheck_lut(L, LUT_PSDEFINITION, pos);
+    return;
+  }
+
   if(!lua_istable(L, pos)) {
     luaL_error(L, "position %d does not contain a sysdef table", pos);
   }
@@ -358,7 +376,8 @@ inline void LCcheck<SystemDefinition*>(lua_State* L, SystemDefinition** def, int
     luaL_error(L, "sysdef table must include a renderer table");
   }
   lua_getfield(L, -1, "name");
-  TypeInfo* type = LCcheck_type(L, -1);
+  TypeInfo* type;
+  LCcheck(L, &type, -1);
   Renderable *renderer = (*def)->set_renderer(type);
   lua_pop(L, 1);
 
@@ -374,7 +393,7 @@ inline void LCcheck<SystemDefinition*>(lua_State* L, SystemDefinition** def, int
   lua_getfield(L, pos, "activator");
   if(lua_istable(L, -1)) {
     lua_getfield(L, -1, "name");
-    type = LCcheck_type(L, -1);
+    LCcheck(L, &type, -1);
     ParticleActivator *activator = (*def)->set_activator(type);
     lua_pop(L, 1);
 
@@ -409,7 +428,8 @@ inline void LCcheck<SystemDefinition*>(lua_State* L, SystemDefinition** def, int
 
     // create the component
     lua_getfield(L, -1, "name");
-    TypeInfo* type = LCcheck_type(L, -1);
+    TypeInfo* type;
+    LCcheck(L, &type, -1);
     ParticleSystemComponent* comp = (*def)->add_component(type);
     lua_pop(L, 1);
 

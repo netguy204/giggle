@@ -38,6 +38,12 @@ static long system_offset(SystemDefinition* def, ParticleFeature feature) {
   return 0;
 }
 
+OBJECT_IMPL(SystemDefinition, Object);
+
+SystemDefinition::SystemDefinition(void* empty) {
+  fail_exit("default runtime constructor not valid");
+}
+
 SystemDefinition::SystemDefinition(unsigned int n)
   : feature_flags(0), n(n), renderer(NULL), activator(new PSAlwaysActivator(this)),
     layer(LAYER_PLAYER) {
@@ -94,6 +100,7 @@ ParticleSystemComponent* SystemDefinition::find_component(TypeInfo* info) {
     });
   return found;
 }
+OBJECT_METHOD1(SystemDefinition, find_component, ParticleSystemComponent*, TypeInfo*);
 
 SystemRenderer* SystemDefinition::set_renderer(TypeInfo* type) {
   if(renderer) {

@@ -38,6 +38,15 @@ const PropertyInfo* TypeInfo::property(const char* name) const {
   return iter->second;
 }
 
+const MethodInfo* TypeInfo::method(const char* name) const {
+  NameToMethod::const_iterator iter = name_to_method.find(name);
+  if(iter == name_to_method.end()) {
+    if(m_parent) return m_parent->method(name);
+    return NULL;
+  }
+  return iter->second;
+}
+
 const char* TypeInfo::name() const {
   return m_name;
 }

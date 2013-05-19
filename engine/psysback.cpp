@@ -94,6 +94,7 @@ ParticleSystemComponent* SystemDefinition::find_component(TypeInfo* info) {
     });
   return found;
 }
+OBJECT_METHOD1(SystemDefinition*, find_component, ParticleSystemComponent*, TypeInfo*);
 
 SystemRenderer* SystemDefinition::set_renderer(TypeInfo* type) {
   if(renderer) {

@@ -193,7 +193,7 @@ class TypeRegistry {
   }                                                     \
   OBJECT_BIMPL(name, &pname::Type)
 
-#define STRINGIFY(name) "" ## name
+#define STRINGIFY(name) #name
 
 #define OP(name, member_name) name ## _ ## member_name ## _ ## Property
 
@@ -230,7 +230,7 @@ class MethodInfo {
 #define LOP(name, method_name) L ## name ## method_name
 #define LOPC(name, method_name) LCLASS ## name ## method_name
 
-#define OBJECT_METHOD1(CLASS, METHOD, RET, TYPE1)                       \
+#define OBJECT_METHOD_BASE(CLASS, METHOD)                               \
   class LOPC(CLASS, METHOD) : public MethodInfo {                       \
   public:                                                               \
                                                                         \
@@ -238,19 +238,73 @@ class MethodInfo {
     : MethodInfo(&CLASS::Type, STRINGIFY(METHOD)) {                     \
     }                                                                   \
                                                                         \
-    virtual int LCinvoke(lua_State* L, int pos) const {                 \
-      CLASS* obj;                                                       \
-      RET r;                                                            \
-      TYPE1 t1;                                                         \
-      LCcheck(L, &obj, pos);                                            \
-      LCcheck(L, &t1, pos + 1);                                         \
-      r = obj->METHOD(t1);                                              \
-      LCpush(L, r);                                                     \
-      return 1;                                                         \
-    }                                                                   \
+    virtual int LCinvoke(lua_State* L, int pos) const;                  \
   };                                                                    \
-  static LOPC(CLASS, METHOD) LOP(CLASS, METHOD);
+  static LOPC(CLASS, METHOD) LOP(CLASS, METHOD);                        \
+                                                                        \
+  int LOPC(CLASS,METHOD)::LCinvoke(lua_State* L, int pos) const
 
+#define OBJECT_METHOD0(CLASS, METHOD, RET)                              \
+  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
+    CLASS* obj;                                                         \
+    RET r;                                                              \
+    LCcheck(L, &obj, pos);                                              \
+    r = obj->METHOD();                                                  \
+    LCpush(L, r);                                                       \
+    return 1;                                                           \
+  }
+
+#define OBJECT_METHOD1(CLASS, METHOD, RET, TYPE1)                       \
+  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
+    CLASS* obj;                                                         \
+    RET r;                                                              \
+    TYPE1 t1;                                                           \
+    LCcheck(L, &obj, pos);                                              \
+    LCcheck(L, &t1, pos + 1);                                           \
+    r = obj->METHOD(t1);                                                \
+    LCpush(L, r);                                                       \
+    return 1;                                                           \
+  }
+
+#define OBJECT_VMETHOD1(CLASS, METHOD, TYPE1)                           \
+  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
+    CLASS* obj;                                                         \
+    TYPE1 t1;                                                           \
+    LCcheck(L, &obj, pos);                                              \
+    LCcheck(L, &t1, pos + 1);                                           \
+    obj->METHOD(t1);                                                    \
+    return 0;                                                           \
+  }
+
+#define OBJECT_METHOD2(CLASS, METHOD, RET, TYPE1, TYPE2)                \
+  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
+    CLASS* obj;                                                         \
+    RET r;                                                              \
+    TYPE1 t1;                                                           \
+    TYPE2 t2;                                                           \
+    LCcheck(L, &obj, pos);                                              \
+    LCcheck(L, &t1, pos + 1);                                           \
+    LCcheck(L, &t2, pos + 2);                                           \
+    r = obj->METHOD(t1, t2);                                            \
+    LCpush(L, r);                                                       \
+    return 1;                                                           \
+  }
+
+#define OBJECT_METHOD3(CLASS, METHOD, RET, TYPE1, TYPE2, TYPE3)         \
+  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
+    CLASS* obj;                                                         \
+    RET r;                                                              \
+    TYPE1 t1;                                                           \
+    TYPE2 t2;                                                           \
+    TYPE3 t3;                                                           \
+    LCcheck(L, &obj, pos);                                              \
+    LCcheck(L, &t1, pos + 1);                                           \
+    LCcheck(L, &t2, pos + 2);                                           \
+    LCcheck(L, &t3, pos + 3);                                           \
+    r = obj->METHOD(t1, t2, t3);                                        \
+    LCpush(L, r);                                                       \
+    return 1;                                                           \
+  }
 
 
 class Object {
@@ -291,5 +345,14 @@ inline void LCcheck<float>(lua_State* L, float* target, int pos) {
   *target = luaL_checknumber(L, pos);
 }
 
+template<>
+inline void LCpush<const char*>(lua_State* L, const char* str) {
+  lua_pushstring(L, str);
+}
+
+template<>
+inline void LCcheck<const char*>(lua_State* L, const char** str, int pos) {
+  *str = luaL_checkstring(L, pos);
+}
 
 #endif

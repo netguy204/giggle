@@ -315,6 +315,34 @@ function reset_state(new_state)
    Timer():reset(0, reset)
 end
 
+function make_particle_system(player)
+   local _smoke = world:atlas_entry(ATLAS, 'steam')
+
+   return player:add_component('CParticleSystem',
+                               {def=
+                                   {n=1000,
+                                    renderer={name='PSC_E2SystemRenderer',
+                                              params={entry=_smoke}},
+                                    activator={name='PSConstantRateActivator',
+                                               rate=0},
+                                    components={
+                                       {name='PSConstantAccelerationUpdater',
+                                        params={acc={0,10}}},
+                                       {name='PSTimeAlphaUpdater',
+                                        params={time_constant=1.5}},
+                                       {name='PSBoxInitializer',
+                                        params={initial={-32,-32,32,-32},
+                                                refresh={-32,-32,32,-32},
+                                                minv={-1000,-10},
+                                                maxv={1000,10}}},
+                                       {name='PSConstColorInitializer',
+                                        params={color=util.rgba(160, 160, 160, 255)}},
+                                       {name='PSTimeInitializer',
+                                        params={min_life=0.2,
+                                                max_life=3.0}},
+                                       {name='PSTimeTerminator'}}}})
+end
+
 function game()
    --debugging collisions
    --MouseEnemy(world:create_go(), 1, 32, 32)
@@ -341,31 +369,7 @@ function game()
    local bar = Bar(gobar, screen_width-32, 16)
 
    local player = world:create_go()
-   local _smoke = world:atlas_entry(ATLAS, 'steam')
-   local _psystem = player:add_component('CParticleSystem',
-                                      {def=
-                                       {n=1000,
-                                        renderer={name='PSC_E2SystemRenderer',
-                                                  params={entry=_smoke}},
-                                        activator={name='PSConstantRateActivator',
-                                                   rate=0},
-                                        components={
-                                           {name='PSConstantAccelerationUpdater',
-                                            params={acc={0,10}}},
-                                           {name='PSTimeAlphaUpdater',
-                                            params={time_constant=1.5}},
-                                           {name='PSBoxInitializer',
-                                            params={initial={-32,-32,32,-32},
-                                                    refresh={-32,-32,32,-32},
-                                                    minv={-1000,-10},
-                                                    maxv={1000,10}}},
-                                           {name='PSConstColorInitializer',
-                                            params={color=util.rgba(160, 160, 160, 255)}},
-                                           {name='PSTimeInitializer',
-                                            params={min_life=0.2,
-                                                    max_life=3.0}},
-                                           {name='PSTimeTerminator'}}}})
-
+   local _psystem = make_particle_system(player)
    local psys = _psystem:def():find_component('PSConstantRateActivator')
 
    local pdim = 64

@@ -856,7 +856,7 @@ void init_world() {
   lua_register(world->L, "random_gaussian", Lrandom_gaussian);
   lua_register(world->L, "set_transform", Lset_transform);
 
-  LCpush_universe(world->L, universe);
+  LCpush(world->L, universe);
   lua_setglobal(world->L, "universe");
 
   world->load_level("resources/init.lua");

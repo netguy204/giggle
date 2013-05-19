@@ -125,29 +125,6 @@ void LCcheck_color(lua_State *L, int pos, Color *c) {
   lua_pop(L, 1);
 }
 
-void LCpush_message(lua_State *L, Message* msg) {
-  lua_newtable(L);
-  LCpush_go(L, msg->source);
-  lua_setfield(L, -2, "source");
-  lua_pushlstring(L, msg->content, msg->nbytes);
-  lua_setfield(L, -2, "content");
-  lua_pushlightuserdata(L, msg);
-  lua_setfield(L, -2, "message");
-}
-
-Message* LCcheck_message(lua_State *L, int pos) {
-  if(!lua_istable(L, pos)) {
-    luaL_error(L, "expected message, got non-message-table");
-  }
-  lua_getfield(L, pos, "message");
-  Message* result = (Message*)lua_touserdata(L, -1);
-  lua_pop(L, 1);
-  if(!result) {
-    luaL_error(L, "`message' field of message-table was not set");
-  }
-  return result;
-}
-
 void LCpush_animation(lua_State *L, Animation* anim) {
   lua_newtable(L);
   lua_pushnumber(L, anim->length_ms / 1000.0);
@@ -446,14 +423,36 @@ void GO::apply_impulse(Vector imp) {
   bImp.y = imp->y / BSCALE;
   body->ApplyLinearImpulse(bImp, body->GetWorldCenter());
 }
+OBJECT_VMETHOD1(GO, apply_impulse, Vector);
 
 void GO::apply_angular_impulse(float angimp) {
   body->ApplyAngularImpulse(angimp);
 }
+OBJECT_VMETHOD1(GO, apply_angular_impulse, float);
 
 void GO::apply_torque(float torque) {
   body->ApplyTorque(torque);
 }
+OBJECT_VMETHOD1(GO, apply_torque, float);
+
+void GO::apply_force(Vector force) {
+  b2Vec2 bForce;
+  bForce.x = force->x / BSCALE;
+  bForce.y = force->y / BSCALE;
+
+  body->ApplyForceToCenter(bForce);
+}
+OBJECT_VMETHOD1(GO, apply_force, Vector);
+
+float GO::mass() {
+  return body->GetMass();
+}
+OBJECT_METHOD0(GO, mass, float);
+
+float GO::inertia() {
+  return body->GetInertia();
+}
+OBJECT_METHOD0(GO, inertia, float);
 
 Component* GO::find_component(const TypeInfo* info, Component* last) {
   DLLNode node = components.head;
@@ -481,6 +480,7 @@ Component* GO::find_component(const TypeInfo* info, Component* last) {
   }
   return NULL;
 }
+OBJECT_METHOD2(GO, find_component, Component*, TypeInfo*, Component*);
 
 void GO::print_description() {
   fprintf(stderr, "UNINITIALIZED COMPONENTS\n");
@@ -511,6 +511,7 @@ void GO::send_message(Message* message) {
 
   inbox_pending.add_tail(message);
 }
+OBJECT_VMETHOD1(GO, send_message, Message*);
 
 OBJECT_IMPL(Component, Object);
 OBJECT_PROPERTY(Component, delete_me);
@@ -638,8 +639,8 @@ void CScripted::step_thread(LuaThread* thread) {
   if(thread->state) {
     if(!thread->is_initialized) {
       thread->is_initialized = 1;
-      LCpush_go(thread->state, go);
-      LCpush_component(thread->state, this);
+      LCpush(thread->state, go);
+      LCpush(thread->state, (Component*)this);
       resume(thread, 2);
     }
 
@@ -683,7 +684,7 @@ void LCpush_lut(lua_State *L, const char* metatable, void* ut) {
   }
 }
 
-static void* LCcheck_lut(lua_State *L, const char* metatable, int pos) {
+void* LCcheck_lut(lua_State *L, const char* metatable, int pos) {
   static char error_msg[256];
 
   if(lua_isnil(L, pos)) {
@@ -702,31 +703,6 @@ static void* LCcheck_lut(lua_State *L, const char* metatable, int pos) {
     luaL_argcheck(L, ud != NULL, pos, error_msg);
   }
   return *ud;
-}
-
-static World* LCcheck_world(lua_State *L, int pos) {
-  return (World*)LCcheck_lut(L, LUT_WORLD, pos);
-}
-
-int LCpush_world(lua_State *L, World* world) {
-  LCpush_lut(L, LUT_WORLD, world);
-  return 1;
-}
-
-GO* LCcheck_go(lua_State *L, int pos) {
-  return (GO*)LCcheck_lut(L, LUT_GO, pos);
-}
-
-void LCpush_go(lua_State *L, GO* go) {
-  LCpush_lut(L, LUT_GO, go);
-}
-
-Universe* LCcheck_universe(lua_State *L, int pos) {
-  return (Universe*)LCcheck_lut(L, LUT_UNIVERSE, pos);
-}
-
-void LCpush_universe(lua_State *L, Universe* universe) {
-  LCpush_lut(L, LUT_UNIVERSE, universe);
 }
 
 struct LuaKeyData {
@@ -785,7 +761,8 @@ void LuaKeyBinding::activate(float value) {
 }
 
 static int Lworld_set_keybinding(lua_State *L) {
-  World* world = LCcheck_world(L, 1);
+  World* world;
+  LCcheck(L, &world, 1);
   const char* keyname = luaL_checkstring(L, 2);
   int keyn = find_keynumber(keyname);
   if(keyn < 0) {
@@ -839,7 +816,8 @@ void LuaSIBinding::activate(SpatialInput* value) {
 }
 
 static int Lworld_set_sibinding(lua_State *L) {
-  World* world = LCcheck_world(L, 1);
+  World* world;
+  LCcheck(L, &world, 1);
   const char* keyname = luaL_checkstring(L, 2);
   int keyn = find_sinumber(keyname);
   if(keyn < 0) {
@@ -856,12 +834,6 @@ static int Lworld_set_sibinding(lua_State *L) {
   set_si_binding((SpatialInputNumber)keyn, kb);
 
   lua_pushboolean(L, true);
-  return 1;
-}
-
-static int Lworld_create_go(lua_State *L) {
-  World* world = LCcheck_world(L, 1);
-  LCpush_go(L, world->create_go());
   return 1;
 }
 
@@ -919,11 +891,14 @@ int Ljoint_destroy(lua_State* L) {
 static int Lworld_create_joint(lua_State *L) {
   Vector_ la, lb;
 
-  World* world = LCcheck_world(L, 1);
-  GO* ga = LCcheck_go(L, 2);
-  LCcheck_vector(L, 3, &la);
-  GO* gb = LCcheck_go(L, 4);
-  LCcheck_vector(L, 5, &lb);
+  World* world;
+  GO* ga;
+  GO* gb;
+  LCcheck(L, &world, 1);
+  LCcheck(L, &ga, 2);
+  LCcheck(L, &la, 3);
+  LCcheck(L, &gb, 4);
+  LCcheck(L, &lb, 5);
 
   b2RevoluteJoint *joint;
 
@@ -945,150 +920,41 @@ static int Lworld_create_joint(lua_State *L) {
   return 1;
 }
 
-static int Lworld_atlas_entry(lua_State *L) {
-  World* world = LCcheck_world(L, 1);
-  const char* atlas = luaL_checkstring(L, 2);
-  const char* entry = luaL_checkstring(L, 3);
-  SpriteAtlasEntry result = world->atlas_entry(atlas, entry);
-  if(!result) {
-    luaL_error(L, "`%s' is not a valid entry in `%s'", entry, atlas);
-  }
-
-  LCpush_entry(L, result);
-  return 1;
-}
-
-static int Lworld_animation(lua_State *L) {
-  World* world = LCcheck_world(L, 1);
-  const char* scml_file = luaL_checkstring(L, 2);
-  const char* atlas_name = luaL_checkstring(L, 3);
-  const char* anim_name = luaL_checkstring(L, 4);
-  SpriteAtlas atlas = world->atlas(atlas_name);
-  Animation* anim = world->animation(scml_file, atlas, anim_name);
-  LCpush_animation(L, anim);
-  return 1;
-}
-
 // world, center, last_go, look angle, cone angle
 static int Lworld_next_in_cone(lua_State *L) {
   Cone cone;
 
-  World* world = LCcheck_world(L, 1);
+  World* world;
+  LCcheck(L, &world, 1);
   LCcheck_vector(L, 2, &cone.point);
-  GO* last_go = LCcheck_go(L, 3);
+  GO* last_go;
+  LCcheck(L, &last_go, 3);
   float angle = luaL_checknumber(L, 4);
   cone.angle = luaL_checknumber(L, 5);
 
   vector_for_angle(&cone.direction, angle);
 
   GO* next_go = world->next_in_cone(last_go, &world->scene.camera_rect, &cone);
-  LCpush_go(L, next_go);
+  LCpush(L, next_go);
   return 1;
 }
 
-static void LCpush_handle(lua_State* L, AudioHandle* h) {
-  LCpush_lut(L, LUT_AUDIOHANDLE, h);
-}
-
-static AudioHandle* LCcheck_handle(lua_State* L, int pos) {
-  return (AudioHandle*)LCcheck_lut(L, LUT_AUDIOHANDLE, pos);
-}
-
 static int Laudiohandle_gc(lua_State* L) {
-  AudioHandle* h = LCcheck_handle(L, 1);
+  AudioHandle* h;
+  LCcheck(L, &h, 1);
   h->destroy();
   return 0;
 }
 
 static int Laudiohandle_terminate(lua_State* L) {
-  AudioHandle* h = LCcheck_handle(L, 1);
+  AudioHandle* h;
+  LCcheck(L, &h, 1);
   h->terminate();
   return 0;
 }
 
-static int Lworld_get_sound(lua_State* L) {
-  World* world = LCcheck_world(L, 1);
-  const char* sound = luaL_checkstring(L, 2);
-  float scale = luaL_checknumber(L, 3);
-
-  lua_pushlightuserdata(L, world->universe->sound.get_sync(sound, scale));
-  return 1;
-}
-
-static int Lworld_play_sound(lua_State* L) {
-  World* world = LCcheck_world(L, 1);
-  Sound* sound = (Sound*)lua_touserdata(L, 2);
-  luaL_argcheck(L, sound != NULL, 2, "`Sound' expected");
-  int channel = luaL_checkinteger(L, 3);
-  // the returned handle isn't guarteed to live beyond this
-  // call. Clone it and have lua gc it when it's done.
-  AudioHandle* handle = world->universe->play_sound(sound, channel);
-  LCpush_handle(L, new AudioHandle(*handle));
-  return 1;
-}
-
-static int Lworld_stream_sound(lua_State* L) {
-  World* world = LCcheck_world(L, 1);
-  const char* sound = luaL_checkstring(L, 2);
-  long start = luaL_checkinteger(L, 3);
-  AudioHandle* handle = world->universe->stream_sound(sound, start);
-  LCpush_handle(L, new AudioHandle(*handle));
-  return 1;
-}
-
-static int Lworld_sound_handle(lua_State* L) {
-  World* world = LCcheck_world(L, 1);
-  long handle_name = luaL_checkinteger(L, 2);
-  AudioHandle* handle = world->universe->sound_handle(handle_name);
-  if(handle) {
-    LCpush_handle(L, new AudioHandle(*handle));
-  } else {
-    lua_pushnil(L);
-  }
-  return 1;
-}
-
-static int Lworld_current_sound_sample(lua_State* L) {
-  lua_pushinteger(L, audio_current_sample());
-  return 1;
-}
-
-static Component* LCcheck_component(lua_State *L, int pos) {
-  return (Component*)LCcheck_lut(L, LUT_COMPONENT, pos);
-}
-
-TypeInfo* LCcheck_type(lua_State *L, int pos) {
-  const char* name = luaL_checkstring(L, pos);
-  TypeInfo* type = TypeRegistry::instance().find_type(name);
-  if(type == NULL) {
-    luaL_error(L, "`%s' does not name a registered type", name);
-  }
-  return type;
-}
-
 static Object* LCcheck_object(lua_State *L, int pos) {
   return (Object*)LCcheck_lut(L, NULL, pos);
-}
-
-void LCpush_component(lua_State *L, Component *comp) {
-  LCpush_lut(L, LUT_COMPONENT, comp);
-}
-
-static int Lgo_find_component(lua_State *L) {
-  GO* go = LCcheck_go(L, 1);
-  TypeInfo* type = LCcheck_type(L, 2);
-  Component* last = LCcheck_component(L, 3);
-  Component* comp = go->find_component(type, last);
-  LCpush_component(L, comp);
-  return 1;
-}
-
-static int Lps_find_component(lua_State *L) {
-  SystemDefinition* def = (SystemDefinition*)LCcheck_lut(L, LUT_PSDEFINITION, 1);
-  TypeInfo* type = LCcheck_type(L, 2);
-  ParticleSystemComponent* comp = def->find_component(type);
-  LCpush_lut(L, LUT_PSCOMPONENT, comp);
-  return 1;
 }
 
 void LCconfigure_object(lua_State *L, Object* obj, int pos) {
@@ -1111,13 +977,15 @@ void LCconfigure_object(lua_State *L, Object* obj, int pos) {
 }
 
 static int Lgo_add_component(lua_State *L) {
-  GO* go = LCcheck_go(L, 1);
-  TypeInfo* type = LCcheck_type(L, 2);
+  GO* go;
+  LCcheck(L, &go, 1);
+  TypeInfo* type;
+  LCcheck(L, &type, 2);
   Component* comp = go->add_component(type);
 
   // argument 3 should be an optional table
   if(lua_gettop(L) != 3) {
-    LCpush_component(L, comp);
+    LCpush(L, (Component*)comp);
     return 1;
   }
 
@@ -1128,12 +996,13 @@ static int Lgo_add_component(lua_State *L) {
 
   LCconfigure_object(L, comp, 3);
 
-  LCpush_component(L, comp);
+  LCpush(L, (Component*)comp);
   return 1;
 }
 
 static int Lgo_create_message(lua_State *L) {
-  GO* go = LCcheck_go(L, 1);
+  GO* go;
+  LCcheck(L, &go, 1);
   int kind = luaL_checkinteger(L, 2);
   const char* content = NULL;
   size_t nbytes = 0;
@@ -1142,19 +1011,13 @@ static int Lgo_create_message(lua_State *L) {
   }
 
   Message* message = go->create_message(kind, content, nbytes);
-  LCpush_message(L, message);
+  LCpush(L, message);
   return 1;
 }
 
-static int Lgo_send_message(lua_State *L) {
-  GO* go = LCcheck_go(L, 1);
-  Message* message = LCcheck_message(L, 2);
-  go->send_message(message);
-  return 0;
-}
-
 static int Lgo_broadcast_message(lua_State *L) {
-  GO* go = LCcheck_go(L, 1);
+  GO* go;
+  LCcheck(L, &go, 1);
   float range = luaL_checknumber(L, 2);
   int kind = luaL_checkinteger(L, 3);
   const char* content = NULL;
@@ -1168,13 +1031,14 @@ static int Lgo_broadcast_message(lua_State *L) {
 }
 
 static int Lgo_has_message(lua_State *L) {
-  GO* go = LCcheck_go(L, 1);
+  GO* go;
+  LCcheck(L, &go, 1);
   int type = luaL_checkinteger(L, 2);
   int rvalues = 0;
 
   go->inbox.foreach([&] (Message* msg) -> int {
       if(msg->kind == type) {
-        LCpush_message(L, msg);
+        LCpush(L, msg);
         ++rvalues;
       }
       return 0;
@@ -1183,58 +1047,9 @@ static int Lgo_has_message(lua_State *L) {
   return rvalues;
 }
 
-static int Lgo_apply_force(lua_State* L) {
-  Vector_ force;
-
-  GO* go = LCcheck_go(L, 1);
-  LCcheck_vector(L, 2, &force);
-
-  b2Vec2 bForce;
-  bForce.x = force.x / BSCALE;
-  bForce.y = force.y / BSCALE;
-
-  go->body->ApplyForceToCenter(bForce);
-  return 0;
-}
-
-static int Lgo_apply_impulse(lua_State* L) {
-  Vector_ imp;
-
-  GO* go = LCcheck_go(L, 1);
-  LCcheck_vector(L, 2, &imp);
-
-  go->apply_impulse(&imp);
-  return 0;
-}
-
-static int Lgo_apply_angular_impulse(lua_State* L) {
-  GO* go = LCcheck_go(L, 1);
-  float angimp = luaL_checknumber(L, 2);
-  go->apply_angular_impulse(angimp);
-  return 0;
-}
-
-static int Lgo_apply_torque(lua_State* L) {
-  GO* go = LCcheck_go(L, 1);
-  float torque = luaL_checknumber(L, 2);
-  go->apply_torque(torque);
-  return 0;
-}
-
-static int Lgo_mass(lua_State* L) {
-  GO* go = LCcheck_go(L, 1);
-  lua_pushnumber(L, go->body->GetMass());
-  return 1;
-}
-
-static int Lgo_inertia(lua_State* L) {
-  GO* go = LCcheck_go(L, 1);
-  lua_pushnumber(L, go->body->GetInertia());
-  return 1;
-}
-
 static int Lgo_contacts(lua_State* L) {
-  GO* go = LCcheck_go(L, 1);
+  GO* go;
+  LCcheck(L, &go, 1);
 
   // contact list
   lua_newtable(L);
@@ -1271,7 +1086,7 @@ static int Lgo_contacts(lua_State* L) {
 
       // contact
       lua_newtable(L);
-      LCpush_go(L, other);
+      LCpush(L, other);
       lua_setfield(L, -2, "other");
 
       LCpush_vector(L, &normv);
@@ -1291,6 +1106,13 @@ static int Lgo_contacts(lua_State* L) {
 static int Lobject_mutate(lua_State* L) {
   const char* name = luaL_checkstring(L, lua_upvalueindex(1));
   Object* obj = LCcheck_object(L, 1);
+
+  // try invoking a method first
+  const MethodInfo* method = obj->typeinfo()->method(name);
+  if(method) {
+    return method->LCinvoke(L, 1);
+  }
+
 
   const PropertyInfo* prop = obj->typeinfo()->property(name);
   if(prop == NULL) {
@@ -1379,15 +1201,7 @@ void init_lua(World* world) {
   }
 
   static const luaL_Reg world_m[] = {
-    {"create_go", Lworld_create_go},
-    {"atlas_entry", Lworld_atlas_entry},
-    {"animation", Lworld_animation},
     {"next_in_cone", Lworld_next_in_cone},
-    {"get_sound", Lworld_get_sound},
-    {"play_sound", Lworld_play_sound},
-    {"stream_sound", Lworld_stream_sound},
-    {"sound_handle", Lworld_sound_handle},
-    {"current_sound_sample", Lworld_current_sound_sample},
     {"set_keybinding", Lworld_set_keybinding},
     {"set_sibinding", Lworld_set_sibinding},
     {"create_joint", Lworld_create_joint},
@@ -1400,17 +1214,9 @@ void init_lua(World* world) {
 
   static const luaL_Reg go_m[] = {
     {"add_component", Lgo_add_component},
-    {"find_component", Lgo_find_component},
     {"has_message", Lgo_has_message},
     {"create_message", Lgo_create_message},
-    {"send_message", Lgo_send_message},
     {"broadcast_message", Lgo_broadcast_message},
-    {"apply_force", Lgo_apply_force},
-    {"apply_impulse", Lgo_apply_impulse},
-    {"apply_angular_impulse", Lgo_apply_angular_impulse},
-    {"apply_torque", Lgo_apply_torque},
-    {"inertia", Lgo_inertia},
-    {"mass", Lgo_mass},
     {"contacts", Lgo_contacts},
     {"__tostring", Lobject_tostring},
     {"__eq", Lobject_eq},
@@ -1436,7 +1242,6 @@ void init_lua(World* world) {
   LClink_metatable(L, LUT_COMPONENT, component_m);
 
   static const luaL_Reg psdef_m[] = {
-    {"find_component", Lps_find_component},
     {"__tostring", Lobject_tostring},
     {"__eq", Lobject_eq},
     {"key", Lobject_key},
@@ -1473,13 +1278,13 @@ void init_lua(World* world) {
 
   LClink_metatable(L, LUT_JOINT, joint_m);
 
-  LCpush_world(L, world);
+  LCpush(L, world);
   lua_setglobal(L, "world");
 
-  LCpush_go(L, world->camera);
+  LCpush(L, world->camera);
   lua_setglobal(L, "camera");
 
-  LCpush_go(L, world->stage);
+  LCpush(L, world->stage);
   lua_setglobal(L, "stage");
 
   lua_pushnumber(L, screen_width);
@@ -1616,18 +1421,47 @@ GO* World::create_go() {
   GO* go = new GO(this);
   return go;
 }
+OBJECT_METHOD0(World, create_go, GO*);
 
 SpriteAtlas World::atlas(const char* atlas) {
   return universe->atlas(atlas);
 }
+OBJECT_METHOD1(World, atlas, SpriteAtlas, const char*);
 
 SpriteAtlasEntry World::atlas_entry(const char* atlas_name, const char* entry) {
   return universe->atlas_entry(atlas_name, entry);
 }
+OBJECT_METHOD2(World, atlas_entry, SpriteAtlasEntry, const char*, const char*);
 
-Animation* World::animation(const char* filename, SpriteAtlas atlas, const char* anim) {
-  return universe->animation(filename, atlas, anim);
+Animation* World::animation(const char* filename, const char* atlas_name, const char* anim) {
+  return universe->animation(filename, atlas(atlas_name), anim);
 }
+OBJECT_METHOD3(World, animation, Animation*, const char*, const char*, const char*);
+
+Sound* World::get_sound(const char* name, float scale) {
+  return universe->sound.get_sync(name, scale);
+}
+OBJECT_METHOD2(World, get_sound, Sound*, const char*, float);
+
+AudioHandle* World::play_sound(Sound* sound, int channel) {
+  return universe->play_sound(sound, channel);
+}
+OBJECT_METHOD2(World, play_sound, AudioHandle*, Sound*, int);
+
+AudioHandle* World::stream_sound(const char* sound, long start_sample) {
+  return universe->stream_sound(sound, start_sample);
+}
+OBJECT_METHOD2(World, stream_sound, AudioHandle*, const char*, long);
+
+AudioHandle* World::sound_handle(long handle_name) {
+  return universe->sound_handle(handle_name);
+}
+OBJECT_METHOD1(World, sound_handle, AudioHandle*, long);
+
+long World::current_sample() const {
+  return audio_current_sample();
+}
+OBJECT_METHOD0(World, current_sample, long);
 
 void World::set_time_scale(float scale) {
   clock->time_scale = scale;

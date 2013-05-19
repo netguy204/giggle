@@ -159,12 +159,13 @@ class Component : public Object {
 };
 
 void LCpush_lut(lua_State *L, const char* metatable, void* ut);
+void* LCcheck_lut(lua_State *L, const char* metatable, int pos);
+
 void LCpush_entry(lua_State* L, SpriteAtlasEntry entry);
 SpriteAtlasEntry LCcheck_entry(lua_State* L, int pos);
 void LCpush_component(lua_State *L, Component *comp);
 
 void LCconfigure_object(lua_State *L, Object* obj, int pos);
-TypeInfo* LCcheck_type(lua_State *L, int pos);
 
 class Fixture {
  public:
@@ -294,6 +295,9 @@ class GO : public Object {
   void apply_impulse(Vector imp);
   void apply_angular_impulse(float angimp);
   void apply_torque(float torque);
+  void apply_force(Vector force);
+  float mass();
+  float inertia();
 
   Component* find_component(const TypeInfo* info, Component* last);
   void print_description();
@@ -314,8 +318,6 @@ class GO : public Object {
   int delete_me;
 };
 
-void LCpush_go(lua_State *L, GO* go);
-GO* LCcheck_go(lua_State *L, int pos);
 void LCpush_vector(lua_State *L, Vector vector);
 
 typedef std::map<const char*, SpriteAtlas, cmp_str> NameToAtlas;
@@ -372,7 +374,13 @@ class World : public Object {
 
   SpriteAtlas atlas(const char* atlas);
   SpriteAtlasEntry atlas_entry(const char* atlas, const char* entry);
-  Animation* animation(const char* scml, SpriteAtlas atlas, const char* anim);
+  Animation* animation(const char* scml, const char* atlas, const char* anim);
+
+  Sound* get_sound(const char* name, float scale);
+  AudioHandle* play_sound(Sound* sound, int channel);
+  AudioHandle* stream_sound(const char* name, long start_time);
+  AudioHandle* sound_handle(long handle_name);
+  long current_sample() const;
 
   void broadcast_message(GO* go, float radius, int kind, const char* content, size_t nbytes);
   GO* next_in_cone(GO* last, Rect bounds, Cone* cone);
@@ -413,8 +421,6 @@ class World : public Object {
   DLL_DECLARE(Component, world_node) components;
 };
 
-int LCpush_world(lua_State *L, World* world);
-
 class WorldPipelineDelegate : public PipelineElement {
  public:
   WorldPipelineDelegate(World* world);
@@ -452,9 +458,6 @@ class Universe : public Object {
   NameToEntity name_to_entity;
   LongToHandle long_to_handle;
 };
-
-Universe* LCcheck_universe(lua_State *L, int pos);
-void LCpush_universe(lua_State *L, Universe* universe);
 
 template <typename Func>
 class WorldCallback : public b2QueryCallback {
@@ -505,6 +508,55 @@ void LCpush_color(lua_State *L, Color *c);
 void LCcheck_color(lua_State *L, int pos, Color *c);
 
 template<>
+inline void LCpush<GO*>(lua_State* L, GO* go) {
+  LCpush_lut(L, LUT_GO, go);
+}
+
+template<>
+inline void LCcheck<GO*>(lua_State* L, GO** go, int pos) {
+  *go = (GO*)LCcheck_lut(L, LUT_GO, pos);
+}
+
+template<>
+inline void LCpush<Component*>(lua_State* L, Component* comp) {
+  LCpush_lut(L, LUT_COMPONENT, comp);
+}
+
+template<>
+inline void LCcheck<Component*>(lua_State* L, Component** comp, int pos) {
+  *comp = (Component*)LCcheck_lut(L, LUT_COMPONENT, pos);
+}
+
+template<>
+inline void LCcheck<TypeInfo*>(lua_State* L, TypeInfo** type, int pos) {
+  const char* name = luaL_checkstring(L, pos);
+  *type = TypeRegistry::instance().find_type(name);
+  if(*type == NULL) {
+    luaL_error(L, "`%s' does not name a registered type", name);
+  }
+}
+
+template<>
+inline void LCpush<World*>(lua_State* L, World* world) {
+  LCpush_lut(L, LUT_WORLD, world);
+}
+
+template<>
+inline void LCcheck<World*>(lua_State* L, World** world, int pos) {
+  *world = (World*)LCcheck_lut(L, LUT_WORLD, pos);
+}
+
+template<>
+inline void LCpush<Universe*>(lua_State* L, Universe* universe) {
+  LCpush_lut(L, LUT_UNIVERSE, universe);
+}
+
+template<>
+inline void LCcheck<Universe*>(lua_State* L, Universe** universe, int pos) {
+  *universe = (Universe*)LCcheck_lut(L, LUT_UNIVERSE, pos);
+}
+
+template<>
 inline void LCpush<Animation*>(lua_State* L, Animation* anim) {
   LCpush_animation(L, anim);
 }
@@ -512,6 +564,50 @@ inline void LCpush<Animation*>(lua_State* L, Animation* anim) {
 template<>
 inline void LCcheck<Animation*>(lua_State* L, Animation** anim, int pos) {
   *anim = LCcheck_animation(L, pos);
+}
+
+template<>
+inline void LCpush<Message*>(lua_State* L, Message* msg) {
+  lua_newtable(L);
+  LCpush(L, msg->source);
+  lua_setfield(L, -2, "source");
+  lua_pushlstring(L, msg->content, msg->nbytes);
+  lua_setfield(L, -2, "content");
+  lua_pushlightuserdata(L, msg);
+  lua_setfield(L, -2, "message");
+}
+
+template<>
+inline void LCcheck<Message*>(lua_State* L, Message** message, int pos) {
+  if(!lua_istable(L, pos)) {
+    luaL_error(L, "expected message, got non-message-table");
+  }
+  lua_getfield(L, pos, "message");
+  *message = (Message*)lua_touserdata(L, -1);
+  lua_pop(L, 1);
+  if(!*message) {
+    luaL_error(L, "`message' field of message-table was not set");
+  }
+}
+
+template<>
+inline void LCpush<SpriteAtlas>(lua_State* L, SpriteAtlas atlas) {
+  lua_pushlightuserdata(L, atlas);
+}
+
+template<>
+inline void LCcheck<SpriteAtlas>(lua_State* L, SpriteAtlas* atlas, int pos) {
+  *atlas = (SpriteAtlas)lua_touserdata(L, pos);
+}
+
+template<>
+inline void LCpush<Sound*>(lua_State* L, Sound* sound) {
+  lua_pushlightuserdata(L, sound);
+}
+
+template<>
+inline void LCcheck<Sound*>(lua_State* L, Sound** sound, int pos) {
+  *sound = (Sound*)lua_touserdata(L, pos);
 }
 
 template<>
@@ -557,6 +653,17 @@ inline void LCcheck<SpriteAtlasEntry>(lua_State* L, SpriteAtlasEntry* entry, int
 }
 
 template<>
+inline void LCpush<AudioHandle*>(lua_State* L, AudioHandle* handle) {
+  // lua owns GC for this object so we copy
+  LCpush_lut(L, LUT_AUDIOHANDLE, new AudioHandle(*handle));
+}
+
+template<>
+inline void LCcheck<AudioHandle*>(lua_State* L, AudioHandle** handle, int pos) {
+  *handle = (AudioHandle*)LCcheck_lut(L, LUT_AUDIOHANDLE, pos);
+}
+
+template<>
 inline void LCcheck<LuaThread>(lua_State* L, LuaThread* thread, int pos) {
   if(thread->state) {
     luaL_unref(L, LUA_REGISTRYINDEX, thread->refid);
@@ -584,13 +691,13 @@ inline void LCcheck<Vector_>(lua_State* L, Vector_* v, int pos) {
 }
 
 template<>
-inline void LCpush<GO*>(lua_State* L, GO* go) {
-  LCpush_go(L, go);
+inline void LCpush<Vector>(lua_State* L, Vector v) {
+  LCpush_vector(L, v);
 }
 
 template<>
-inline void LCcheck<GO*>(lua_State* L, GO** go, int pos) {
-  *go = LCcheck_go(L, pos);
+inline void LCcheck<Vector>(lua_State* L, Vector* v, int pos) {
+  LCcheck_vector(L, pos, *v);
 }
 
 template<>
@@ -717,11 +824,6 @@ inline void LCcheck<Fixture>(lua_State* L, Fixture* fixture, int pos) {
   // build the fixture
   fixture->fixture = fixture->comp->go->body->CreateFixture(&fixtureDef);
   fixture->fixture->SetUserData(fixture->comp);
-}
-
-template<>
-inline void LCpush<b2Fixture*>(lua_State* L, b2Fixture* fixture) {
-  lua_pushnil(L);
 }
 
 #endif
