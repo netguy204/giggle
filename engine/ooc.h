@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <map>
+#include <typeinfo>
 
 class Object;
 
@@ -31,13 +32,19 @@ struct cmp_str {
 };
 
 class PropertyInfo;
+class MethodInfo;
+
 typedef std::map<const char*, PropertyInfo*, cmp_str> NameToProperty;
+typedef std::map<const char*, MethodInfo*, cmp_str> NameToMethod;
 
 class TypeInfo {
 public:
   TypeInfo(const char* name, CtorFn ctor, TypeInfo* parent);
   void register_property(PropertyInfo* property);
+  void register_method(MethodInfo* method);
+
   const PropertyInfo* property(const char* name) const;
+  const MethodInfo* method(const char* name) const;
 
   const char* name() const;
   const TypeInfo* parent() const;
@@ -46,6 +53,8 @@ public:
 
 private:
   NameToProperty name_to_property;
+  NameToMethod name_to_method;
+
   const char* m_name;
   CtorFn m_ctor;
   TypeInfo* m_parent;
@@ -55,16 +64,18 @@ class PropertyType;
 
 class PropertyInfo {
  public:
-  PropertyInfo(TypeInfo* type, const char* name);
+  PropertyInfo(TypeInfo* type, const char* name, size_t size);
 
   const char* name() const;
+  size_t size() const;
 
   virtual void set_value(Object* obj, void* value) const = 0;
   virtual void get_value(Object* obj, void* value) const = 0;
+  virtual void LCset_value(Object* obj, lua_State* L,  int pos) const = 0;
   virtual void LCpush_value(Object* obj, lua_State* L) const = 0;
-  virtual void LCset_value(Object* obj, lua_State* L, int pos) const = 0;
 
   TypeInfo* m_type;
+  size_t m_size;
   const char* m_name;
 };
 
@@ -72,7 +83,7 @@ template <typename T>
 class PropertyTypeImpl : public PropertyInfo {
 public:
   PropertyTypeImpl(TypeInfo* type, const char* name, size_t offset)
-    : PropertyInfo(type, name), m_offset(offset) {
+    : PropertyInfo(type, name, sizeof(T)), m_offset(offset) {
   }
 
   virtual void set_value(Object* obj, void* value) const {
@@ -83,68 +94,44 @@ public:
     memcpy(value, (char*)obj + m_offset, sizeof(T));
   }
 
-  virtual void LCpush_value(Object* obj, lua_State* L) const {
-    luaL_error(L, "don't know how to read `%s'", name());
+  virtual void LCset_value(Object* obj, lua_State* L, int pos) const {
+    T value;
+    get_value(obj, &value);
+    LCcheck(L, &value, pos);
+    set_value(obj, &value);
   }
 
-  virtual void LCset_value(Object* obj, lua_State* L, int pos) const {
-    luaL_error(L, "don't know how to write `%s'", name());
+  virtual void LCpush_value(Object* obj, lua_State* L) const {
+    T value;
+    get_value(obj, &value);
+    LCpush(L, value);
   }
 
   size_t m_offset;
 };
 
-template<>
-inline void PropertyTypeImpl<int>::LCpush_value(Object* obj, lua_State* L) const {
-  int val;
-  get_value(obj, &val);
-  lua_pushinteger(L, val);
+template<typename T>
+inline void LCpush(lua_State* L, T value) {
+  luaL_error(L, "don't know how to push `%s'", typeid(value).name());
 }
 
-template<>
-inline void PropertyTypeImpl<int>::LCset_value(Object* obj, lua_State* L, int pos) const {
-  int val = luaL_checkinteger(L, pos);
-  set_value(obj, &val);
-}
-
-template<>
-inline void PropertyTypeImpl<long>::LCpush_value(Object* obj, lua_State* L) const {
-  long val;
-  get_value(obj, &val);
-  lua_pushinteger(L, val);
-}
-
-template<>
-inline void PropertyTypeImpl<long>::LCset_value(Object* obj, lua_State* L, int pos) const {
-  long val = luaL_checkinteger(L, pos);
-  set_value(obj, &val);
-}
-
-template<>
-inline void PropertyTypeImpl<float>::LCpush_value(Object* obj, lua_State* L) const {
-  float val;
-  get_value(obj, &val);
-  lua_pushnumber(L, val);
-}
-
-template<>
-inline void PropertyTypeImpl<float>::LCset_value(Object* obj, lua_State* L, int pos) const {
-  float val = luaL_checknumber(L, pos);
-  set_value(obj, &val);
+template<typename T>
+inline void LCcheck(lua_State* L, T* target, int pos) {
+  luaL_error(L, "don't know how to check `%s'", typeid(target).name());
 }
 
 template <typename Sig>
 class PropertyMethodImpl;
 
 template <typename CLASS, typename T>
-class PropertyMethodImpl<void (CLASS::*)(T)> : public PropertyTypeImpl<T> {
+class PropertyMethodImpl<void (CLASS::*)(T)> : public PropertyInfo {
 public:
   typedef T (CLASS::*Getter)();
   typedef void (CLASS::*Setter)(T);
 
   PropertyMethodImpl(TypeInfo* type, const char* name,
                      Getter getter, Setter setter)
-    : PropertyTypeImpl<T>(type, name, 0), m_setter(setter), m_getter(getter) {
+    : PropertyInfo(type, name, sizeof(T)), m_setter(setter), m_getter(getter) {
   }
 
   virtual void set_value(Object* _obj, void* _value) const {
@@ -157,6 +144,19 @@ public:
     CLASS* obj = (CLASS*)_obj;
     T* value = (T*)_value;
     *value = (obj->*m_getter)();
+  }
+
+  virtual void LCset_value(Object* obj, lua_State* L, int pos) const {
+    T value;
+    get_value(obj, &value);
+    LCcheck(L, &value, pos);
+    set_value(obj, &value);
+  }
+
+  virtual void LCpush_value(Object* obj, lua_State* L) const {
+    T value;
+    get_value(obj, &value);
+    LCpush(L, value);
   }
 
   Getter m_getter;
@@ -193,6 +193,8 @@ class TypeRegistry {
   }                                                     \
   OBJECT_BIMPL(name, &pname::Type)
 
+#define STRINGIFY(name) "" ## name
+
 #define OP(name, member_name) name ## _ ## member_name ## _ ## Property
 
 #define OBJECT_PROPERTY(name, member_name)                              \
@@ -210,9 +212,84 @@ class TypeRegistry {
       &name::getter,                                                 \
       &name::setter)
 
+// Methods are added to the metatable for an object. The metatable
+// must be fully defined before it is injected into an
+// interpreter. Most init should be happening at static initialization
+// time so it shouldn't be an issue
+class MethodInfo {
+ public:
+  MethodInfo(TypeInfo* type, const char* name);
+
+  const char* name() const;
+  virtual int LCinvoke(lua_State* L, int pos) const = 0;
+
+  TypeInfo* m_type;
+  const char* m_name;
+};
+
+#define LOP(name, method_name) L ## name ## method_name
+#define LOPC(name, method_name) LCLASS ## name ## method_name
+
+#define OBJECT_METHOD1(CLASS, METHOD, RET, TYPE1)                       \
+  class LOPC(CLASS, METHOD) : public MethodInfo {                       \
+  public:                                                               \
+                                                                        \
+  LOPC(CLASS, METHOD)()                                                 \
+    : MethodInfo(&CLASS::Type, STRINGIFY(METHOD)) {                     \
+    }                                                                   \
+                                                                        \
+    virtual int LCinvoke(lua_State* L, int pos) const {                 \
+      CLASS* obj;                                                       \
+      RET r;                                                            \
+      TYPE1 t1;                                                         \
+      LCcheck(L, &obj, pos);                                            \
+      LCcheck(L, &t1, pos + 1);                                         \
+      r = obj->METHOD(t1);                                              \
+      LCpush(L, r);                                                     \
+      return 1;                                                         \
+    }                                                                   \
+  };                                                                    \
+  static LOPC(CLASS, METHOD) LOP(CLASS, METHOD);
+
+
+
 class Object {
 public:
   OBJECT_PROTO(Object);
 };
+
+
+// specialize the lua getters and setters for the primitives here
+// since we'll always need those.
+template<>
+inline void LCpush<int>(lua_State* L, int val) {
+  lua_pushinteger(L, val);
+}
+
+template<>
+inline void LCcheck(lua_State* L, int* target, int pos) {
+  *target = luaL_checkinteger(L, pos);
+}
+
+template<>
+inline void LCpush<long>(lua_State* L, long val) {
+  lua_pushinteger(L, val);
+}
+
+template<>
+inline void LCcheck<long>(lua_State* L, long* target, int pos) {
+  *target = luaL_checkinteger(L, pos);
+}
+
+template<>
+inline void LCpush<float>(lua_State* L, float val) {
+  lua_pushnumber(L, val);
+}
+
+template<>
+inline void LCcheck<float>(lua_State* L, float* target, int pos) {
+  *target = luaL_checknumber(L, pos);
+}
+
 
 #endif

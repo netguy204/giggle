@@ -25,6 +25,10 @@ void TypeInfo::register_property(PropertyInfo* property) {
   name_to_property.insert(std::make_pair(property->name(), property));
 }
 
+void TypeInfo::register_method(MethodInfo* method) {
+  name_to_method.insert(std::make_pair(method->name(), method));
+}
+
 const PropertyInfo* TypeInfo::property(const char* name) const {
   NameToProperty::const_iterator iter = name_to_property.find(name);
   if(iter == name_to_property.end()) {
@@ -53,13 +57,17 @@ bool TypeInfo::isInstanceOf(const TypeInfo* other) const {
   return parent()->isInstanceOf(other);
 }
 
-PropertyInfo::PropertyInfo(TypeInfo* type, const char* name)
-  : m_type(type), m_name(name) {
+PropertyInfo::PropertyInfo(TypeInfo* type, const char* name, size_t size)
+  : m_type(type), m_name(name), m_size(size) {
   m_type->register_property(this);
 }
 
 const char* PropertyInfo::name() const {
   return m_name;
+}
+
+size_t PropertyInfo::size() const {
+  return m_size;
 }
 
 bool cmp_str::operator()(char const *a, char const *b) const {
@@ -85,4 +93,13 @@ OBJECT_BIMPL(Object, NULL);
 
 Object* Object::CreateInstance(void* init) {
   return new Object();
+}
+
+MethodInfo::MethodInfo(TypeInfo* type, const char* name)
+  : m_type(type), m_name(name) {
+  m_type->register_method(this);
+}
+
+const char* MethodInfo::name() const {
+  return m_name;
 }

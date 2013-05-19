@@ -330,14 +330,12 @@ class PSConstantRateActivator : public ParticleActivator {
 
 // template magic to make SystemDefinition settable from lua
 template<>
-inline void PropertyTypeImpl<SystemDefinition*>::LCpush_value(Object* obj, lua_State* L) const {
-  SystemDefinition* def;
-  get_value(obj, &def);
+inline void LCpush<SystemDefinition*>(lua_State* L, SystemDefinition* def) {
   LCpush_lut(L, LUT_PSDEFINITION, def);
 }
 
 template<>
-inline void PropertyTypeImpl<SystemDefinition*>::LCset_value(Object* obj, lua_State* L, int pos) const {
+inline void LCcheck<SystemDefinition*>(lua_State* L, SystemDefinition** def, int pos) {
   if(!lua_istable(L, pos)) {
     luaL_error(L, "position %d does not contain a sysdef table", pos);
   }
@@ -348,13 +346,11 @@ inline void PropertyTypeImpl<SystemDefinition*>::LCset_value(Object* obj, lua_St
   lua_pop(L, 1);
 
   // delete the old system if there is one
-  SystemDefinition* def;
-  get_value(obj, &def);
-  if(def) {
-    delete def;
+  if(*def) {
+    delete *def;
   }
 
-  def = new SystemDefinition(n);
+  *def = new SystemDefinition(n);
 
   // renderer
   lua_getfield(L, pos, "renderer");
@@ -363,7 +359,7 @@ inline void PropertyTypeImpl<SystemDefinition*>::LCset_value(Object* obj, lua_St
   }
   lua_getfield(L, -1, "name");
   TypeInfo* type = LCcheck_type(L, -1);
-  Renderable *renderer = def->set_renderer(type);
+  Renderable *renderer = (*def)->set_renderer(type);
   lua_pop(L, 1);
 
   lua_getfield(L, -1, "params");
@@ -379,7 +375,7 @@ inline void PropertyTypeImpl<SystemDefinition*>::LCset_value(Object* obj, lua_St
   if(lua_istable(L, -1)) {
     lua_getfield(L, -1, "name");
     type = LCcheck_type(L, -1);
-    ParticleActivator *activator = def->set_activator(type);
+    ParticleActivator *activator = (*def)->set_activator(type);
     lua_pop(L, 1);
 
     lua_getfield(L, -1, "params");
@@ -393,7 +389,7 @@ inline void PropertyTypeImpl<SystemDefinition*>::LCset_value(Object* obj, lua_St
 
   lua_getfield(L, pos, "layer");
   if(!lua_isnil(L, -1)) {
-    def->layer = luaL_checknumber(L, -1);
+    (*def)->layer = luaL_checknumber(L, -1);
   }
   lua_pop(L, 1);
 
@@ -414,7 +410,7 @@ inline void PropertyTypeImpl<SystemDefinition*>::LCset_value(Object* obj, lua_St
     // create the component
     lua_getfield(L, -1, "name");
     TypeInfo* type = LCcheck_type(L, -1);
-    ParticleSystemComponent* comp = def->add_component(type);
+    ParticleSystemComponent* comp = (*def)->add_component(type);
     lua_pop(L, 1);
 
     // configure the component
@@ -431,8 +427,6 @@ inline void PropertyTypeImpl<SystemDefinition*>::LCset_value(Object* obj, lua_St
   // pop the last attempted value (a nil)
   // pop the components table
   lua_pop(L, 2);
-
-  set_value(obj, &def);
 }
 
 #endif

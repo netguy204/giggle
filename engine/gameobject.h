@@ -166,6 +166,15 @@ void LCpush_component(lua_State *L, Component *comp);
 void LCconfigure_object(lua_State *L, Object* obj, int pos);
 TypeInfo* LCcheck_type(lua_State *L, int pos);
 
+class Fixture {
+ public:
+  Fixture();
+  Fixture(Component* comp);
+
+  Component* comp;
+  b2Fixture* fixture;
+};
+
 class CCollidable : public Component {
  public:
   OBJECT_PROTO(CCollidable);
@@ -173,7 +182,7 @@ class CCollidable : public Component {
   CCollidable(void* go);
   virtual ~CCollidable();
 
-  b2Fixture* fixture;
+  Fixture fixture;
 };
 
 class CSensor : public Component {
@@ -184,7 +193,7 @@ class CSensor : public Component {
   virtual ~CSensor();
   virtual void update(float dt);
 
-  b2Fixture* fixture;
+  Fixture fixture;
   int kind;
 };
 
@@ -496,23 +505,17 @@ void LCpush_color(lua_State *L, Color *c);
 void LCcheck_color(lua_State *L, int pos, Color *c);
 
 template<>
-inline void PropertyTypeImpl<Animation*>::LCpush_value(Object* obj, lua_State* L) const {
-  Animation* anim;
-  get_value(obj, &anim);
+inline void LCpush<Animation*>(lua_State* L, Animation* anim) {
   LCpush_animation(L, anim);
 }
 
 template<>
-inline void PropertyTypeImpl<Animation*>::LCset_value(Object* obj, lua_State* L, int pos) const {
-  Animation* anim = LCcheck_animation(L, pos);
-  set_value(obj, &anim);
+inline void LCcheck<Animation*>(lua_State* L, Animation** anim, int pos) {
+  *anim = LCcheck_animation(L, pos);
 }
 
 template<>
-inline void PropertyTypeImpl<Rect_>::LCpush_value(Object* obj, lua_State* L) const {
-  Rect_ rect;
-  get_value(obj, &rect);
-
+inline void LCpush<Rect_>(lua_State* L, Rect_ rect) {
   lua_createtable(L, 4, 0);
   lua_rawseti(L, 1, rect.minx);
   lua_rawseti(L, 2, rect.miny);
@@ -521,124 +524,99 @@ inline void PropertyTypeImpl<Rect_>::LCpush_value(Object* obj, lua_State* L) con
 }
 
 template<>
-inline void PropertyTypeImpl<Rect_>::LCset_value(Object* obj, lua_State* L, int pos) const {
-  Rect_ rect;
-
+inline void LCcheck<Rect_>(lua_State* L, Rect_* rect, int pos) {
   if(!lua_istable(L, pos)) {
     luaL_error(L, "position %d does not contain a rect table", pos);
   }
 
   lua_rawgeti(L, pos, 1);
-  rect.minx = luaL_checknumber(L, -1);
+  rect->minx = luaL_checknumber(L, -1);
   lua_pop(L, 1);
 
   lua_rawgeti(L, pos, 2);
-  rect.miny = luaL_checknumber(L, -1);
+  rect->miny = luaL_checknumber(L, -1);
   lua_pop(L, 1);
 
   lua_rawgeti(L, pos, 3);
-  rect.maxx = luaL_checknumber(L, -1);
+  rect->maxx = luaL_checknumber(L, -1);
   lua_pop(L, 1);
 
   lua_rawgeti(L, pos, 4);
-  rect.maxy = luaL_checknumber(L, -1);
+  rect->maxy = luaL_checknumber(L, -1);
   lua_pop(L, 1);
-
-  set_value(obj, &rect);
 }
 
 template<>
-inline void PropertyTypeImpl<SpriteAtlasEntry>::LCpush_value(Object* obj, lua_State* L) const {
-  SpriteAtlasEntry entry;
-  get_value(obj, &entry);
+inline void LCpush<SpriteAtlasEntry>(lua_State* L, SpriteAtlasEntry entry) {
   LCpush_entry(L, entry);
 }
 
 template<>
-inline void PropertyTypeImpl<SpriteAtlasEntry>::LCset_value(Object* obj, lua_State* L, int pos) const {
-  SpriteAtlasEntry entry = LCcheck_entry(L, pos);
-  set_value(obj, &entry);
+inline void LCcheck<SpriteAtlasEntry>(lua_State* L, SpriteAtlasEntry* entry, int pos) {
+  *entry = LCcheck_entry(L, pos);
 }
 
 template<>
-inline void PropertyTypeImpl<lua_State*>::LCset_value(Object* obj, lua_State* L, int pos) const {
-  lua_State* state = lua_tothread(L, pos);
-  if(!state) {
+inline void LCcheck<LuaThread>(lua_State* L, LuaThread* thread, int pos) {
+  if(thread->state) {
+    luaL_unref(L, LUA_REGISTRYINDEX, thread->refid);
+    thread->state = NULL;
+  }
+
+  thread->state = lua_tothread(L, pos);
+  if(!thread->state) {
     luaL_error(L, "position %d does not contain a thread", pos);
   }
 
-  // special arrangement with our possible set_value client says that
-  // we leave the refid on the thread's stack (and clean it off in
-  // case it's a trivial client... which will leak since it can't
-  // un-retain the thread)
   lua_pushvalue(L, pos);
-  int refid = luaL_ref(L, LUA_REGISTRYINDEX);
-  lua_pushinteger(state, refid);
-  set_value(obj, &state);
-  lua_pop(state, 1);
+  thread->refid = luaL_ref(L, LUA_REGISTRYINDEX);
+  thread->is_initialized = 0;
 }
 
 template<>
-inline void PropertyTypeImpl<Vector_>::LCpush_value(Object* obj, lua_State* L) const {
-  Vector_ v;
-  get_value(obj, &v);
+inline void LCpush<Vector_>(lua_State* L, Vector_ v) {
   LCpush_vector(L, &v);
 }
 
 template<>
-inline void PropertyTypeImpl<Vector_>::LCset_value(Object* obj, lua_State* L, int pos) const {
-  Vector_ v;
-  LCcheck_vector(L, pos, &v);
-  set_value(obj, &v);
+inline void LCcheck<Vector_>(lua_State* L, Vector_* v, int pos) {
+  LCcheck_vector(L, pos, v);
 }
 
 template<>
-inline void PropertyTypeImpl<GO*>::LCpush_value(Object* obj, lua_State* L) const {
-  GO* go;
-  get_value(obj, &go);
+inline void LCpush<GO*>(lua_State* L, GO* go) {
   LCpush_go(L, go);
 }
 
 template<>
-inline void PropertyTypeImpl<GO*>::LCset_value(Object* obj, lua_State* L, int pos) const {
-  GO* go = LCcheck_go(L, pos);
-  set_value(obj, &go);
+inline void LCcheck<GO*>(lua_State* L, GO** go, int pos) {
+  *go = LCcheck_go(L, pos);
 }
 
 template<>
-inline void PropertyTypeImpl<LString*>::LCpush_value(Object* obj, lua_State* L) const {
-  LString* str;
-  get_value(obj, &str);
+inline void LCpush<LString*>(lua_State* L, LString* str) {
   LCpush_lstring(L, str);
 }
 
 
 template<>
-inline void PropertyTypeImpl<LString*>::LCset_value(Object* obj, lua_State* L, int pos) const {
-  LString* str = LCcheck_lstring(L, pos);
-
-  LString* current;
-  get_value(obj, &current);
-  if(current) {
-    free_lstring(current);
+inline void LCcheck<LString*>(lua_State* L, LString** str, int pos) {
+  if(*str) {
+    free_lstring(*str);
   }
 
-  set_value(obj, &str);
+  *str = LCcheck_lstring(L, pos);
 }
 
 template<>
-inline void PropertyTypeImpl<Color>::LCpush_value(Object* obj, lua_State* L) const {
-  Color c;
-  get_value(obj, &c);
+inline void LCpush<Color>(lua_State* L, Color c) {
   LCpush_color(L, &c);
 }
 
 
 template<>
-inline void PropertyTypeImpl<Color>::LCset_value(Object* obj, lua_State* L, int pos) const {
-  Color c;
-  LCcheck_color(L, pos, &c);
-  set_value(obj, &c);
+inline void LCcheck<Color>(lua_State* L, Color* c, int pos) {
+  LCcheck_color(L, pos, c);
 }
 
 #define OPT_PARM(pos, name, fetch)              \
@@ -651,12 +629,9 @@ inline void PropertyTypeImpl<Color>::LCset_value(Object* obj, lua_State* L, int 
   } while(0)
 
 template<>
-inline void PropertyTypeImpl<b2Fixture*>::LCset_value(Object* obj, lua_State* L, int pos) const {
-  b2Fixture* fixture;
-  get_value(obj, &fixture);
-
-  if(fixture) {
-    fixture->GetBody()->DestroyFixture(fixture);
+inline void LCcheck<Fixture>(lua_State* L, Fixture* fixture, int pos) {
+  if(fixture->fixture) {
+    fixture->fixture->GetBody()->DestroyFixture(fixture->fixture);
   }
 
   if(!lua_istable(L, pos)) {
@@ -739,22 +714,13 @@ inline void PropertyTypeImpl<b2Fixture*>::LCset_value(Object* obj, lua_State* L,
     luaL_error(L, "fixture type `%s' is not recognized", type);
   }
 
-  // break in... steal the GO
-  if(!obj->typeinfo()->isInstanceOf(&Component::Type)) {
-    fail_exit("bad programmer... made a wrong assumption");
-  }
-
-  Component* comp = (Component*)obj;
-  GO* go = comp->go;
-
   // build the fixture
-  fixture = go->body->CreateFixture(&fixtureDef);
-  fixture->SetUserData(obj);
-  set_value(obj, &fixture);
+  fixture->fixture = fixture->comp->go->body->CreateFixture(&fixtureDef);
+  fixture->fixture->SetUserData(fixture->comp);
 }
 
 template<>
-inline void PropertyTypeImpl<b2Fixture*>::LCpush_value(Object* obj, lua_State* L) const {
+inline void LCpush<b2Fixture*>(lua_State* L, b2Fixture* fixture) {
   lua_pushnil(L);
 }
 

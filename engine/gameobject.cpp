@@ -542,16 +542,24 @@ void Component::update(float dt) {
 void Component::messages_received() {
 }
 
+Fixture::Fixture()
+  : comp(NULL), fixture(NULL) {
+}
+
+Fixture::Fixture(Component* comp)
+  : comp(comp), fixture(NULL) {
+}
+
 OBJECT_IMPL(CCollidable, Component);
 OBJECT_PROPERTY(CCollidable, fixture);
 
 CCollidable::CCollidable(void* go)
-  : Component((GO*)go, PRIORITY_LEAST), fixture(NULL) {
+  : Component((GO*)go, PRIORITY_LEAST), fixture(this) {
 }
 
 CCollidable::~CCollidable() {
-  if(fixture) {
-    go->body->DestroyFixture(fixture);
+  if(fixture.fixture) {
+    go->body->DestroyFixture(fixture.fixture);
   }
 }
 
@@ -561,11 +569,13 @@ OBJECT_PROPERTY(CSensor, kind);
 
 CSensor::CSensor(void* _go)
   : Component((GO*)_go, PRIORITY_THINK), kind(MESSAGE_COLLIDING),
-    fixture(NULL) {
+    fixture(this) {
 }
 
 CSensor::~CSensor() {
-  go->body->DestroyFixture(fixture);
+  if(fixture.fixture) {
+    go->body->DestroyFixture(fixture.fixture);
+  }
 }
 
 void CSensor::update(float dt) {
@@ -574,9 +584,9 @@ void CSensor::update(float dt) {
   while(node) {
     if(node->contact->IsTouching()) {
       GO* other = NULL;
-      if(node->contact->GetFixtureA() == fixture) {
+      if(node->contact->GetFixtureA() == fixture.fixture) {
         other = (GO*)node->contact->GetFixtureB()->GetBody()->GetUserData();
-      } else if(node->contact->GetFixtureB() == fixture) {
+      } else if(node->contact->GetFixtureB() == fixture.fixture) {
         other = (GO*)node->contact->GetFixtureA()->GetBody()->GetUserData();
       }
 
@@ -593,8 +603,8 @@ LuaThread::LuaThread()
 }
 
 OBJECT_IMPL(CScripted, Component);
-OBJECT_ACCESSOR(CScripted, update_thread, get_update_thread, set_update_thread);
-OBJECT_ACCESSOR(CScripted, message_thread, get_message_thread, set_message_thread);
+OBJECT_PROPERTY(CScripted, update_thread);
+OBJECT_PROPERTY(CScripted, message_thread);
 
 CScripted::CScripted(void* go)
   : Component((GO*)go, PRIORITY_ACT) {
@@ -606,6 +616,12 @@ CScripted::~CScripted() {
   free_thread(&update_thread);
   free_thread(&message_thread);
 }
+void CScripted::free_thread(LuaThread* thread) {
+  if(thread->state) {
+    luaL_unref(thread->state, LUA_REGISTRYINDEX, thread->refid);
+    thread->state = NULL;
+  }
+}
 
 void CScripted::init() {
   if(!update_thread.state && !message_thread.state) {
@@ -616,43 +632,6 @@ void CScripted::init() {
 
   step_thread(&update_thread);
   step_thread(&message_thread);
-}
-
-void CScripted::free_thread(LuaThread* thread) {
-  if(thread->state) {
-    luaL_unref(thread->state, LUA_REGISTRYINDEX, thread->refid);
-    thread->state = NULL;
-  }
-}
-
-void CScripted::set_thread(LuaThread* target, lua_State* thread) {
-  // release old reference
-  if(target->state) {
-    luaL_unref(target->state, LUA_REGISTRYINDEX, target->refid);
-  }
-
-  // our special arrangement with LCset_value
-  // ensures that the top of the lua thread stack contains the thread's
-  // refid
-  target->state = thread;
-  target->refid = lua_tointeger(thread, -1);
-  target->is_initialized = 0;
-}
-
-void CScripted::set_update_thread(lua_State* thread) {
-  set_thread(&update_thread, thread);
-}
-
-void CScripted::set_message_thread(lua_State* thread) {
-  set_thread(&message_thread, thread);
-}
-
-lua_State* CScripted::get_update_thread() {
-  return NULL;
-}
-
-lua_State* CScripted::get_message_thread() {
-  return NULL;
 }
 
 void CScripted::step_thread(LuaThread* thread) {
@@ -1125,6 +1104,7 @@ void LCconfigure_object(lua_State *L, Object* obj, int pos) {
       luaL_error(L, "`%s' does not name a property of `%s'",
                  pname, type->name());
     }
+
     prop->LCset_value(obj, L, -1);
     lua_pop(L, 1); // pop the value, leave the key
   }
