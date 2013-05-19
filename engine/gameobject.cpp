@@ -1167,11 +1167,18 @@ void LClink_metatable(lua_State *L, const char* name, const luaL_Reg* table) {
     {"__index", Lobject_index},
     {NULL, NULL}};
 
+  static const luaL_Reg defaults_m[] = {
+    {"__tostring", Lobject_tostring},
+    {"__eq", Lobject_eq},
+    {"key", Lobject_key},
+    {NULL, NULL}};
+
   luaL_newmetatable(L, name);
   lua_pushstring(L, "__index");
   lua_pushvalue(L, -2);
   lua_settable(L, -3);
-  luaL_setfuncs(L, table, 0);
+  luaL_setfuncs(L, defaults_m, 0);
+  if(table) luaL_setfuncs(L, table, 0);
 
   lua_newtable(L);
   luaL_setfuncs(L, object_m, 0);
@@ -1205,9 +1212,6 @@ void init_lua(World* world) {
     {"set_keybinding", Lworld_set_keybinding},
     {"set_sibinding", Lworld_set_sibinding},
     {"create_joint", Lworld_create_joint},
-    {"__tostring", Lobject_tostring},
-    {"__eq", Lobject_eq},
-    {"key", Lobject_key},
     {NULL, NULL}};
 
   LClink_metatable(L, LUT_WORLD, world_m);
@@ -1218,51 +1222,18 @@ void init_lua(World* world) {
     {"create_message", Lgo_create_message},
     {"broadcast_message", Lgo_broadcast_message},
     {"contacts", Lgo_contacts},
-    {"__tostring", Lobject_tostring},
-    {"__eq", Lobject_eq},
-    {"key", Lobject_key},
     {NULL, NULL}};
 
   LClink_metatable(L, LUT_GO, go_m);
 
-  static const luaL_Reg universe_m[] = {
-    {"__tostring", Lobject_tostring},
-    {"__eq", Lobject_eq},
-    {"key", Lobject_key},
-    {NULL, NULL}};
-
-  LClink_metatable(L, LUT_UNIVERSE, universe_m);
-
-  static const luaL_Reg component_m[] = {
-    {"__tostring", Lobject_tostring},
-    {"__eq", Lobject_eq},
-    {"key", Lobject_key},
-    {NULL, NULL}};
-
-  LClink_metatable(L, LUT_COMPONENT, component_m);
-
-  static const luaL_Reg psdef_m[] = {
-    {"__tostring", Lobject_tostring},
-    {"__eq", Lobject_eq},
-    {"key", Lobject_key},
-    {NULL, NULL}};
-
-  LClink_metatable(L, LUT_PSDEFINITION, psdef_m);
-
-  static const luaL_Reg pscomp_m[] = {
-    {"__tostring", Lobject_tostring},
-    {"__eq", Lobject_eq},
-    {"key", Lobject_key},
-    {NULL, NULL}};
-
-  LClink_metatable(L, LUT_PSCOMPONENT, psdef_m);
+  LClink_metatable(L, LUT_UNIVERSE, NULL);
+  LClink_metatable(L, LUT_COMPONENT, NULL);
+  LClink_metatable(L, LUT_PSDEFINITION, NULL);
+  LClink_metatable(L, LUT_PSCOMPONENT, NULL);
 
   static const luaL_Reg audiohandle_m[] = {
     {"terminate", Laudiohandle_terminate},
     {"__gc", Laudiohandle_gc},
-    {"__tostring", Lobject_tostring},
-    {"__eq", Lobject_eq},
-    {"key", Lobject_key},
     {NULL, NULL}};
 
   LClink_metatable(L, LUT_AUDIOHANDLE, audiohandle_m);
@@ -1271,9 +1242,6 @@ void init_lua(World* world) {
     {"__gc", Ljoint_gc},
     {"limit", Ljoint_limit},
     {"destroy", Ljoint_destroy},
-    {"__tostring", Lobject_tostring},
-    {"__eq", Lobject_eq},
-    {"key", Lobject_key},
     {NULL, NULL}};
 
   LClink_metatable(L, LUT_JOINT, joint_m);

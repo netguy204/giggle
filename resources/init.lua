@@ -346,7 +346,6 @@ end
 function game()
    --debugging collisions
    --MouseEnemy(world:create_go(), 1, 32, 32)
-
    local flash_red = {0.8, 0.0, 0.0, 0.6}
    local flash_off = {0.0, 0.0, 0.0, 0.0}
    local camera = Camera(world:create_go(), screen_width, screen_height)
