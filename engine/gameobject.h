@@ -354,6 +354,24 @@ class LuaSIBinding : public SpatialInputBinding {
   SpatialInputNumber keyn;
 };
 
+class RevJoint : public Object {
+public:
+  OBJECT_PROTO(RevJoint);
+
+  RevJoint(void* _joint);
+
+  float lower_limit();
+  float upper_limit();
+
+  void set_lower_limit(float val);
+  void set_upper_limit(float val);
+  void limit(float lower, float upper);
+  void destroy();
+
+  b2RevoluteJoint* joint;
+  World* world;
+};
+
 class World : public Object {
  public:
   OBJECT_PROTO(World);
@@ -383,6 +401,8 @@ class World : public Object {
   void set_gravity(Vector_ vector);
   Vector_ get_gravity();
   GO* create_go();
+
+  RevJoint* create_joint(GO* ga, Vector la, GO* gb, Vector lb);
 
   GO* camera;
   GO* stage;
@@ -542,6 +562,16 @@ inline void LCpush<Universe*>(lua_State* L, Universe* universe) {
 template<>
 inline void LCcheck<Universe*>(lua_State* L, Universe** universe, int pos) {
   *universe = (Universe*)LCcheck_lut(L, LUT_UNIVERSE, pos);
+}
+
+template<>
+inline void LCpush<RevJoint*>(lua_State* L, RevJoint* joint) {
+  LCpush_lut(L, LUT_JOINT, joint);
+}
+
+template<>
+inline void LCcheck<RevJoint*>(lua_State* L, RevJoint** joint, int pos) {
+  *joint = (RevJoint*)LCcheck_lut(L, LUT_JOINT, pos);
 }
 
 template<>

@@ -735,87 +735,44 @@ static int Lworld_set_sibinding(lua_State *L) {
   return 1;
 }
 
-class RevJoint : public Object {
-public:
-  OBJECT_PROTO(RevJoint);
-  RevJoint(void* _joint) {
-    joint = (b2RevoluteJoint*)_joint;
-  }
-
-  float lower_limit() {
-    return joint->GetLowerLimit();
-  }
-
-  void set_lower_limit(float val) {
-    joint->SetLimits(val, joint->GetUpperLimit());
-  }
-
-  float upper_limit() {
-    return joint->GetUpperLimit();
-  }
-
-  void set_upper_limit(float val) {
-    joint->SetLimits(joint->GetLowerLimit(), val);
-  }
-
-  b2RevoluteJoint* joint;
-  World* world;
-};
-
 OBJECT_IMPL(RevJoint, Object);
 OBJECT_ACCESSOR(RevJoint, lower_limit, lower_limit, set_lower_limit);
 OBJECT_ACCESSOR(RevJoint, upper_limit, upper_limit, set_upper_limit);
 
-int Ljoint_limit(lua_State* L) {
-  RevJoint* joint = (RevJoint*)LCcheck_lut(L, LUT_JOINT, 1);
-  float limit1 = luaL_checknumber(L, 2);
-  float limit2 = luaL_checknumber(L, 3);
-  joint->joint->SetLimits(limit1, limit2);
-  return 0;
+RevJoint::RevJoint(void* _joint) {
+  joint = (b2RevoluteJoint*)_joint;
 }
+
+float RevJoint::lower_limit() {
+  return joint->GetLowerLimit();
+}
+
+void RevJoint::set_lower_limit(float val) {
+  joint->SetLimits(val, joint->GetUpperLimit());
+}
+
+float RevJoint::upper_limit() {
+  return joint->GetUpperLimit();
+}
+
+void RevJoint::set_upper_limit(float val) {
+  joint->SetLimits(joint->GetLowerLimit(), val);
+}
+
+void RevJoint::limit(float lower, float upper) {
+  joint->SetLimits(lower, upper);
+}
+OBJECT_VMETHOD2(RevJoint, limit, float, float);
+
+void RevJoint::destroy() {
+  world->bWorld.DestroyJoint(joint);
+}
+OBJECT_VMETHOD0(RevJoint, destroy);
 
 int Ljoint_gc(lua_State* L) {
   RevJoint* joint = (RevJoint*)LCcheck_lut(L, LUT_JOINT, 1);
   delete joint;
   return 0;
-}
-
-int Ljoint_destroy(lua_State* L) {
-  RevJoint* joint = (RevJoint*)LCcheck_lut(L, LUT_JOINT, 1);
-  joint->world->bWorld.DestroyJoint(joint->joint);
-  return 0;
-}
-
-static int Lworld_create_joint(lua_State *L) {
-  Vector_ la, lb;
-
-  World* world;
-  GO* ga;
-  GO* gb;
-  LCcheck(L, &world, 1);
-  LCcheck(L, &ga, 2);
-  LCcheck(L, &la, 3);
-  LCcheck(L, &gb, 4);
-  LCcheck(L, &lb, 5);
-
-  b2RevoluteJoint *joint;
-
-  //car class constructor
-  b2RevoluteJointDef jointDef;
-  jointDef.bodyA = ga->body;
-  jointDef.enableLimit = true;
-  jointDef.lowerAngle = 0;//with both these at zero...
-  jointDef.upperAngle = 0;//...the joint will not move
-  jointDef.localAnchorA.Set(la.x / BSCALE, la.y / BSCALE);
-
-  jointDef.bodyB = gb->body;
-  jointDef.localAnchorB.Set(lb.x / BSCALE, lb.y / BSCALE);
-
-  joint = (b2RevoluteJoint*)world->bWorld.CreateJoint( &jointDef );
-  RevJoint* rj = new RevJoint(joint);
-  rj->world = world;
-  LCpush_lut(L, LUT_JOINT, rj);
-  return 1;
 }
 
 // world, center, last_go, look angle, cone angle
@@ -1109,7 +1066,6 @@ void init_lua(World* world) {
     {"next_in_cone", Lworld_next_in_cone},
     {"set_keybinding", Lworld_set_keybinding},
     {"set_sibinding", Lworld_set_sibinding},
-    {"create_joint", Lworld_create_joint},
     {NULL, NULL}};
 
   LClink_metatable(L, LUT_WORLD, world_m);
@@ -1138,8 +1094,6 @@ void init_lua(World* world) {
 
   static const luaL_Reg joint_m[] = {
     {"__gc", Ljoint_gc},
-    {"limit", Ljoint_limit},
-    {"destroy", Ljoint_destroy},
     {NULL, NULL}};
 
   LClink_metatable(L, LUT_JOINT, joint_m);
@@ -1288,6 +1242,27 @@ GO* World::create_go() {
   return go;
 }
 OBJECT_METHOD0(World, create_go, GO*);
+
+RevJoint* World::create_joint(GO* ga, Vector la, GO* gb, Vector lb) {
+  b2RevoluteJoint *joint;
+
+  //car class constructor
+  b2RevoluteJointDef jointDef;
+  jointDef.bodyA = ga->body;
+  jointDef.enableLimit = true;
+  jointDef.lowerAngle = 0;//with both these at zero...
+  jointDef.upperAngle = 0;//...the joint will not move
+  jointDef.localAnchorA.Set(la->x / BSCALE, la->y / BSCALE);
+
+  jointDef.bodyB = gb->body;
+  jointDef.localAnchorB.Set(lb->x / BSCALE, lb->y / BSCALE);
+
+  joint = (b2RevoluteJoint*)bWorld.CreateJoint( &jointDef );
+  RevJoint* rj = new RevJoint(joint);
+  rj->world = this;
+  return rj;
+}
+OBJECT_METHOD4(World, create_joint, RevJoint*, GO*, Vector, GO*, Vector);
 
 SpriteAtlas World::atlas(const char* atlas) {
   return universe->atlas(atlas);

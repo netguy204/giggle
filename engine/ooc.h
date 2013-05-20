@@ -254,6 +254,14 @@ class MethodInfo {
     return 1;                                                           \
   }
 
+#define OBJECT_VMETHOD0(CLASS, METHOD)                                  \
+  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
+    CLASS* obj;                                                         \
+    LCcheck(L, &obj, pos);                                              \
+    obj->METHOD();                                                      \
+    return 1;                                                           \
+  }
+
 #define OBJECT_METHOD1(CLASS, METHOD, RET, TYPE1)                       \
   OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
     CLASS* obj;                                                         \
@@ -290,6 +298,18 @@ class MethodInfo {
     return 1;                                                           \
   }
 
+#define OBJECT_VMETHOD2(CLASS, METHOD, TYPE1, TYPE2)                    \
+  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
+    CLASS* obj;                                                         \
+    TYPE1 t1;                                                           \
+    TYPE2 t2;                                                           \
+    LCcheck(L, &obj, pos);                                              \
+    LCcheck(L, &t1, pos + 1);                                           \
+    LCcheck(L, &t2, pos + 2);                                           \
+    obj->METHOD(t1, t2);                                                \
+    return 0;                                                           \
+  }
+
 #define OBJECT_METHOD3(CLASS, METHOD, RET, TYPE1, TYPE2, TYPE3)         \
   OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
     CLASS* obj;                                                         \
@@ -302,6 +322,24 @@ class MethodInfo {
     LCcheck(L, &t2, pos + 2);                                           \
     LCcheck(L, &t3, pos + 3);                                           \
     r = obj->METHOD(t1, t2, t3);                                        \
+    LCpush(L, r);                                                       \
+    return 1;                                                           \
+  }
+
+#define OBJECT_METHOD4(CLASS, METHOD, RET, TYPE1, TYPE2, TYPE3, TYPE4)  \
+  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
+    CLASS* obj;                                                         \
+    RET r;                                                              \
+    TYPE1 t1;                                                           \
+    TYPE2 t2;                                                           \
+    TYPE3 t3;                                                           \
+    TYPE4 t4;                                                           \
+    LCcheck(L, &obj, pos);                                              \
+    LCcheck(L, &t1, pos + 1);                                           \
+    LCcheck(L, &t2, pos + 2);                                           \
+    LCcheck(L, &t3, pos + 3);                                           \
+    LCcheck(L, &t4, pos + 4);                                           \
+    r = obj->METHOD(t1, t2, t3, t4);                                    \
     LCpush(L, r);                                                       \
     return 1;                                                           \
   }
