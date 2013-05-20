@@ -161,10 +161,6 @@ class Component : public Object {
 void LCpush_lut(lua_State *L, const char* metatable, void* ut);
 void* LCcheck_lut(lua_State *L, const char* metatable, int pos);
 
-void LCpush_entry(lua_State* L, SpriteAtlasEntry entry);
-SpriteAtlasEntry LCcheck_entry(lua_State* L, int pos);
-void LCpush_component(lua_State *L, Component *comp);
-
 void LCconfigure_object(lua_State *L, Object* obj, int pos);
 
 class Fixture {
@@ -317,8 +313,6 @@ class GO : public Object {
 
   int delete_me;
 };
-
-void LCpush_vector(lua_State *L, Vector vector);
 
 typedef std::map<const char*, SpriteAtlas, cmp_str> NameToAtlas;
 typedef std::map<const char*, Entity*, cmp_str> NameToEntity;
@@ -498,14 +492,8 @@ inline GO* Component::camera() {
 }
 
 // lua property accessors
-void LCpush_animation(lua_State *L, Animation* anim);
-Animation* LCcheck_animation(lua_State *L, int pos);
 void LCpush_vector(lua_State* L, Vector v);
 void LCcheck_vector(lua_State* L, int pos, Vector v);
-void LCpush_lstring(lua_State *L, LString* str);
-LString* LCcheck_lstring(lua_State *L, int pos);
-void LCpush_color(lua_State *L, Color *c);
-void LCcheck_color(lua_State *L, int pos, Color *c);
 
 template<>
 inline void LCpush<GO*>(lua_State* L, GO* go) {
@@ -558,12 +546,28 @@ inline void LCcheck<Universe*>(lua_State* L, Universe** universe, int pos) {
 
 template<>
 inline void LCpush<Animation*>(lua_State* L, Animation* anim) {
-  LCpush_animation(L, anim);
+  lua_newtable(L);
+  lua_pushnumber(L, anim->length_ms / 1000.0);
+  lua_setfield(L, -2, "length");
+  lua_pushboolean(L, anim->looping);
+  lua_setfield(L, -2, "looping");
+  lua_pushlightuserdata(L, anim);
+  lua_setfield(L, -2, "animation");
 }
 
 template<>
 inline void LCcheck<Animation*>(lua_State* L, Animation** anim, int pos) {
-  *anim = LCcheck_animation(L, pos);
+  if(!lua_istable(L, pos)) {
+    luaL_error(L, "no animation-table at %d", pos);
+  }
+
+  lua_getfield(L, pos, "animation");
+  *anim = (Animation*)lua_touserdata(L, -1);
+  lua_pop(L, 1);
+
+  if(!anim) {
+    luaL_error(L, "animation-table did not contain `animation' field at %d", pos);
+  }
 }
 
 template<>
@@ -644,12 +648,28 @@ inline void LCcheck<Rect_>(lua_State* L, Rect_* rect, int pos) {
 
 template<>
 inline void LCpush<SpriteAtlasEntry>(lua_State* L, SpriteAtlasEntry entry) {
-  LCpush_entry(L, entry);
+  lua_newtable(L);
+  lua_pushlightuserdata(L, entry);
+  lua_setfield(L, -2, "entry");
+  lua_pushinteger(L, entry->w);
+  lua_setfield(L, -2, "w");
+  lua_pushinteger(L, entry->h);
+  lua_setfield(L, -2, "h");
 }
 
 template<>
 inline void LCcheck<SpriteAtlasEntry>(lua_State* L, SpriteAtlasEntry* entry, int pos) {
-  *entry = LCcheck_entry(L, pos);
+  if(!lua_istable(L, pos)) {
+    luaL_error(L, "position %d does not contain a table", pos);
+  }
+
+  lua_getfield(L, pos, "entry");
+  *entry = (SpriteAtlasEntry)lua_touserdata(L, -1);
+  if(!*entry) {
+    luaL_error(L, "table at position %d does not have lightuserdata at `entry'", pos);
+  }
+
+  lua_pop(L, 1);
 }
 
 template<>
@@ -702,7 +722,11 @@ inline void LCcheck<Vector>(lua_State* L, Vector* v, int pos) {
 
 template<>
 inline void LCpush<LString*>(lua_State* L, LString* str) {
-  LCpush_lstring(L, str);
+  if(str) {
+    lua_pushlstring(L, str->str, str->length);
+  } else {
+    lua_pushnil(L);
+  }
 }
 
 
@@ -712,18 +736,49 @@ inline void LCcheck<LString*>(lua_State* L, LString** str, int pos) {
     free_lstring(*str);
   }
 
-  *str = LCcheck_lstring(L, pos);
+  size_t length;
+  const char* value = lua_tolstring(L, pos, &length);
+  *str =  malloc_lstring(value, length);
 }
 
 template<>
 inline void LCpush<Color>(lua_State* L, Color c) {
-  LCpush_color(L, &c);
-}
+  lua_createtable(L, 4, 0);
 
+  lua_pushnumber(L, c.r);
+  lua_rawseti(L, -2, 1);
+
+  lua_pushnumber(L, c.g);
+  lua_rawseti(L, -2, 2);
+
+  lua_pushnumber(L, c.b);
+  lua_rawseti(L, -2, 3);
+
+  lua_pushnumber(L, c.a);
+  lua_rawseti(L, -2, 4);
+}
 
 template<>
 inline void LCcheck<Color>(lua_State* L, Color* c, int pos) {
-  LCcheck_color(L, pos, c);
+  if(!lua_istable(L, pos)) {
+    luaL_argerror(L, pos, "`color table' expected");
+  }
+
+  lua_rawgeti(L, pos, 1);
+  c->r = luaL_checknumber(L, -1);
+  lua_pop(L, 1);
+
+  lua_rawgeti(L, pos, 2);
+  c->g = luaL_checknumber(L, -1);
+  lua_pop(L, 1);
+
+  lua_rawgeti(L, pos, 3);
+  c->b = luaL_checknumber(L, -1);
+  lua_pop(L, 1);
+
+  lua_rawgeti(L, pos, 4);
+  c->a = luaL_checknumber(L, -1);
+  lua_pop(L, 1);
 }
 
 #define OPT_PARM(pos, name, fetch)              \

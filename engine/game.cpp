@@ -41,10 +41,6 @@ WorldPipelineDelegate* world_delegate;
 Pipeline* pipeline;
 Universe* universe;
 
-void play_vorbis(const char* filename, float volume) {
-  audio_enqueue(new OggSampler(filename, audio_current_sample(), volume));
-}
-
 OBJECT_IMPL(CTimer, Component);
 OBJECT_PROPERTY(CTimer, time_remaining);
 OBJECT_PROPERTY(CTimer, kind);
@@ -288,7 +284,7 @@ void LCcheck_spec(lua_State* L, int pos, TileSpec spec) {
   }
 
   lua_getfield(L, pos, "image");
-  spec->image = LCcheck_entry(L, -1);
+  LCcheck(L, &spec->image, -1);
   lua_pop(L, 1);
 
   lua_getfield(L, pos, "bitmask");

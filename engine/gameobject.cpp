@@ -24,31 +24,6 @@
 #include <math.h>
 #include <Box2D/Dynamics/Joints/b2Joint.h>
 
-void LCpush_entry(lua_State* L, SpriteAtlasEntry entry) {
-  lua_newtable(L);
-  lua_pushlightuserdata(L, entry);
-  lua_setfield(L, -2, "entry");
-  lua_pushinteger(L, entry->w);
-  lua_setfield(L, -2, "w");
-  lua_pushinteger(L, entry->h);
-  lua_setfield(L, -2, "h");
-}
-
-SpriteAtlasEntry LCcheck_entry(lua_State* L, int pos) {
-  if(!lua_istable(L, pos)) {
-    luaL_error(L, "position %d does not contain a table", pos);
-  }
-
-  lua_getfield(L, pos, "entry");
-  SpriteAtlasEntry entry = (SpriteAtlasEntry)lua_touserdata(L, -1);
-  if(!entry) {
-    luaL_error(L, "table at position %d does not have lightuserdata at `entry'", pos);
-  }
-
-  lua_pop(L, 1);
-  return entry;
-}
-
 void init_lstring(LString* str, const char* data, size_t length) {
   str->length = length;
   if(data) {
@@ -71,83 +46,6 @@ LString* frame_alloc_lstring(const char* data, size_t length) {
   LString *result = (LString*)frame_alloc(sizeof(LString) + length + 1);
   init_lstring(result, data, length);
   return result;
-}
-
-void LCpush_lstring(lua_State *L, LString* str) {
-  if(str) {
-    lua_pushlstring(L, str->str, str->length);
-  } else {
-    lua_pushnil(L);
-  }
-}
-
-LString* LCcheck_lstring(lua_State *L, int pos) {
-  size_t length;
-  const char* value = lua_tolstring(L, pos, &length);
-  return malloc_lstring(value, length);
-}
-
-void LCpush_color(lua_State *L, Color *c) {
-  lua_createtable(L, 4, 0);
-
-  lua_pushnumber(L, c->r);
-  lua_rawseti(L, -2, 1);
-
-  lua_pushnumber(L, c->g);
-  lua_rawseti(L, -2, 2);
-
-  lua_pushnumber(L, c->b);
-  lua_rawseti(L, -2, 3);
-
-  lua_pushnumber(L, c->a);
-  lua_rawseti(L, -2, 4);
-}
-
-void LCcheck_color(lua_State *L, int pos, Color *c) {
-  if(!lua_istable(L, pos)) {
-    luaL_argerror(L, pos, "`color table' expected");
-  }
-
-  lua_rawgeti(L, pos, 1);
-  c->r = luaL_checknumber(L, -1);
-  lua_pop(L, 1);
-
-  lua_rawgeti(L, pos, 2);
-  c->g = luaL_checknumber(L, -1);
-  lua_pop(L, 1);
-
-  lua_rawgeti(L, pos, 3);
-  c->b = luaL_checknumber(L, -1);
-  lua_pop(L, 1);
-
-  lua_rawgeti(L, pos, 4);
-  c->a = luaL_checknumber(L, -1);
-  lua_pop(L, 1);
-}
-
-void LCpush_animation(lua_State *L, Animation* anim) {
-  lua_newtable(L);
-  lua_pushnumber(L, anim->length_ms / 1000.0);
-  lua_setfield(L, -2, "length");
-  lua_pushboolean(L, anim->looping);
-  lua_setfield(L, -2, "looping");
-  lua_pushlightuserdata(L, anim);
-  lua_setfield(L, -2, "animation");
-}
-
-Animation* LCcheck_animation(lua_State *L, int pos) {
-  if(!lua_istable(L, pos)) {
-    luaL_error(L, "no animation-table at %d", pos);
-  }
-
-  lua_getfield(L, pos, "animation");
-  Animation* anim = (Animation*)lua_touserdata(L, -1);
-  lua_pop(L, 1);
-
-  if(!anim) {
-    luaL_error(L, "animation-table did not contain `animation' field at %d", pos);
-  }
-  return anim;
 }
 
 void LCpush_vector(lua_State* L, Vector v) {
@@ -1203,7 +1101,7 @@ void init_lua(World* world) {
   luaL_openlibs(L);
   if(world->universe->lua_path) {
     lua_getglobal(L, "package");
-    LCpush_lstring(L, world->universe->lua_path);
+    LCpush(L, world->universe->lua_path);
     lua_setfield(L, -2, "path");
   }
 
