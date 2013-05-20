@@ -36,24 +36,6 @@ class ScreenSampler : public Renderable {
   Texture* texture;
 };
 
-class CrossfadeElement : public PipelineElement {
- public:
-  CrossfadeElement(World* prev, float lifetime);
-  virtual ~CrossfadeElement();
-
-  virtual void update(long delta);
-
-  World* prev_world;
-
-  ScreenSampler* sampler;
-
-  Clock clock;
-
-  float lifetime;
-  float remaining;
-  int first_time;
-};
-
 class CLeftAndRight : public Component {
  public:
   OBJECT_PROTO(CLeftAndRight);
@@ -83,7 +65,7 @@ class CTestDisplay : public Component {
 
   CTestDisplay(void* go);
 
-  virtual void update(float dt);
+  virtual void render(Camera* camera);
 
   Vector_ offset;
   Color color;
@@ -97,7 +79,7 @@ class CStaticSprite : public Component {
 
   CStaticSprite(void* go);
 
-  virtual void update(float dt);
+  virtual void render(Camera* camera);
 
   Vector_ offset;
   SpriteAtlasEntry entry;
@@ -111,7 +93,7 @@ class CColoredSprite : public CStaticSprite {
 
   CColoredSprite(void* go);
 
-  virtual void update(float dt);
+  virtual void render(Camera* camera);
 
   Color color;
   float w;
@@ -125,6 +107,7 @@ class CSpriterSprite : public Component {
   CSpriterSprite(void* go);
 
   virtual void update(float dt);
+  virtual void render(Camera* camera);
 
   Animation* animation;
   Vector_ offset;
@@ -146,7 +129,7 @@ class CDrawWallpaper : public Component {
 
   CDrawWallpaper(void* go);
 
-  virtual void update(float dt);
+  virtual void render(Camera* camera);
 
   SpriteAtlasEntry entry;
   Vector_ offset;
@@ -177,7 +160,7 @@ class CDrawTilemap : public Component {
   CDrawTilemap(void* go);
   virtual ~CDrawTilemap();
 
-  virtual void update(float dt);
+  virtual void render(Camera* camera);
 
   void set_map(TileMap map);
   TileMap get_map();
@@ -196,7 +179,7 @@ class CDrawText : public Component {
   CDrawText(void* go);
   virtual ~CDrawText();
 
-  virtual void update(float dt);
+  virtual void render(Camera* camera);
 
   Vector_ offset;
   LString* message;
@@ -211,53 +194,9 @@ class CDrawConsoleText : public CDrawText {
   OBJECT_PROTO(CDrawConsoleText);
   CDrawConsoleText(void *go);
 
-  virtual void update(float dt);
+  virtual void render(Camera* camera);
 
   float w;
-};
-
-struct PEntry {
-  Vector_ pos;
-  Vector_ vel;
-  float life;
-  float angle;
-  float dangle;
-};
-
-enum EmitterColoring {
-  COLORING_BLACKBODY,
-  COLORING_BW
-};
-
-class CParticleEmitter : public Component {
- public:
-  OBJECT_PROTO(CParticleEmitter);
-
-  CParticleEmitter(void* go);
-  virtual ~CParticleEmitter();
-  void init();
-
-  virtual void update(float dt);
-  void init_entry(PEntry* e, float life);
-
-  SpriteAtlasEntry entry;
-  Vector_ offset;
-  int nmax;
-  int active;
-  int layer;
-  int coloring;
-  float max_life;
-  float max_speed;
-  float max_angular_speed;
-  float max_offset;
-  float grav_accel;
-  float start_scale;
-  float end_scale;
-  float start_color;
-  float end_color;
-  float start_alpha;
-  float end_alpha;
-  PEntry* entries;
 };
 
 struct GradientScreenRectParams {
@@ -282,7 +221,7 @@ class CGradientScreenRect : public Component {
   CGradientScreenRect(void* go);
   virtual ~CGradientScreenRect();
 
-  virtual void update(float dt);
+  virtual void render(Camera* camera);
 
   GradientScreenRectRenderer* renderer;
 

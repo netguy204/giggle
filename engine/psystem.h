@@ -94,7 +94,7 @@ class SystemRenderer : public Renderable {
   SystemRenderer(void* empty);
 
   virtual void render(void *args);
-  virtual void submit(Scene* scene, int layer, SystemDefinition* def);
+  virtual void submit(Camera* camera, int layer, SystemDefinition* def);
 };
 
 class ParticleActivator : public ParticleSystemComponent {
@@ -122,6 +122,8 @@ class SystemDefinition : public Object {
   ParticleActivator* set_activator(TypeInfo* type);
 
   void update(float dt);
+  void render(Camera* camera);
+
   void init();
 
   float* system_featuref(ParticleFeature feature);
@@ -155,7 +157,7 @@ class P_ESSystemRenderer : public SystemRenderer {
   P_ESSystemRenderer(void* empty);
 
   virtual void render(void *args);
-  virtual void submit(Scene* scene, int layer, SystemDefinition* def);
+  virtual void submit(Camera* camera, int layer, SystemDefinition* def);
 
   SpriteAtlasEntry entry;
   float scale;
@@ -167,7 +169,7 @@ class PSC_E2SystemRenderer : public SystemRenderer {
   PSC_E2SystemRenderer(void* empty);
 
   virtual void render(void *args);
-  virtual void submit(Scene* scene, int layer, SystemDefinition* def);
+  virtual void submit(Camera* camera, int layer, SystemDefinition* def);
 
   SpriteAtlasEntry entry;
 };
@@ -189,6 +191,7 @@ class CParticleSystem : public Component {
 
   virtual void init();
   virtual void update(float dt);
+  virtual void render(Camera* camera);
 
   SystemDefinition* def;
 };

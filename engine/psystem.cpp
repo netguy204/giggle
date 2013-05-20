@@ -119,6 +119,15 @@ ParticleActivator* SystemDefinition::set_activator(TypeInfo* type) {
 }
 
 void SystemDefinition::update(float dt) {
+  initializers.foreach([](ParticleSystemInitializer* p) -> int {
+      p->initialize();
+      return 0;
+    });
+
+  if(activator->enabled) {
+    activator->activate(dt);
+  }
+
   updaters.foreach([=](ParticleSystemUpdater* p) -> int {
       p->update(dt);
       return 0;
@@ -128,17 +137,10 @@ void SystemDefinition::update(float dt) {
       p->terminateExpired();
       return 0;
     });
+}
 
-  renderer->submit(component->scene(), layer, this);
-
-  initializers.foreach([](ParticleSystemInitializer* p) -> int {
-      p->initialize();
-      return 0;
-    });
-
-  if(activator->enabled) {
-    activator->activate(dt);
-  }
+void SystemDefinition::render(Camera* camera) {
+  renderer->submit(camera, layer, this);
 }
 
 size_t SystemDefinition::features_size() {
@@ -238,7 +240,7 @@ SystemRenderer::SystemRenderer(void *empty)
 void SystemRenderer::render(void *args) {
 }
 
-void SystemRenderer::submit(Scene* scene, int layer, SystemDefinition* def) {
+void SystemRenderer::submit(Camera* camera, int layer, SystemDefinition* def) {
 }
 
 OBJECT_IMPL(ParticleActivator, ParticleSystemComponent);
@@ -266,7 +268,7 @@ struct P_ESParams {
   Vector_ positions[0];
 };
 
-void P_ESSystemRenderer::submit(Scene* scene, int layer, SystemDefinition* def) {
+void P_ESSystemRenderer::submit(Camera* camera, int layer, SystemDefinition* def) {
   P_ESParams* params = (P_ESParams*)frame_alloc(sizeof(P_ESParams) +
                                                 sizeof(Vector_) * def->n);
 
@@ -284,7 +286,7 @@ void P_ESSystemRenderer::submit(Scene* scene, int layer, SystemDefinition* def) 
     }
   }
 
-  scene->addRenderable(layer, this, params);
+  camera->addRenderable(layer, this, params);
 }
 
 void P_ESSystemRenderer::render(void *args) {
@@ -355,7 +357,7 @@ PSC_E2SystemRenderer::PSC_E2SystemRenderer(void *empty)
   : SystemRenderer(empty), entry(NULL) {
 }
 
-void PSC_E2SystemRenderer::submit(Scene* scene, int layer, SystemDefinition* def) {
+void PSC_E2SystemRenderer::submit(Camera* camera, int layer, SystemDefinition* def) {
   PSC_EParams* params = (PSC_EParams*)frame_alloc(sizeof(PSC_EParams));
 
   params->entry = entry;
@@ -370,7 +372,7 @@ void PSC_E2SystemRenderer::submit(Scene* scene, int layer, SystemDefinition* def
   memcpy(params->colors, def->system_featurec(PF_COLOR), def->n * sizeof(Color));
   memcpy(params->valids, def->system_featurech(PF_VALID), def->n * sizeof(char));
 
-  scene->addRenderable(layer, this, params);
+  camera->addRenderable(layer, this, params);
 }
 
 void PSC_E2SystemRenderer::render(void *args) {
@@ -684,6 +686,10 @@ void CParticleSystem::init() {
 
 void CParticleSystem::update(float dt) {
   def->update(dt);
+}
+
+void CParticleSystem::render(Camera* camera) {
+  def->render(camera);
 }
 
 OBJECT_IMPL(PSConstantAccelerationUpdater, ParticleSystemUpdater);

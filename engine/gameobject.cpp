@@ -74,16 +74,22 @@ void Message::operator delete(void* obj) {
   // this is because messages must be fully stack allocated
 }
 
-Scene::Scene(World* world)
-  : world(world) {
+OBJECT_IMPL(Camera, Component);
+Camera::Camera(void* _go)
+  : Component((GO*)_go, PRIORITY_SHOW) {
   memset(renderables, 0, sizeof(renderables));
   memset(baseLayers, 0, sizeof(baseLayers));
   memset(layers, 0, sizeof(layers));
   memset(particles, 0, sizeof(particles));
   memset(testRects, 0, sizeof(testRects));
+  go->world->cameras.add_head(this);
 }
 
-void Scene::addRenderable(int layer, Renderable* renderable, void* args) {
+Camera::~Camera() {
+  go->world->cameras.remove(this);
+}
+
+void Camera::addRenderable(int layer, Renderable* renderable, void* args) {
   RenderableCommand* command = (RenderableCommand*)frame_alloc(sizeof(RenderableCommand));
   command->renderable = renderable;
   command->args = args;
@@ -91,38 +97,16 @@ void Scene::addRenderable(int layer, Renderable* renderable, void* args) {
   renderables[layer] = command;
 }
 
-void Scene::addRelative(BaseSprite* list, BaseSprite sprite) {
-  sprite->displayX -= dx;
-  sprite->displayY -= dy;
-  addAbsolute(list, sprite);
-}
-
-void Scene::addAbsolute(BaseSprite* list, BaseSprite sprite) {
+void Camera::addSprite(BaseSprite* list, BaseSprite sprite) {
   sprite_append(*list, sprite);
 }
 
-void Scene::addRelative(ColoredRect* list, ColoredRect rect) {
-  rect->minx -= dx;
-  rect->maxx -= dx;
-  rect->miny -= dy;
-  rect->maxy -= dy;
-
+void Camera::addRect(ColoredRect* list, ColoredRect rect) {
   rect->next = *list;
   *list = rect;
 }
 
-void Scene::start() {
-  Vector_ cpos;
-  world->camera->pos(&cpos);
-  dx = floorf(cpos.x);
-  dy = floorf(cpos.y);
-  camera_rect.minx = dx;
-  camera_rect.miny = dy;
-  camera_rect.maxx = dx + screen_width;
-  camera_rect.maxy = dy + screen_height;
-}
-
-void Scene::enqueue() {
+void Camera::enqueue() {
   for(int ii = 0; ii < LAYER_MAX; ++ii) {
     if(renderables[ii]) {
       renderables_enqueue_for_screen(renderables[ii]);
@@ -439,6 +423,9 @@ void Component::update(float dt) {
 }
 
 void Component::messages_received() {
+}
+
+void Component::render(Camera* camera) {
 }
 
 Fixture::Fixture()
@@ -775,25 +762,6 @@ int Ljoint_gc(lua_State* L) {
   return 0;
 }
 
-// world, center, last_go, look angle, cone angle
-static int Lworld_next_in_cone(lua_State *L) {
-  Cone cone;
-
-  World* world;
-  LCcheck(L, &world, 1);
-  LCcheck_vector(L, 2, &cone.point);
-  GO* last_go;
-  LCcheck(L, &last_go, 3);
-  float angle = luaL_checknumber(L, 4);
-  cone.angle = luaL_checknumber(L, 5);
-
-  vector_for_angle(&cone.direction, angle);
-
-  GO* next_go = world->next_in_cone(last_go, &world->scene.camera_rect, &cone);
-  LCpush(L, next_go);
-  return 1;
-}
-
 static int Laudiohandle_gc(lua_State* L) {
   AudioHandle* h;
   LCcheck(L, &h, 1);
@@ -1051,6 +1019,7 @@ void init_lua(World* world) {
   world->camera_clock = clock_make();
   world->camera = world->create_go();
   world->stage = world->create_go();
+  world->stage->add_component(&Camera::Type);
 
   lua_State* L = luaL_newstate();
   world->L = L;
@@ -1063,7 +1032,6 @@ void init_lua(World* world) {
   }
 
   static const luaL_Reg world_m[] = {
-    {"next_in_cone", Lworld_next_in_cone},
     {"set_keybinding", Lworld_set_keybinding},
     {"set_sibinding", Lworld_set_sibinding},
     {NULL, NULL}};
@@ -1117,7 +1085,7 @@ void init_lua(World* world) {
 }
 
 World::World(void* _universe)
-  : L(NULL), scene(this), bWorld(b2Vec2(0, -50)), focus(NULL),
+  : L(NULL), bWorld(b2Vec2(0, -50)), focus(NULL),
     universe((Universe*)_universe),
     lk_alloc(MAX(sizeof(LuaKeyData), sizeof(LuaSIData)),
              MAX_INFLIGHT_INPUTS, "lk_alloc"),
@@ -1157,8 +1125,6 @@ void World::update(long delta) {
   bWorld.Step(dt, 6, 2);
   update_camera(clock_update(camera_clock, delta / 1000.0));
 
-  scene.start();
-
   // let the game objects initialize any new components
   game_objects.foreach([=](GO* go) -> int {
       if(go->delete_me) {
@@ -1193,6 +1159,15 @@ void World::update(long delta) {
         return 0;
       });
   }
+
+  cameras.foreach([this](Camera* camera) -> int {
+      this->components.foreach([=](Component* comp) -> int {
+          comp->render(camera);
+          return 0;
+        });
+      camera->enqueue();
+      return 0;
+    });
 }
 
 void World::update_camera(float dt) {
@@ -1419,16 +1394,6 @@ void World::evaluate_commands() {
     cmd->function(cmd->data);
     cmd_alloc.free(cmd);
   }
-}
-
-WorldPipelineDelegate::WorldPipelineDelegate(World* world)
-  : world(world) {
-}
-
-void WorldPipelineDelegate::update(long delta) {
-  world->update(delta);
-  world->scene.enqueue();
-  callNext(delta);
 }
 
 OBJECT_IMPL(Universe, Object);

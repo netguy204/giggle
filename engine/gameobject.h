@@ -27,6 +27,7 @@
 #include "color.h"
 #include "utils.h"
 #include "input.h"
+#include "matrix.h"
 
 #include <lua.hpp>
 #include <Box2D/Box2D.h>
@@ -96,42 +97,14 @@ enum RenderLayers {
 
 class World;
 
-class Scene {
- public:
-  RenderableCommand* renderables[LAYER_MAX];
-
-  // base layers are interpreted as if they contain only basesprite
-  // representations (no rotation, color, or shifted origin)
-  BaseSprite baseLayers[LAYER_MAX];
-
-  // layers must include rotation
-  BaseSprite layers[LAYER_MAX];
-
-  // particles must also include color
-  BaseSprite particles[LAYER_MAX];
-  ColoredRect testRects[LAYER_MAX];
-
-  int dx, dy;
-  Rect_ camera_rect;
-  World* world;
-
-  Scene(World* world);
-
-  void addRenderable(int layer, Renderable* renderable, void* args);
-  void addRelative(BaseSprite* list, BaseSprite sprite);
-  void addAbsolute(BaseSprite* list, BaseSprite sprite);
-  void addRelative(ColoredRect* list, ColoredRect rect);
-
-  void start(); // after the camera is ready
-  void enqueue();
-};
-
 enum ComponentPriority {
   PRIORITY_THINK,
   PRIORITY_ACT,
   PRIORITY_SHOW,
   PRIORITY_LEAST
 };
+
+class Camera;
 
 class Component : public Object {
  public:
@@ -145,10 +118,7 @@ class Component : public Object {
   virtual void init();
   virtual void update(float dt);
   virtual void messages_received();
-
-  inline Scene* scene();
-  inline GO* camera();
-
+  virtual void render(Camera* camera);
 
   struct DLLNode_ node;
   struct DLLNode_ world_node;
@@ -162,6 +132,35 @@ void LCpush_lut(lua_State *L, const char* metatable, void* ut);
 void* LCcheck_lut(lua_State *L, const char* metatable, int pos);
 
 void LCconfigure_object(lua_State *L, Object* obj, int pos);
+
+class Camera : public Component {
+ public:
+  OBJECT_PROTO(Camera);
+
+  Camera(void* _go);
+  ~Camera();
+
+  RenderableCommand* renderables[LAYER_MAX];
+
+  // base layers are interpreted as if they contain only basesprite
+  // representations (no rotation, color, or shifted origin)
+  BaseSprite baseLayers[LAYER_MAX];
+
+  // layers must include rotation
+  BaseSprite layers[LAYER_MAX];
+
+  // particles must also include color
+  BaseSprite particles[LAYER_MAX];
+  ColoredRect testRects[LAYER_MAX];
+  DLLNode_ camera_node;
+  Matrix44_ world2camera;
+
+  void addRenderable(int layer, Renderable* renderable, void* args);
+  void addSprite(BaseSprite* list, BaseSprite sprite);
+  void addRect(ColoredRect* list, ColoredRect rect);
+
+  void enqueue();
+};
 
 class Fixture {
  public:
@@ -413,8 +412,6 @@ class World : public Object {
   Clock clock;
   Clock camera_clock;
 
-  Scene scene;
-
   lua_State* L;
   b2World bWorld;
 
@@ -433,15 +430,7 @@ class World : public Object {
   DLL_DECLARE(LuaSIBinding, node) sibindings;
 
   DLL_DECLARE(Component, world_node) components;
-};
-
-class WorldPipelineDelegate : public PipelineElement {
- public:
-  WorldPipelineDelegate(World* world);
-
-  virtual void update(long delta);
-
-  World* world;
+  DLL_DECLARE(Camera, camera_node) cameras;
 };
 
 class Universe : public Object {
@@ -502,14 +491,6 @@ void world_foreach(World* world, Vector pos, float rad, Func func) {
 
 int point_in_cone(Cone* cone, Vector point);
 
-
-inline Scene* Component::scene() {
-  return &go->world->scene;
-}
-
-inline GO* Component::camera() {
-  return go->world->camera;
-}
 
 // lua property accessors
 void LCpush_vector(lua_State* L, Vector v);

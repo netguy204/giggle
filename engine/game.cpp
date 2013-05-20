@@ -26,7 +26,6 @@
 #include "color.h"
 #include "utils.h"
 #include "spriter.h"
-#include "pipeline.h"
 
 #include "config.h"
 
@@ -37,8 +36,6 @@
 #include <libgen.h>
 
 World* world = NULL;
-WorldPipelineDelegate* world_delegate;
-Pipeline* pipeline;
 Universe* universe;
 
 OBJECT_IMPL(CTimer, Component);
@@ -101,7 +98,7 @@ CTestDisplay::CTestDisplay(void* go)
   color.a = 1.0f;
 }
 
-void CTestDisplay::update(float dt) {
+void CTestDisplay::render(Camera* camera) {
   Vector_ pos;
   go->pos(&pos);
   vector_add(&pos, &pos, &offset);
@@ -116,7 +113,7 @@ void CTestDisplay::update(float dt) {
   rect->color[2] = color.b;
   rect->color[3] = color.a;
 
-  scene()->addRelative(&scene()->testRects[layer], rect);
+  camera->addRect(&camera->testRects[layer], rect);
 }
 
 OBJECT_IMPL(CStaticSprite, Component);
@@ -131,7 +128,7 @@ CStaticSprite::CStaticSprite(void* go)
   vector_zero(&offset);
 }
 
-void CStaticSprite::update(float dt) {
+void CStaticSprite::render(Camera* camera) {
   Vector_ pos;
   go->pos(&pos);
   vector_add(&pos, &pos, &offset);
@@ -144,7 +141,7 @@ void CStaticSprite::update(float dt) {
   sprite->originY = 0.5;
   sprite->angle = angle;
 
-  scene()->addRelative(&scene()->layers[layer], sprite);
+  camera->addSprite(&camera->layers[layer], sprite);
 }
 
 OBJECT_IMPL(CColoredSprite, CStaticSprite);
@@ -160,7 +157,7 @@ CColoredSprite::CColoredSprite(void* _go)
   color.a = 1.0;
 }
 
-void CColoredSprite::update(float dt) {
+void CColoredSprite::render(Camera* camera) {
   Vector_ pos;
   go->pos(&pos);
   vector_add(&pos, &pos, &offset);
@@ -179,7 +176,7 @@ void CColoredSprite::update(float dt) {
   sprite->w = w;
   sprite->h = h;
 
-  scene()->addRelative(&scene()->particles[layer], sprite);
+  camera->addSprite(&camera->particles[layer], sprite);
 }
 
 OBJECT_IMPL(CSpriterSprite, Component);
@@ -198,20 +195,20 @@ CSpriterSprite::CSpriterSprite(void* _go)
 }
 
 void CSpriterSprite::update(float dt) {
+  current_time += dt * time_scale;
+}
+
+void CSpriterSprite::render(Camera* camera) {
   if(!animation) return;
 
-  Vector_ pos, cpos;
+  Vector_ pos;
   go->pos(&pos);
-  camera()->pos(&cpos);
 
   vector_add(&pos, &pos, &offset);
-  vector_sub(&pos, &pos, &cpos);
 
-  BaseSprite list = scene()->layers[layer];
+  BaseSprite list = camera->layers[layer];
   list = spriter_append(list, animation, &pos, scale_x, scale_y, current_time * 1000);
-  scene()->layers[layer] = list;
-
-  current_time += dt * time_scale;
+  camera->layers[layer] = list;
 }
 
 OBJECT_IMPL(CDrawWallpaper, Component);
@@ -227,23 +224,22 @@ CDrawWallpaper::CDrawWallpaper(void* _go)
   vector_zero(&offset);
 }
 
-void CDrawWallpaper::update(float dt) {
-  Vector_ pos, cpos;
+void CDrawWallpaper::render(Camera* camera) {
+  Vector_ pos;
   go->pos(&pos);
-  camera()->pos(&cpos);
 
   vector_add(&pos, &pos, &offset);
 
-  float x_bl = (pos.x - w/2) - floorf(cpos.x);
+  float x_bl = (pos.x - w/2);
   if(x_bl > screen_width) return;
 
-  float y_bl = (pos.y - h/2) - floorf(cpos.y);
+  float y_bl = (pos.y - h/2);
   if(y_bl > screen_height) return;
 
-  float x_tr = (pos.x + w/2) - floorf(cpos.x);
+  float x_tr = (pos.x + w/2);
   if(x_tr < 0) return;
 
-  float y_tr = (pos.y + h/2) - floorf(cpos.y);
+  float y_tr = (pos.y + h/2);
   if(y_tr < 0) return;
 
   // now we have some overlap, clamp the tr to the screen and figure
@@ -271,7 +267,7 @@ void CDrawWallpaper::update(float dt) {
       sprite_fillfromentry(sprite, entry);
       sprite->displayX = x;
       sprite->displayY = y;
-      scene()->addAbsolute(&scene()->baseLayers[layer], sprite);
+      camera->addSprite(&camera->baseLayers[layer], sprite);
       x += entry->w;
     }
     y += entry->h;
@@ -436,24 +432,21 @@ void CDrawTilemap::set_map(TileMap _map) {
   map_dirty = 1;
 }
 
-void CDrawTilemap::update(float dt) {
+void CDrawTilemap::render(Camera* camera) {
   if(!map) return;
 
-  // dirty ignores camera. FIXME (by making camera a shader transform)
   if(map_dirty) {
-    Vector_ pos, cpos;
+    Vector_ pos;
     go->pos(&pos);
     vector_add(&pos, &pos, &offset);
     map->x_bl = pos.x;
     map->y_bl = pos.y;
 
-    camera()->pos(&cpos);
-
-    BaseSprite sprites = tilemap_spritelist(NULL, map, cpos.x, cpos.y, w, h);
-    scene()->addRenderable(layer, renderer, sprites);
+    BaseSprite sprites = tilemap_spritelist(NULL, map, 0, 0, w, h);
+    camera->addRenderable(layer, renderer, sprites);
     map_dirty = 0;
   } else {
-    scene()->addRenderable(layer, renderer, NULL);
+    camera->addRenderable(layer, renderer, NULL);
   }
 }
 
@@ -480,20 +473,18 @@ CDrawText::~CDrawText() {
   if(atlas) free_lstring(atlas);
 }
 
-void CDrawText::update(float dt) {
+void CDrawText::render(Camera* camera) {
   if(!message) return;
   if(!atlas) {
     fail_exit("CDrawText was not given a font atlas");
   }
 
-  BaseSprite* spritep = &scene()->particles[layer];
+  BaseSprite* spritep = &camera->particles[layer];
   SpriteAtlas atlasobj = go->world->atlas(atlas->str);
-  Vector_ pos, cpos;
+  Vector_ pos;
   go->pos(&pos);
-  camera()->pos(&cpos);
 
   vector_add(&pos, &pos, &offset);
-  vector_sub(&pos, &pos, &cpos);
 
   *spritep = spritelist_from_string(*spritep, atlasobj, (FontSize)font_size,
                                     message->str,
@@ -508,158 +499,22 @@ CDrawConsoleText::CDrawConsoleText(void *_go)
   w = 100;
 }
 
-void CDrawConsoleText::update(float dt) {
+void CDrawConsoleText::render(Camera* camera) {
   if(!message) return;
   if(!atlas) {
     fail_exit("CDrawConsoleText was not given a font atlas");
   }
 
-  BaseSprite* spritep = &scene()->particles[layer];
+  BaseSprite* spritep = &camera->particles[layer];
   SpriteAtlas atlasobj = go->world->atlas(atlas->str);
-  Vector_ pos, cpos;
+  Vector_ pos;
   go->pos(&pos);
-  camera()->pos(&cpos);
 
   vector_add(&pos, &pos, &offset);
-  vector_sub(&pos, &pos, &cpos);
 
   *spritep = spritelist_from_consoletext(
         *spritep, atlasobj, message->str, pos.x, pos.y,
         w, &color);
-}
-
-OBJECT_IMPL(CParticleEmitter, Component);
-OBJECT_PROPERTY(CParticleEmitter, entry);
-OBJECT_PROPERTY(CParticleEmitter, active);
-OBJECT_PROPERTY(CParticleEmitter, max_life);
-OBJECT_PROPERTY(CParticleEmitter, max_speed);
-OBJECT_PROPERTY(CParticleEmitter, max_offset);
-OBJECT_PROPERTY(CParticleEmitter, grav_accel);
-OBJECT_PROPERTY(CParticleEmitter, start_scale);
-OBJECT_PROPERTY(CParticleEmitter, end_scale);
-OBJECT_PROPERTY(CParticleEmitter, nmax);
-OBJECT_PROPERTY(CParticleEmitter, offset);
-OBJECT_PROPERTY(CParticleEmitter, layer);
-OBJECT_PROPERTY(CParticleEmitter, coloring);
-OBJECT_PROPERTY(CParticleEmitter, start_color);
-OBJECT_PROPERTY(CParticleEmitter, end_color);
-OBJECT_PROPERTY(CParticleEmitter, start_alpha);
-OBJECT_PROPERTY(CParticleEmitter, end_alpha);
-OBJECT_PROPERTY(CParticleEmitter, max_angular_speed);
-
-void vector_random(Vector v, float scale) {
-  float mag = 0;
-  while(mag < 0.0001) {
-    v->x = random_next_gaussian(&rgen);
-    v->y = random_next_gaussian(&rgen);
-    mag = vector_dot(v, v);
-  }
-
-  mag = sqrtf(mag);
-  vector_scale(v, v, scale / mag);
-}
-
-CParticleEmitter::CParticleEmitter(void* go)
-  : Component((GO*)go, PRIORITY_ACT), entry(NULL), nmax(0), entries(NULL),
-    max_life(1), max_speed(100), max_offset(3), active(1), grav_accel(0),
-    start_scale(1), end_scale(1), layer(LAYER_BACKGROUND), start_alpha(1),
-    end_alpha(0), start_color(6500), end_color(2000), coloring(COLORING_BLACKBODY),
-    max_angular_speed(0) {
-  vector_zero(&offset);
-}
-
-void CParticleEmitter::init() {
-  if(entries) delete[] entries;
-
-  entries = new PEntry[nmax];
-
-  float dlife = max_life / nmax;
-
-  for(int ii = 0; ii < nmax; ++ii) {
-    PEntry* e = &entries[ii];
-    init_entry(e, dlife * ii);
-    // off in the nether so it can burn out
-    e->pos.x = -10000;
-    e->pos.y = -10000;
-  }
-}
-
-void CParticleEmitter::init_entry(PEntry* e, float life) {
-  Vector_ wpos;
-  go->pos(&wpos);
-  vector_add(&wpos, &wpos, &offset);
-  vector_random(&e->vel, max_speed);
-  vector_random(&e->pos, max_offset);
-  vector_add(&e->pos, &e->pos, &wpos);
-  e->life = life;
-  if(max_angular_speed > 0) {
-    e->angle = random_next_gaussian(&rgen) * 2 * M_PI;
-    e->dangle = random_next_gaussian(&rgen) * max_angular_speed;
-  } else {
-    e->angle = 0;
-    e->dangle = 0;
-  }
-}
-
-CParticleEmitter::~CParticleEmitter() {
-  delete[] entries;
-}
-
-void CParticleEmitter::update(float dt) {
-  const float color_slope = (start_color - end_color) / max_life;
-  const float scale_slope = (start_scale - end_scale) / max_life;
-  const float alpha_slope = (start_alpha - end_alpha) / max_life;
-
-  for(int ii = 0; ii < nmax; ++ii) {
-    PEntry* e = &entries[ii];
-    if(e->life <= 0) {
-      if(active) {
-        // re-init dead particles
-        init_entry(e, e->life + max_life);
-      } else {
-        // skip dead particles
-        continue;
-      }
-    }
-
-    // integrate
-    e->vel.y -= grav_accel * dt;
-    e->angle += e->dangle * dt;
-
-    vector_integrate(&e->pos, &e->pos, &e->vel, dt);
-    e->life -= dt;
-
-    const float scale = end_scale + e->life * scale_slope;
-    const float color = end_color + e->life * color_slope;
-    const float alpha = end_alpha + e->life * alpha_slope;
-
-    // draw
-    Sprite sprite = frame_make_sprite();
-    sprite_fillfromentry(sprite, entry);
-    sprite->displayX = e->pos.x;
-    sprite->displayY = e->pos.y;
-    sprite->originX = 0.5;
-    sprite->originY = 0.5;
-    sprite->w *= scale;
-    sprite->h *= scale;
-    if(max_angular_speed > 0) {
-      sprite->angle = e->angle;
-    } else {
-      sprite->angle = vector_angle(&e->vel);
-    }
-
-    if(coloring == COLORING_BLACKBODY) {
-      color_for_temp(color, sprite->color);
-    } else {
-      sprite->color[0] = color;
-      sprite->color[1] = color;
-      sprite->color[2] = color;
-    }
-
-    sprite->color[3] = alpha;
-
-    scene()->addRelative(&scene()->particles[layer], sprite);
-  }
 }
 
 OBJECT_IMPL(ScreenSampler, Renderable);
@@ -739,78 +594,6 @@ void ScreenSampler::render(void *args) {
   }
 }
 
-CrossfadeElement::CrossfadeElement(World* prev_world, float lifetime)
-  : prev_world(prev_world), first_time(1),
-    lifetime(lifetime), remaining(lifetime) {
-  clock = clock_make();
-
-  sampler = new ScreenSampler(NULL);
-}
-
-CrossfadeElement::~CrossfadeElement() {
-  clock_free(clock);
-  sampler->destroy();
-}
-
-void cfe_set_parms(Sprite sprite, Texture* tex) {
-  sprite->texture = tex;
-  sprite->u0 = 0.0f;
-  sprite->u1 = 1.0f;
-  sprite->v0 = 0.0f;
-  sprite->v1 = 1.0f;
-  sprite->displayX = 0.0f;
-  sprite->displayY = 0.0f;
-  sprite->w = screen_width;
-  sprite->h = screen_height;
-  sprite->angle = 0.0f;
-  sprite->originX = 0.0f;
-  sprite->originY = 0.0f;
-  sprite->color[0] = 1.0f;
-  sprite->color[1] = 1.0f;
-  sprite->color[2] = 1.0f;
-  sprite->color[3] = 1.0f;
-}
-
-void CrossfadeElement::update(long delta) {
-  if(first_time) {
-    first_time = 0;
-    // get the current screen state
-    renderable_enqueue_for_screen(sampler, 0);
-    if(prev_world) {
-      prev_world->update(0);
-      prev_world->scene.enqueue();
-      delete prev_world;
-      prev_world = NULL;
-    }
-    renderable_enqueue_for_screen(sampler, sampler);
-  }
-
-  // render next
-  callNext(delta);
-
-  // overlay with what's stored in our sampler
-  float dt = clock_update(clock, delta / 1000.0);
-  remaining -= dt;
-  float factor = remaining / lifetime;
-
-  Sprite screen = frame_make_sprite();
-  cfe_set_parms(screen, sampler->texture);
-
-  screen->color[0] = factor;
-  screen->color[1] = factor;
-  screen->color[2] = factor;
-  screen->color[3] = factor;
-
-  BaseSprite list = NULL;
-  sprite_append(list, screen);
-
-  renderable_enqueue_for_screen(coloredspritelist_renderer, list);
-
-  if(remaining < 0) {
-    delete this;
-  }
-}
-
 void game_step(long delta);
 
 int world_reset_requested = 0;
@@ -842,11 +625,6 @@ void init_world() {
   World* old_world = world;
 
   world = new World(universe);
-  if(world_delegate) {
-    delete world_delegate;
-  }
-  world_delegate = new WorldPipelineDelegate(world);
-  pipeline->add_back(world_delegate);
 
   lua_register(world->L, "reset_world", Lreset_world);
   lua_register(world->L, "random_gaussian", Lrandom_gaussian);
@@ -856,9 +634,6 @@ void init_world() {
   lua_setglobal(world->L, "universe");
 
   world->load_level("resources/init.lua");
-
-  CrossfadeElement* crossfade = new CrossfadeElement(old_world, 1);
-  pipeline->add_front(crossfade);
 
   world_reset_requested = 0;
   LOGI("init complete");
@@ -955,7 +730,7 @@ CGradientScreenRect::~CGradientScreenRect() {
   renderer->destroy();
 }
 
-void CGradientScreenRect::update(float dt) {
+void CGradientScreenRect::render(Camera* camera) {
   GradientScreenRectParams* params
     = (GradientScreenRectParams*)frame_alloc(sizeof(GradientScreenRectParams));
   params->corners[0] = bl_p;
@@ -970,7 +745,7 @@ void CGradientScreenRect::update(float dt) {
   params->texture = frame_make_sprite();
   sprite_fillfromentry(params->texture, entry);
 
-  go->world->scene.addRenderable(layer, renderer, params);
+  camera->addRenderable(layer, renderer, params);
 }
 
 OBJECT_IMPL(CTire, Component);
@@ -1016,7 +791,6 @@ void game_init(int argc, char** argv) {
 
   // initialize globals
   game_support_init();
-  pipeline = new Pipeline();
   universe = new Universe(buffer);
 
   init_world();
@@ -1028,8 +802,8 @@ void game_step(long delta) {
     init_world();
   }
 
+  world->update(delta);
   universe->update(delta);
-  pipeline->update(delta);
 }
 
 void game_shutdown() {
