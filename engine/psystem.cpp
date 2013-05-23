@@ -100,7 +100,7 @@ ParticleSystemComponent* SystemDefinition::find_component(TypeInfo* info) {
     });
   return found;
 }
-OBJECT_METHOD(SystemDefinition, find_component, RETURNS, ParticleSystemComponent*, (TypeInfo*));
+OBJECT_METHOD(SystemDefinition, find_component, ParticleSystemComponent*, (TypeInfo*));
 
 SystemRenderer* SystemDefinition::set_renderer(TypeInfo* type) {
   if(renderer) {

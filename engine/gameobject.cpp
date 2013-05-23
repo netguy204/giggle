@@ -305,17 +305,17 @@ void GO::apply_impulse(Vector imp) {
   bImp.y = imp->y / BSCALE;
   body->ApplyLinearImpulse(bImp, body->GetWorldCenter());
 }
-OBJECT_METHOD(GO, apply_impulse, NORETURN, void, (Vector));
+OBJECT_METHOD(GO, apply_impulse, void, (Vector));
 
 void GO::apply_angular_impulse(float angimp) {
   body->ApplyAngularImpulse(angimp);
 }
-OBJECT_METHOD(GO, apply_angular_impulse, NORETURN,, (float));
+OBJECT_METHOD(GO, apply_angular_impulse, void, (float));
 
 void GO::apply_torque(float torque) {
   body->ApplyTorque(torque);
 }
-OBJECT_METHOD(GO, apply_torque, NORETURN,, (float));
+OBJECT_METHOD(GO, apply_torque, void, (float));
 
 void GO::apply_force(Vector force) {
   b2Vec2 bForce;
@@ -324,17 +324,17 @@ void GO::apply_force(Vector force) {
 
   body->ApplyForceToCenter(bForce);
 }
-OBJECT_METHOD(GO, apply_force, NORETURN,, (Vector));
+OBJECT_METHOD(GO, apply_force, void, (Vector));
 
 float GO::mass() {
   return body->GetMass();
 }
-OBJECT_METHOD(GO, mass, RETURNS, float, ());
+OBJECT_METHOD(GO, mass, float, ());
 
 float GO::inertia() {
   return body->GetInertia();
 }
-OBJECT_METHOD(GO, inertia, RETURNS, float, ());
+OBJECT_METHOD(GO, inertia, float, ());
 
 Component* GO::find_component(const TypeInfo* info, Component* last) {
   DLLNode node = components.head;
@@ -362,7 +362,7 @@ Component* GO::find_component(const TypeInfo* info, Component* last) {
   }
   return NULL;
 }
-OBJECT_METHOD(GO, find_component, RETURNS, Component*, (TypeInfo*, Component*));
+OBJECT_METHOD(GO, find_component, Component*, (TypeInfo*, Component*));
 
 void GO::print_description() {
   fprintf(stderr, "UNINITIALIZED COMPONENTS\n");
@@ -393,7 +393,7 @@ void GO::send_message(Message* message) {
 
   inbox_pending.add_tail(message);
 }
-OBJECT_METHOD(GO, send_message, NORETURN,, (Message*));
+OBJECT_METHOD(GO, send_message, void, (Message*));
 
 OBJECT_IMPL(Component, Object);
 OBJECT_PROPERTY(Component, delete_me);
@@ -749,12 +749,12 @@ void RevJoint::set_upper_limit(float val) {
 void RevJoint::limit(float lower, float upper) {
   joint->SetLimits(lower, upper);
 }
-OBJECT_METHOD(RevJoint, limit, NORETURN,, (float, float));
+OBJECT_METHOD(RevJoint, limit, void, (float, float));
 
 void RevJoint::destroy() {
   world->bWorld.DestroyJoint(joint);
 }
-OBJECT_METHOD(RevJoint, destroy, NORETURN,, ());
+OBJECT_METHOD(RevJoint, destroy, void, ());
 
 int Ljoint_gc(lua_State* L) {
   RevJoint* joint = (RevJoint*)LCcheck_lut(L, LUT_JOINT, 1);
@@ -1216,7 +1216,7 @@ GO* World::create_go() {
   GO* go = new GO(this);
   return go;
 }
-OBJECT_METHOD(World, create_go, RETURNS, GO*, ());
+OBJECT_METHOD(World, create_go, GO*, ());
 
 RevJoint* World::create_joint(GO* ga, Vector la, GO* gb, Vector lb) {
   b2RevoluteJoint *joint;
@@ -1237,47 +1237,47 @@ RevJoint* World::create_joint(GO* ga, Vector la, GO* gb, Vector lb) {
   rj->world = this;
   return rj;
 }
-OBJECT_METHOD(World, create_joint, RETURNS, RevJoint*, (GO*, Vector, GO*, Vector));
+OBJECT_METHOD(World, create_joint, RevJoint*, (GO*, Vector, GO*, Vector));
 
 SpriteAtlas World::atlas(const char* atlas) {
   return universe->atlas(atlas);
 }
-OBJECT_METHOD(World, atlas, RETURNS, SpriteAtlas, (const char*));
+OBJECT_METHOD(World, atlas, SpriteAtlas, (const char*));
 
 SpriteAtlasEntry World::atlas_entry(const char* atlas_name, const char* entry) {
   return universe->atlas_entry(atlas_name, entry);
 }
-OBJECT_METHOD(World, atlas_entry, RETURNS, SpriteAtlasEntry, (const char*, const char*));
+OBJECT_METHOD(World, atlas_entry, SpriteAtlasEntry, (const char*, const char*));
 
 Animation* World::animation(const char* filename, const char* atlas_name, const char* anim) {
   return universe->animation(filename, atlas(atlas_name), anim);
 }
-OBJECT_METHOD(World, animation, RETURNS, Animation*, (const char*, const char*, const char*));
+OBJECT_METHOD(World, animation, Animation*, (const char*, const char*, const char*));
 
 Sound* World::get_sound(const char* name, float scale) {
   return universe->sound.get_sync(name, scale);
 }
-OBJECT_METHOD(World, get_sound, RETURNS, Sound*, (const char*, float));
+OBJECT_METHOD(World, get_sound, Sound*, (const char*, float));
 
 AudioHandle* World::play_sound(Sound* sound, int channel) {
   return universe->play_sound(sound, channel);
 }
-OBJECT_METHOD(World, play_sound, RETURNS, AudioHandle*, (Sound*, int));
+OBJECT_METHOD(World, play_sound, AudioHandle*, (Sound*, int));
 
 AudioHandle* World::stream_sound(const char* sound, long start_sample) {
   return universe->stream_sound(sound, start_sample);
 }
-OBJECT_METHOD(World, stream_sound, RETURNS, AudioHandle*, (const char*, long));
+OBJECT_METHOD(World, stream_sound, AudioHandle*, (const char*, long));
 
 AudioHandle* World::sound_handle(long handle_name) {
   return universe->sound_handle(handle_name);
 }
-OBJECT_METHOD(World, sound_handle, RETURNS, AudioHandle*, (long));
+OBJECT_METHOD(World, sound_handle, AudioHandle*, (long));
 
 long World::current_sample() const {
   return audio_current_sample();
 }
-OBJECT_METHOD(World, current_sample, RETURNS, long, ());
+OBJECT_METHOD(World, current_sample, long, ());
 
 void World::set_time_scale(float scale) {
   clock->time_scale = scale;

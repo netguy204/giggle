@@ -245,19 +245,22 @@ class MethodInfo {
 #define VARNAME0(item, pos1) JOIN(var, pos1)
 #define VARNAME(item, pos) VARNAME0(var, INC(pos))
 
+#define CHECK_VOID(X) CHECK(JOIN(CHECK_VOID_, X))
+#define CHECK_VOID_void ~, 1,
+
 #define RETURNS(TYPE, ARGS, METHOD)              \
   TYPE r = obj->METHOD MAP(VARNAME, ARGS);       \
   LCpush(L, r);                                  \
   return 1;
 
-#define NORETURN(TYPE, ARGS, METHOD)             \
+#define NORETURN(ARGS, METHOD)             \
   obj->METHOD MAP(VARNAME, ARGS);                \
   return 0;
 
 #define LOP(name, method_name) L ## name ## method_name
 #define LOPC(name, method_name) LCLASS ## name ## method_name
 
-#define OBJECT_METHOD(CLASS, METHOD, RETURNER, RTYPE, ARGS)             \
+#define OBJECT_METHOD(CLASS, METHOD, RTYPE, ARGS)                       \
   class LOPC(CLASS, METHOD) : public MethodInfo {                       \
   public:                                                               \
                                                                         \
@@ -273,7 +276,9 @@ class MethodInfo {
     CLASS* obj;                                                         \
     LCcheck(L, &obj, pos);                                              \
     GENLUAVARS(ARGS);                                                   \
-    RETURNER(RTYPE, ARGS, METHOD);                                      \
+    IF_ELSE(CHECK_VOID(RTYPE),                                          \
+            NORETURN(ARGS, METHOD),                                     \
+            RETURNS(RTYPE, ARGS, METHOD))                                \
   }
 
 class Object {
