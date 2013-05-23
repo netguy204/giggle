@@ -227,10 +227,37 @@ class MethodInfo {
   const char* m_name;
 };
 
+// now for some serious pre-processor black magic.
+#include "cpp.h"
+
+#define LLC($, X) NOT(ISEMPTY(TAIL(X)))
+#define LLU($, X) CONS(INC(HEAD(X)), TAIL(TAIL(X)))
+#define LLF($, X)
+
+#define GENLUAVARS2(TYPE, OFFSET)                               \
+  TYPE JOIN(var, OFFSET);                                       \
+  LCcheck(L, &JOIN(var, OFFSET), pos + OFFSET);
+
+#define GENLUAVARS1($, X) GENLUAVARS2(HEAD(TAIL(X)), HEAD(X))
+
+#define GENLUAVARS(X) IF(NOT(ISEMPTY(X)), JOIN(RECR_D, 0)(1, LLC, GENLUAVARS1, LLU, LLF, CONS(1, X)))
+
+#define VARNAME0(item, pos1) JOIN(var, pos1)
+#define VARNAME(item, pos) VARNAME0(var, INC(pos))
+
+#define RETURNS(TYPE, ARGS, METHOD)              \
+  TYPE r = obj->METHOD MAP(VARNAME, ARGS);       \
+  LCpush(L, r);                                  \
+  return 1;
+
+#define NORETURN(TYPE, ARGS, METHOD)             \
+  obj->METHOD MAP(VARNAME, ARGS);                \
+  return 0;
+
 #define LOP(name, method_name) L ## name ## method_name
 #define LOPC(name, method_name) LCLASS ## name ## method_name
 
-#define OBJECT_METHOD_BASE(CLASS, METHOD)                               \
+#define OBJECT_METHOD(CLASS, METHOD, RETURNER, RTYPE, ARGS)             \
   class LOPC(CLASS, METHOD) : public MethodInfo {                       \
   public:                                                               \
                                                                         \
@@ -242,108 +269,12 @@ class MethodInfo {
   };                                                                    \
   static LOPC(CLASS, METHOD) LOP(CLASS, METHOD);                        \
                                                                         \
-  int LOPC(CLASS,METHOD)::LCinvoke(lua_State* L, int pos) const
-
-#define OBJECT_METHOD0(CLASS, METHOD, RET)                              \
-  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
-    CLASS* obj;                                                         \
-    RET r;                                                              \
-    LCcheck(L, &obj, pos);                                              \
-    r = obj->METHOD();                                                  \
-    LCpush(L, r);                                                       \
-    return 1;                                                           \
-  }
-
-#define OBJECT_VMETHOD0(CLASS, METHOD)                                  \
-  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
+  int LOPC(CLASS,METHOD)::LCinvoke(lua_State* L, int pos) const {       \
     CLASS* obj;                                                         \
     LCcheck(L, &obj, pos);                                              \
-    obj->METHOD();                                                      \
-    return 1;                                                           \
+    GENLUAVARS(ARGS);                                                   \
+    RETURNER(RTYPE, ARGS, METHOD);                                      \
   }
-
-#define OBJECT_METHOD1(CLASS, METHOD, RET, TYPE1)                       \
-  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
-    CLASS* obj;                                                         \
-    RET r;                                                              \
-    TYPE1 t1;                                                           \
-    LCcheck(L, &obj, pos);                                              \
-    LCcheck(L, &t1, pos + 1);                                           \
-    r = obj->METHOD(t1);                                                \
-    LCpush(L, r);                                                       \
-    return 1;                                                           \
-  }
-
-#define OBJECT_VMETHOD1(CLASS, METHOD, TYPE1)                           \
-  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
-    CLASS* obj;                                                         \
-    TYPE1 t1;                                                           \
-    LCcheck(L, &obj, pos);                                              \
-    LCcheck(L, &t1, pos + 1);                                           \
-    obj->METHOD(t1);                                                    \
-    return 0;                                                           \
-  }
-
-#define OBJECT_METHOD2(CLASS, METHOD, RET, TYPE1, TYPE2)                \
-  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
-    CLASS* obj;                                                         \
-    RET r;                                                              \
-    TYPE1 t1;                                                           \
-    TYPE2 t2;                                                           \
-    LCcheck(L, &obj, pos);                                              \
-    LCcheck(L, &t1, pos + 1);                                           \
-    LCcheck(L, &t2, pos + 2);                                           \
-    r = obj->METHOD(t1, t2);                                            \
-    LCpush(L, r);                                                       \
-    return 1;                                                           \
-  }
-
-#define OBJECT_VMETHOD2(CLASS, METHOD, TYPE1, TYPE2)                    \
-  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
-    CLASS* obj;                                                         \
-    TYPE1 t1;                                                           \
-    TYPE2 t2;                                                           \
-    LCcheck(L, &obj, pos);                                              \
-    LCcheck(L, &t1, pos + 1);                                           \
-    LCcheck(L, &t2, pos + 2);                                           \
-    obj->METHOD(t1, t2);                                                \
-    return 0;                                                           \
-  }
-
-#define OBJECT_METHOD3(CLASS, METHOD, RET, TYPE1, TYPE2, TYPE3)         \
-  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
-    CLASS* obj;                                                         \
-    RET r;                                                              \
-    TYPE1 t1;                                                           \
-    TYPE2 t2;                                                           \
-    TYPE3 t3;                                                           \
-    LCcheck(L, &obj, pos);                                              \
-    LCcheck(L, &t1, pos + 1);                                           \
-    LCcheck(L, &t2, pos + 2);                                           \
-    LCcheck(L, &t3, pos + 3);                                           \
-    r = obj->METHOD(t1, t2, t3);                                        \
-    LCpush(L, r);                                                       \
-    return 1;                                                           \
-  }
-
-#define OBJECT_METHOD4(CLASS, METHOD, RET, TYPE1, TYPE2, TYPE3, TYPE4)  \
-  OBJECT_METHOD_BASE(CLASS, METHOD) {                                   \
-    CLASS* obj;                                                         \
-    RET r;                                                              \
-    TYPE1 t1;                                                           \
-    TYPE2 t2;                                                           \
-    TYPE3 t3;                                                           \
-    TYPE4 t4;                                                           \
-    LCcheck(L, &obj, pos);                                              \
-    LCcheck(L, &t1, pos + 1);                                           \
-    LCcheck(L, &t2, pos + 2);                                           \
-    LCcheck(L, &t3, pos + 3);                                           \
-    LCcheck(L, &t4, pos + 4);                                           \
-    r = obj->METHOD(t1, t2, t3, t4);                                    \
-    LCpush(L, r);                                                       \
-    return 1;                                                           \
-  }
-
 
 class Object {
 public:
