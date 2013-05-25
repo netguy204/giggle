@@ -212,16 +212,19 @@ class TypeRegistry {
       &name::getter,                                                 \
       &name::setter)
 
-// Methods are added to the metatable for an object. The metatable
-// must be fully defined before it is injected into an
-// interpreter. Most init should be happening at static initialization
-// time so it shouldn't be an issue
+
+class VoidFunction {
+ public:
+  virtual void invoke() = 0;
+};
+
 class MethodInfo {
  public:
   MethodInfo(TypeInfo* type, const char* name);
 
   const char* name() const;
   virtual int LCinvoke(lua_State* L, int pos) const = 0;
+  virtual VoidFunction* LCframebind(lua_State* L, int pos) const = 0;
 
   TypeInfo* m_type;
   const char* m_name;
@@ -234,13 +237,15 @@ class MethodInfo {
 #define LLU($, X) CONS(INC(HEAD(X)), TAIL(TAIL(X)))
 #define LLF($, X)
 
-#define GENLUAVARS2(TYPE, OFFSET)                               \
-  TYPE JOIN(var, OFFSET);                                       \
+#define GENVARS2(TYPE, OFFSET)                               \
+  TYPE JOIN(var, OFFSET);
+#define GENVARS1($, X) GENVARS2(HEAD(TAIL(X)), HEAD(X))
+#define GENVARS(X) IF(NOT(ISEMPTY(X)), JOIN(RECR_D, 0)(1, LLC, GENVARS1, LLU, LLF, CONS(1, X)))
+
+#define GENCHECKS2(TYPE, OFFSET)                               \
   LCcheck(L, &JOIN(var, OFFSET), pos + OFFSET);
-
-#define GENLUAVARS1($, X) GENLUAVARS2(HEAD(TAIL(X)), HEAD(X))
-
-#define GENLUAVARS(X) IF(NOT(ISEMPTY(X)), JOIN(RECR_D, 0)(1, LLC, GENLUAVARS1, LLU, LLF, CONS(1, X)))
+#define GENCHECKS1($, X) GENCHECKS2(HEAD(TAIL(X)), HEAD(X))
+#define GENCHECKS(X) IF(NOT(ISEMPTY(X)), JOIN(RECR_D, 0)(1, LLC, GENCHECKS1, LLU, LLF, CONS(1, X)))
 
 #define VARNAME0(item, pos1) JOIN(var, pos1)
 #define VARNAME(item, pos) VARNAME0(var, INC(pos))
@@ -253,14 +258,29 @@ class MethodInfo {
   LCpush(L, r);                                  \
   return 1;
 
-#define NORETURN(ARGS, METHOD)             \
+#define NORETURN(ARGS, METHOD)                   \
   obj->METHOD MAP(VARNAME, ARGS);                \
   return 0;
 
 #define LOP(name, method_name) L ## name ## method_name
 #define LOPC(name, method_name) LCLASS ## name ## method_name
+#define FLOPC(name, method_name) FLCLASS ## name ## method_name
 
 #define OBJECT_METHOD(CLASS, METHOD, RTYPE, ARGS)                       \
+  class FLOPC(CLASS, METHOD) : public VoidFunction {                    \
+  public:                                                               \
+    CLASS* obj;                                                         \
+    GENVARS(ARGS);                                                      \
+                                                                        \
+    void invoke() {                                                     \
+      obj->METHOD MAP(VARNAME, ARGS);                                   \
+    }                                                                   \
+                                                                        \
+    void LCbind(lua_State* L, int pos) {                                \
+      LCcheck(L, &obj, pos);                                            \
+      GENCHECKS(ARGS);                                                  \
+    }                                                                   \
+  };                                                                    \
   class LOPC(CLASS, METHOD) : public MethodInfo {                       \
   public:                                                               \
                                                                         \
@@ -268,18 +288,24 @@ class MethodInfo {
     : MethodInfo(&CLASS::Type, STRINGIFY(METHOD)) {                     \
     }                                                                   \
                                                                         \
-    virtual int LCinvoke(lua_State* L, int pos) const;                  \
-  };                                                                    \
-  static LOPC(CLASS, METHOD) LOP(CLASS, METHOD);                        \
+    virtual int LCinvoke(lua_State* L, int pos) const {                 \
+      CLASS* obj;                                                       \
+      GENVARS(ARGS);                                                    \
+      LCcheck(L, &obj, pos);                                            \
+      GENCHECKS(ARGS);                                                  \
+      IF_ELSE(CHECK_VOID(RTYPE),                                        \
+              NORETURN(ARGS, METHOD),                                   \
+              RETURNS(RTYPE, ARGS, METHOD))                             \
+    }                                                                   \
                                                                         \
-  int LOPC(CLASS,METHOD)::LCinvoke(lua_State* L, int pos) const {       \
-    CLASS* obj;                                                         \
-    LCcheck(L, &obj, pos);                                              \
-    GENLUAVARS(ARGS);                                                   \
-    IF_ELSE(CHECK_VOID(RTYPE),                                          \
-            NORETURN(ARGS, METHOD),                                     \
-            RETURNS(RTYPE, ARGS, METHOD))                                \
-  }
+    virtual VoidFunction* LCframebind(lua_State* L, int pos) const {    \
+      FLOPC(CLASS, METHOD) *bound = (FLOPC(CLASS,METHOD)*)frame_alloc(sizeof(FLOPC(CLASS,METHOD))); \
+      bound->LCbind(L, pos);                                            \
+      return bound;                                                     \
+    }                                                                   \
+  };                                                                    \
+  static LOPC(CLASS, METHOD) LOP(CLASS, METHOD);
+
 
 class Object {
 public:

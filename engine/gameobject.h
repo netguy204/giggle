@@ -133,14 +133,29 @@ void* LCcheck_lut(lua_State *L, const char* metatable, int pos);
 
 void LCconfigure_object(lua_State *L, Object* obj, int pos);
 
+struct LuaThread {
+  LuaThread();
+
+  lua_State* state;
+  int refid;
+  int is_initialized;
+  int is_valid;
+};
+
 class Camera : public Component {
  public:
   OBJECT_PROTO(Camera);
 
   Camera(void* _go);
-  ~Camera();
+  virtual ~Camera();
 
   RenderableCommand* renderables[LAYER_MAX];
+
+  void addRenderable(int layer, Renderable* renderable, void* args);
+  void addSprite(BaseSprite* list, BaseSprite sprite);
+  void addRect(ColoredRect* list, ColoredRect rect);
+
+  void enqueue();
 
   // base layers are interpreted as if they contain only basesprite
   // representations (no rotation, color, or shifted origin)
@@ -155,11 +170,8 @@ class Camera : public Component {
   DLLNode_ camera_node;
   Matrix44_ world2camera;
 
-  void addRenderable(int layer, Renderable* renderable, void* args);
-  void addSprite(BaseSprite* list, BaseSprite sprite);
-  void addRect(ColoredRect* list, ColoredRect rect);
-
-  void enqueue();
+  LuaThread before_enqueue;
+  LuaThread after_enqueue;
 };
 
 class Fixture {
@@ -193,15 +205,6 @@ class CSensor : public Component {
   int kind;
 };
 
-struct LuaThread {
-  LuaThread();
-
-  lua_State* state;
-  int refid;
-  int is_initialized;
-  int is_valid;
-};
-
 class CScripted : public Component {
  public:
   OBJECT_PROTO(CScripted);
@@ -212,16 +215,6 @@ class CScripted : public Component {
   virtual void init();
   virtual void update(float dt);
   virtual void messages_received();
-
-  void set_thread(LuaThread* target, lua_State* thread);
-  void set_update_thread(lua_State* thread);
-  void set_message_thread(lua_State* thread);
-  lua_State* get_update_thread();
-  lua_State* get_message_thread();
-
-  void free_thread(LuaThread* thread);
-  void step_thread(LuaThread* thread);
-  void resume(LuaThread* thread, int args);
 
   LuaThread update_thread;
   LuaThread message_thread;
@@ -438,7 +431,7 @@ class Universe : public Object {
   OBJECT_PROTO(Universe);
 
   Universe(void* path);
-  ~Universe();
+  virtual ~Universe();
 
   SpriteAtlas atlas(const char* atlas);
   SpriteAtlasEntry atlas_entry(const char* atlas, const char* entry);

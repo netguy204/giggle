@@ -74,7 +74,42 @@ void Message::operator delete(void* obj) {
   // this is because messages must be fully stack allocated
 }
 
+void free_thread(LuaThread* thread) {
+  if(thread->state) {
+    luaL_unref(thread->state, LUA_REGISTRYINDEX, thread->refid);
+    thread->state = NULL;
+  }
+}
+
+void resume(LuaThread* thread, int args) {
+  int status = lua_resume(thread->state, NULL, args);
+  if(status != LUA_YIELD) {
+    if(status != LUA_OK) {
+      const char* error = lua_tostring(thread->state, -1);
+      fail_exit("lua thread failed: %s", error);
+    }
+
+    free_thread(thread);
+  }
+}
+
+void step_thread(LuaThread* thread, GO* go, Component* comp) {
+  if(thread->state) {
+    if(!thread->is_initialized) {
+      thread->is_initialized = 1;
+      LCpush(thread->state, go);
+      LCpush(thread->state, comp);
+      resume(thread, 2);
+    }
+
+    resume(thread, 0);
+  }
+}
+
 OBJECT_IMPL(Camera, Component);
+OBJECT_PROPERTY(Camera, before_enqueue);
+OBJECT_PROPERTY(Camera, after_enqueue);
+
 Camera::Camera(void* _go)
   : Component((GO*)_go, PRIORITY_SHOW) {
   memset(renderables, 0, sizeof(renderables));
@@ -87,6 +122,8 @@ Camera::Camera(void* _go)
 
 Camera::~Camera() {
   go->world->cameras.remove(this);
+  free_thread(&before_enqueue);
+  free_thread(&after_enqueue);
 }
 
 void Camera::addRenderable(int layer, Renderable* renderable, void* args) {
@@ -107,6 +144,7 @@ void Camera::addRect(ColoredRect* list, ColoredRect rect) {
 }
 
 void Camera::enqueue() {
+  step_thread(&before_enqueue, go, this);
   for(int ii = 0; ii < LAYER_MAX; ++ii) {
     if(renderables[ii]) {
       renderables_enqueue_for_screen(renderables[ii]);
@@ -128,6 +166,7 @@ void Camera::enqueue() {
     layers[ii] = NULL;
     particles[ii] = NULL;
     baseLayers[ii] = NULL;
+    step_thread(&after_enqueue, go, this);
   }
 }
 
@@ -502,13 +541,6 @@ CScripted::~CScripted() {
   free_thread(&update_thread);
   free_thread(&message_thread);
 }
-void CScripted::free_thread(LuaThread* thread) {
-  if(thread->state) {
-    luaL_unref(thread->state, LUA_REGISTRYINDEX, thread->refid);
-    thread->state = NULL;
-  }
-}
-
 void CScripted::init() {
   if(!update_thread.state && !message_thread.state) {
     fprintf(stderr, "CScripted initialized with no attached script\n");
@@ -516,47 +548,22 @@ void CScripted::init() {
     return;
   }
 
-  step_thread(&update_thread);
-  step_thread(&message_thread);
-}
-
-void CScripted::step_thread(LuaThread* thread) {
-  if(thread->state) {
-    if(!thread->is_initialized) {
-      thread->is_initialized = 1;
-      LCpush(thread->state, go);
-      LCpush(thread->state, (Component*)this);
-      resume(thread, 2);
-    }
-
-    resume(thread, 0);
-  }
+  step_thread(&update_thread, go, this);
+  step_thread(&message_thread, go, this);
 }
 
 void CScripted::update(float dt) {
-  // init guaranteed that we always have a script
-  step_thread(&update_thread);
+  // init guaranteed that we always have at least one script
+  step_thread(&update_thread, go, this);
+
+  // when both threads exit, remove ourselves
+  if(!message_thread.state && !update_thread.state) {
+    delete_me = 1;
+  }
 }
 
 void CScripted::messages_received() {
-  step_thread(&message_thread);
-}
-
-void CScripted::resume(LuaThread* thread, int args) {
-  int status = lua_resume(thread->state, NULL, args);
-  if(status != LUA_YIELD) {
-    if(status != LUA_OK) {
-      const char* error = lua_tostring(thread->state, -1);
-      fail_exit("lua thread failed: %s", error);
-    }
-
-    free_thread(thread);
-
-    // when both threads exit, remove ourselves
-    if(!message_thread.state && !update_thread.state) {
-      delete_me = 1;
-    }
-  }
+  step_thread(&message_thread, go, this);
 }
 
 void LCpush_lut(lua_State *L, const char* metatable, void* ut) {
