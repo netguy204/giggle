@@ -266,7 +266,7 @@ class MethodInfo {
 #define LOPC(name, method_name) LCLASS ## name ## method_name
 #define FLOPC(name, method_name) FLCLASS ## name ## method_name
 
-#define OBJECT_METHOD(CLASS, METHOD, RTYPE, ARGS)                       \
+#define OBJECT_BASE_METHOD(CLASS, METHOD, RTYPE, ARGS)                  \
   class FLOPC(CLASS, METHOD) : public VoidFunction {                    \
   public:                                                               \
     CLASS* obj;                                                         \
@@ -288,24 +288,35 @@ class MethodInfo {
     : MethodInfo(&CLASS::Type, STRINGIFY(METHOD)) {                     \
     }                                                                   \
                                                                         \
-    virtual int LCinvoke(lua_State* L, int pos) const {                 \
-      CLASS* obj;                                                       \
-      GENVARS(ARGS);                                                    \
-      LCcheck(L, &obj, pos);                                            \
-      GENCHECKS(ARGS);                                                  \
-      IF_ELSE(CHECK_VOID(RTYPE),                                        \
-              NORETURN(ARGS, METHOD),                                   \
-              RETURNS(RTYPE, ARGS, METHOD))                             \
-    }                                                                   \
+    virtual int LCinvoke(lua_State* L, int pos) const;                  \
                                                                         \
     virtual VoidFunction* LCframebind(lua_State* L, int pos) const {    \
-      FLOPC(CLASS, METHOD) *bound = (FLOPC(CLASS,METHOD)*)frame_alloc(sizeof(FLOPC(CLASS,METHOD))); \
+      void* buffer = frame_alloc(sizeof(FLOPC(CLASS,METHOD)));          \
+      FLOPC(CLASS, METHOD) *bound = new(buffer) FLOPC(CLASS, METHOD)(); \
       bound->LCbind(L, pos);                                            \
       return bound;                                                     \
     }                                                                   \
   };                                                                    \
-  static LOPC(CLASS, METHOD) LOP(CLASS, METHOD);
+  static LOPC(CLASS, METHOD) LOP(CLASS, METHOD);                        \
+                                                                        \
+  int LOPC(CLASS, METHOD)::LCinvoke(lua_State* L, int pos) const
 
+#define OBJECT_METHOD(CLASS, METHOD, RTYPE, ARGS)                       \
+  OBJECT_BASE_METHOD(CLASS, METHOD, RTYPE, ARGS) {                      \
+    CLASS* obj;                                                         \
+    GENVARS(ARGS);                                                      \
+    LCcheck(L, &obj, pos);                                              \
+    GENCHECKS(ARGS);                                                    \
+    IF_ELSE(CHECK_VOID(RTYPE),                                          \
+            NORETURN(ARGS, METHOD),                                     \
+            RETURNS(RTYPE, ARGS, METHOD))                               \
+  }
+
+#define DEFERRED_OBJECT_METHOD(TARGET, CLASS, METHOD, RTYPE, ARGS)      \
+  OBJECT_BASE_METHOD(CLASS, METHOD, RTYPE, ARGS) {                      \
+    TARGET(LCframebind(L, pos));                                        \
+    return 0;                                                           \
+  }
 
 class Object {
 public:

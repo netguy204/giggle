@@ -166,8 +166,8 @@ void Camera::enqueue() {
     layers[ii] = NULL;
     particles[ii] = NULL;
     baseLayers[ii] = NULL;
-    step_thread(&after_enqueue, go, this);
   }
+  step_thread(&after_enqueue, go, this);
 }
 
 OBJECT_IMPL(GO, Object);
@@ -1057,6 +1057,7 @@ void init_lua(World* world) {
 
   LClink_metatable(L, LUT_UNIVERSE, NULL);
   LClink_metatable(L, LUT_COMPONENT, NULL);
+  LClink_metatable(L, LUT_COMPOSITOR, NULL);
   LClink_metatable(L, LUT_PSDEFINITION, NULL);
   LClink_metatable(L, LUT_PSCOMPONENT, NULL);
 
@@ -1130,7 +1131,6 @@ void World::update(long delta) {
 
   // do an integration step
   bWorld.Step(dt, 6, 2);
-  update_camera(clock_update(camera_clock, delta / 1000.0));
 
   // let the game objects initialize any new components
   game_objects.foreach([=](GO* go) -> int {
@@ -1175,33 +1175,6 @@ void World::update(long delta) {
       camera->enqueue();
       return 0;
     });
-}
-
-void World::update_camera(float dt) {
-  if(!focus) return;
-  Vector_ offset = {screen_width / 2.0f, screen_height / 2.0f};
-  Vector_ desired;
-  focus->pos(&desired);
-  vector_sub(&desired, &desired, &offset);
-
-  float max_v = 1600;
-  const float max_dx = max_v * dt;
-
-  Vector_ cpos;
-  camera->pos(&cpos);
-
-  Vector_ delta;
-  vector_sub(&delta, &desired, &cpos);
-  float mag = vector_mag(&delta);
-  if(mag < max_dx) {
-    // snap
-    camera->set_pos(&desired);
-    return;
-  }
-
-  vector_scale(&delta, &delta, max_dx / mag);
-  vector_add(&cpos, &cpos, &delta);
-  camera->set_pos(&cpos);
 }
 
 void World::load_level(const char* level) {
@@ -1406,9 +1379,10 @@ void World::evaluate_commands() {
 OBJECT_IMPL(Universe, Object);
 OBJECT_PROPERTY(Universe, stash);
 OBJECT_PROPERTY(Universe, lua_path);
+OBJECT_PROPERTY(Universe, compositor);
 
 Universe::Universe(void* _path)
-  : stash(NULL) {
+  : stash(NULL), compositor(new Compositor(NULL)) {
   if(_path) {
     lua_path = malloc_lstring((char*)_path, strlen((char*)_path));
   } else {
@@ -1418,6 +1392,7 @@ Universe::Universe(void* _path)
 
 Universe::~Universe() {
   if(stash) free_lstring(stash);
+  delete compositor;
 
   for(NameToAtlas::iterator iter = name_to_atlas.begin();
       iter != name_to_atlas.end(); ++iter) {

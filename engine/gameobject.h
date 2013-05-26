@@ -28,6 +28,7 @@
 #include "utils.h"
 #include "input.h"
 #include "matrix.h"
+#include "compositor.h"
 
 #include <lua.hpp>
 #include <Box2D/Box2D.h>
@@ -42,6 +43,7 @@
 #define LUT_GO "Go"
 #define LUT_COMPONENT "Component"
 #define LUT_UNIVERSE "Universe"
+#define LUT_COMPOSITOR "Compositor"
 #define LUT_PSDEFINITION "PSDefinition"
 #define LUT_PSCOMPONENT "PSComponent"
 #define LUT_AUDIOHANDLE "AudioHandle"
@@ -372,7 +374,6 @@ class World : public Object {
   virtual ~World();
 
   virtual void update(long delta);
-  void update_camera(float dt);
 
   void load_level(const char* level);
 
@@ -449,6 +450,7 @@ class Universe : public Object {
 
   LString* stash;
   LString* lua_path;
+  Compositor* compositor;
 
   NameToAtlas name_to_atlas;
   NameToEntity name_to_entity;
@@ -685,6 +687,16 @@ inline void LCpush<AudioHandle*>(lua_State* L, AudioHandle* handle) {
 template<>
 inline void LCcheck<AudioHandle*>(lua_State* L, AudioHandle** handle, int pos) {
   *handle = (AudioHandle*)LCcheck_lut(L, LUT_AUDIOHANDLE, pos);
+}
+
+template<>
+inline void LCpush<Compositor*>(lua_State* L, Compositor* compositor) {
+  LCpush_lut(L, LUT_COMPOSITOR, compositor);
+}
+
+template<>
+inline void LCcheck<Compositor*>(lua_State* L, Compositor** compositor, int pos) {
+  *compositor = (Compositor*)LCcheck_lut(L, LUT_COMPOSITOR, pos);
 }
 
 template<>

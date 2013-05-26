@@ -622,7 +622,10 @@ int Lset_transform(lua_State* L) {
 
 void init_world() {
   LOGI("init_world");
-  World* old_world = world;
+
+  if(world) {
+    delete world;
+  }
 
   world = new World(universe);
 

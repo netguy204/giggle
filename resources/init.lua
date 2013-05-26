@@ -564,6 +564,15 @@ function menu_screen(message, offset, fn)
       stage:add_component('CScripted', {update_thread=util.thread(thread)})
    end
    Timer():reset(0.2, install_handler)
+
+   local pre_render = function(go, comp)
+      while true do
+         coroutine.yield()
+         universe:compositor():clear_with_color({0.2,0.2,0.2,1.0})
+      end
+   end
+
+   stage:find_component('Camera', nil):before_enqueue(util.thread(pre_render))
 end
 
 function game_lose()
