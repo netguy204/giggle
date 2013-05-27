@@ -28,7 +28,6 @@
 #include "utils.h"
 #include "input.h"
 #include "matrix.h"
-#include "compositor.h"
 
 #include <lua.hpp>
 #include <Box2D/Box2D.h>
@@ -48,6 +47,8 @@
 #define LUT_PSCOMPONENT "PSComponent"
 #define LUT_AUDIOHANDLE "AudioHandle"
 #define LUT_JOINT "Joint"
+#define LUT_TEXTURE "Texture"
+#define LUT_FRAMEBUFFER "FrameBuffer"
 
 typedef enum {
   MASK_NON_COLLIDER = 0,
@@ -365,6 +366,8 @@ public:
   b2RevoluteJoint* joint;
   World* world;
 };
+
+class Compositor;
 
 class World : public Object {
  public:
@@ -686,16 +689,6 @@ inline void LCpush<AudioHandle*>(lua_State* L, AudioHandle* handle) {
 template<>
 inline void LCcheck<AudioHandle*>(lua_State* L, AudioHandle** handle, int pos) {
   *handle = (AudioHandle*)LCcheck_lut(L, LUT_AUDIOHANDLE, pos);
-}
-
-template<>
-inline void LCpush<Compositor*>(lua_State* L, Compositor* compositor) {
-  LCpush_lut(L, LUT_COMPOSITOR, compositor);
-}
-
-template<>
-inline void LCcheck<Compositor*>(lua_State* L, Compositor** compositor, int pos) {
-  *compositor = (Compositor*)LCcheck_lut(L, LUT_COMPOSITOR, pos);
 }
 
 template<>

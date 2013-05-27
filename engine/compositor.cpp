@@ -2,9 +2,48 @@
 #include "testlib.h"
 #include "testlib_gl.h"
 
+class VoidFunctionRenderable : public Renderable {
+public:
+  OBJECT_PROTO(VoidFunctionRenderable);
+  VoidFunctionRenderable(void* _fn)
+    : Renderable(NULL) {
+    fn = (VoidFunction*)_fn;
+  }
+
+  virtual void render(void *args) {
+    fn->invoke();
+  }
+
+  VoidFunction* fn;
+};
+OBJECT_IMPL(VoidFunctionRenderable, Renderable);
+
+void as_renderable(VoidFunction* fn) {
+  void* buffer = frame_alloc(sizeof(VoidFunctionRenderable));
+  VoidFunctionRenderable* vfr = new(buffer) VoidFunctionRenderable(fn);
+  renderable_enqueue_for_screen(vfr, NULL);
+}
+
+OBJECT_IMPL(FrameBuffer, Object);
+OBJECT_PROPERTY(FrameBuffer, color_buffer);
+
+FrameBuffer::FrameBuffer(void* _empty) {
+  fail_exit("default FrameBuffer constructor is not valid");
+}
+
 FrameBuffer::FrameBuffer()
   : color_buffer(NULL), fbo(0) {
 }
+
+void FrameBuffer::destroy() {
+  DEFERRED_INVOKE(as_renderable, this, deferred_destroy, NULL);
+}
+
+void FrameBuffer::deferred_destroy() {
+  glDeleteFramebuffers(1, &fbo);
+  delete this;
+}
+DEFERRED_OBJECT_METHOD(as_renderable, FrameBuffer, deferred_destroy, void, ());
 
 const char* framebufferstatus(GLenum result) {
   switch(result) {
@@ -27,28 +66,6 @@ const char* framebufferstatus(GLenum result) {
   default:
     return "unknown";
   }
-}
-
-class VoidFunctionRenderable : public Renderable {
-public:
-  OBJECT_PROTO(VoidFunctionRenderable);
-  VoidFunctionRenderable(void* _fn)
-    : Renderable(NULL) {
-    fn = (VoidFunction*)_fn;
-  }
-
-  virtual void render(void *args) {
-    fn->invoke();
-  }
-
-  VoidFunction* fn;
-};
-OBJECT_IMPL(VoidFunctionRenderable, Renderable);
-
-void as_renderable(VoidFunction* fn) {
-  void* buffer = frame_alloc(sizeof(VoidFunctionRenderable));
-  VoidFunctionRenderable* vfr = new(buffer) VoidFunctionRenderable(fn);
-  renderable_enqueue_for_screen(vfr, NULL);
 }
 
 OBJECT_IMPL(Compositor, Object);
@@ -91,6 +108,7 @@ DEFERRED_OBJECT_METHOD(as_renderable, Compositor, texture_destroy, void, (Textur
 FrameBuffer* Compositor::frame_buffer_create(Texture* color) {
   FrameBuffer* fb = new FrameBuffer();
   DEFERRED_INVOKE(as_renderable, this, frame_buffer_init, fb, color);
+  fb->reference_count = 0; // disown
   return fb;
 }
 OBJECT_METHOD(Compositor, frame_buffer_create, FrameBuffer*, (Texture*));
@@ -111,12 +129,6 @@ void Compositor::frame_buffer_init(FrameBuffer* fb, Texture* tex) {
   gl_check(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 }
 DEFERRED_OBJECT_METHOD(as_renderable, Compositor, frame_buffer_init, void, (FrameBuffer*, Texture*));
-
-void Compositor::frame_buffer_destroy(FrameBuffer* fb) {
-  glDeleteFramebuffers(1, &fb->fbo);
-  delete fb;
-}
-DEFERRED_OBJECT_METHOD(as_renderable, Compositor, frame_buffer_destroy, void, (FrameBuffer*));
 
 void Compositor::frame_buffer_bind(FrameBuffer* fb) {
   if(fb) {

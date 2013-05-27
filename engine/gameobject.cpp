@@ -20,6 +20,7 @@
 #include "testlib.h"
 #include "utils.h"
 #include "psystem.h"
+#include "compositor.h"
 
 #include <math.h>
 #include <Box2D/Dynamics/Joints/b2Joint.h>
@@ -1042,6 +1043,7 @@ void init_lua(World* world) {
   static const luaL_Reg world_m[] = {
     {"set_keybinding", Lworld_set_keybinding},
     {"set_sibinding", Lworld_set_sibinding},
+    {"__gc", Lobject_special_gc},
     {NULL, NULL}};
 
   LClink_metatable(L, LUT_WORLD, world_m);
@@ -1068,6 +1070,8 @@ void init_lua(World* world) {
   LClink_metatable(L, LUT_PSCOMPONENT, NULL);
   LClink_metatable(L, LUT_JOINT, NULL);
   LClink_metatable(L, LUT_AUDIOHANDLE, NULL);
+  LClink_metatable(L, LUT_TEXTURE, NULL);
+  LClink_metatable(L, LUT_FRAMEBUFFER, NULL);
 
   LCpush(L, world);
   lua_setglobal(L, "world");
@@ -1387,7 +1391,7 @@ Universe::Universe(void* _path)
 
 Universe::~Universe() {
   if(stash) free_lstring(stash);
-  delete compositor;
+  compositor->release();
 
   for(NameToAtlas::iterator iter = name_to_atlas.begin();
       iter != name_to_atlas.end(); ++iter) {
