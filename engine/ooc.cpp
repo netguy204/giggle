@@ -104,6 +104,10 @@ Object* Object::CreateInstance(void* init) {
   return new Object();
 }
 
+void Object::destroy() {
+  delete this;
+}
+
 MethodInfo::MethodInfo(TypeInfo* type, const char* name)
   : m_type(type), m_name(name) {
   m_type->register_method(this);

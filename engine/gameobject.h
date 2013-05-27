@@ -130,8 +130,8 @@ class Component : public Object {
   int delete_me;
 };
 
-void LCpush_lut(lua_State *L, const char* metatable, void* ut);
-void* LCcheck_lut(lua_State *L, const char* metatable, int pos);
+void LCpush_lut(lua_State *L, const char* metatable, Object* ut);
+Object* LCcheck_lut(lua_State *L, const char* metatable, int pos);
 
 void LCconfigure_object(lua_State *L, Object* obj, int pos);
 
@@ -680,8 +680,7 @@ inline void LCcheck<SpriteAtlasEntry>(lua_State* L, SpriteAtlasEntry* entry, int
 
 template<>
 inline void LCpush<AudioHandle*>(lua_State* L, AudioHandle* handle) {
-  // lua owns GC for this object so we copy
-  LCpush_lut(L, LUT_AUDIOHANDLE, new AudioHandle(*handle));
+  LCpush_lut(L, LUT_AUDIOHANDLE, handle);
 }
 
 template<>

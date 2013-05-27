@@ -614,7 +614,7 @@ function enable_compositor()
       while true do
          coroutine.yield()
          if not tex then
-            tex = czor:texture_create(640, 480, constant.GL_NEAREST)
+            tex = czor:texture_create(1024, 768, constant.GL_NEAREST)
             fbo = czor:frame_buffer_create(tex)
          end
          czor:frame_buffer_bind(fbo)

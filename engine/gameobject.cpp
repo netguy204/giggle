@@ -439,6 +439,7 @@ OBJECT_PROPERTY(Component, delete_me);
 
 Component::Component(void* p)
   : go(NULL), delete_me(0) {
+  fail_exit("default component constructor not valid");
 }
 
 Component::Component(GO* go, ComponentPriority priority)
@@ -449,9 +450,9 @@ Component::Component(GO* go, ComponentPriority priority)
 }
 
 Component::~Component() {
-  if(this->go) {
-    this->go->components.remove(this);
-    this->go->world->components.remove(this);
+  if(go) {
+    go->components.remove(this);
+    go->world->components.remove(this);
   }
 }
 
@@ -566,17 +567,17 @@ void CScripted::messages_received() {
   step_thread(&message_thread, go, this);
 }
 
-void LCpush_lut(lua_State *L, const char* metatable, void* ut) {
+void LCpush_lut(lua_State *L, const char* metatable, Object* ut) {
   if(!ut) {
     lua_pushnil(L);
   } else {
     void** p = (void**)lua_newuserdata(L, sizeof(void*));
     luaL_setmetatable(L, metatable);
-    *p = ut;
+    *p = ut->retain();
   }
 }
 
-void* LCcheck_lut(lua_State *L, const char* metatable, int pos) {
+Object* LCcheck_lut(lua_State *L, const char* metatable, int pos) {
   static char error_msg[256];
 
   if(lua_isnil(L, pos)) {
@@ -594,7 +595,7 @@ void* LCcheck_lut(lua_State *L, const char* metatable, int pos) {
     snprintf(error_msg, sizeof(error_msg), "`%s' expected", metatable);
     luaL_argcheck(L, ud != NULL, pos, error_msg);
   }
-  return *ud;
+  return (Object*)*ud;
 }
 
 struct LuaKeyData {
@@ -762,19 +763,6 @@ void RevJoint::destroy() {
   world->bWorld.DestroyJoint(joint);
 }
 OBJECT_METHOD(RevJoint, destroy, void, ());
-
-int Ljoint_gc(lua_State* L) {
-  RevJoint* joint = (RevJoint*)LCcheck_lut(L, LUT_JOINT, 1);
-  delete joint;
-  return 0;
-}
-
-static int Laudiohandle_gc(lua_State* L) {
-  AudioHandle* h;
-  LCcheck(L, &h, 1);
-  h->destroy();
-  return 0;
-}
 
 static int Laudiohandle_terminate(lua_State* L) {
   AudioHandle* h;
@@ -992,6 +980,18 @@ static int Lobject_key(lua_State* L) {
   return 1;
 }
 
+static int Lobject_gc(lua_State* L) {
+  Object* obj = LCcheck_object(L, 1);
+  obj->release();
+  return 0;
+}
+
+static int Lobject_special_gc(lua_State* L) {
+  // used by GO and Component, which do not participate in reference
+  // counting
+  return 0;
+}
+
 void LClink_metatable(lua_State *L, const char* name, const luaL_Reg* table) {
   static const luaL_Reg object_m[] = {
     {"__index", Lobject_index},
@@ -1000,6 +1000,7 @@ void LClink_metatable(lua_State *L, const char* name, const luaL_Reg* table) {
   static const luaL_Reg defaults_m[] = {
     {"__tostring", Lobject_tostring},
     {"__eq", Lobject_eq},
+    {"__gc", Lobject_gc},
     {"key", Lobject_key},
     {NULL, NULL}};
 
@@ -1051,28 +1052,22 @@ void init_lua(World* world) {
     {"create_message", Lgo_create_message},
     {"broadcast_message", Lgo_broadcast_message},
     {"contacts", Lgo_contacts},
+    {"__gc", Lobject_special_gc},
     {NULL, NULL}};
 
   LClink_metatable(L, LUT_GO, go_m);
 
+  static const luaL_Reg comp_m[] = {
+    {"__gc", Lobject_special_gc},
+    {NULL, NULL}};
+  LClink_metatable(L, LUT_COMPONENT, comp_m);
+
   LClink_metatable(L, LUT_UNIVERSE, NULL);
-  LClink_metatable(L, LUT_COMPONENT, NULL);
   LClink_metatable(L, LUT_COMPOSITOR, NULL);
   LClink_metatable(L, LUT_PSDEFINITION, NULL);
   LClink_metatable(L, LUT_PSCOMPONENT, NULL);
-
-  static const luaL_Reg audiohandle_m[] = {
-    {"terminate", Laudiohandle_terminate},
-    {"__gc", Laudiohandle_gc},
-    {NULL, NULL}};
-
-  LClink_metatable(L, LUT_AUDIOHANDLE, audiohandle_m);
-
-  static const luaL_Reg joint_m[] = {
-    {"__gc", Ljoint_gc},
-    {NULL, NULL}};
-
-  LClink_metatable(L, LUT_JOINT, joint_m);
+  LClink_metatable(L, LUT_JOINT, NULL);
+  LClink_metatable(L, LUT_AUDIOHANDLE, NULL);
 
   LCpush(L, world);
   lua_setglobal(L, "world");
@@ -1447,7 +1442,7 @@ void Universe::update(long delta) {
     ++iter;
 
     if(!handle->isCurrent()) {
-      handle->destroy();
+      handle->release();
       long_to_handle.erase(handle_name);
     }
   }

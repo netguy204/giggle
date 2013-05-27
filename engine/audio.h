@@ -68,7 +68,7 @@ class AudioHandle : public Object {
   int isCurrent();
 
   void terminate();
-  void destroy();
+  virtual void destroy();
 
   long handle;
   long last_sample;

@@ -547,7 +547,7 @@ void init_world() {
   LOGI("init_world");
 
   if(world) {
-    delete world;
+    world->release();
   }
 
   world = new World(universe);

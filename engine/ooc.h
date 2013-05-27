@@ -355,6 +355,27 @@ class MethodInfo {
 class Object {
 public:
   OBJECT_PROTO(Object);
+
+  // a newly constructed object will have a reference count of 1
+  inline Object()
+    : reference_count(1) {
+  }
+
+  inline Object* retain() {
+    ++reference_count;
+    return this;
+  }
+
+  inline void release() {
+    --reference_count;
+    if(reference_count <= 0) {
+      destroy();
+    }
+  }
+
+  virtual void destroy();
+
+  int reference_count;
 };
 
 
