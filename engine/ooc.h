@@ -20,6 +20,8 @@
 #include <lua.hpp>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
+
 #include <map>
 #include <typeinfo>
 
@@ -225,6 +227,7 @@ class MethodInfo {
   const char* name() const;
   virtual int LCinvoke(lua_State* L, int pos) const = 0;
   virtual VoidFunction* LCframebind(lua_State* L, int pos) const = 0;
+  virtual VoidFunction* framebind(Object* obj, ...) const = 0;
 
   TypeInfo* m_type;
   const char* m_name;
@@ -246,6 +249,16 @@ class MethodInfo {
   LCcheck(L, &JOIN(var, OFFSET), pos + OFFSET);
 #define GENCHECKS1($, X) GENCHECKS2(HEAD(TAIL(X)), HEAD(X))
 #define GENCHECKS(X) IF(NOT(ISEMPTY(X)), JOIN(RECR_D, 0)(1, LLC, GENCHECKS1, LLU, LLF, CONS(1, X)))
+
+#define CHECK_FLOAT(X) CHECK(JOIN(CHECK_FLOAT_, X))
+#define CHECK_FLOAT_float ~, 1,
+
+#define FLOAT2DOUBLE(TYPE) IF_ELSE(CHECK_FLOAT(TYPE), double, TYPE)
+
+#define GENVAARGS2(TYPE, OFFSET)                               \
+  JOIN(var, OFFSET) = va_arg(*args, FLOAT2DOUBLE(TYPE));
+#define GENVAARGS1($, X) GENVAARGS2(HEAD(TAIL(X)), HEAD(X))
+#define GENVAARGS(X) IF(NOT(ISEMPTY(X)), JOIN(RECR_D, 0)(1, LLC, GENVAARGS1, LLU, LLF, CONS(1, X)))
 
 #define VARNAME0(item, pos1) JOIN(var, pos1)
 #define VARNAME(item, pos) VARNAME0(var, INC(pos))
@@ -280,6 +293,10 @@ class MethodInfo {
       LCcheck(L, &obj, pos);                                            \
       GENCHECKS(ARGS);                                                  \
     }                                                                   \
+                                                                        \
+    void bind(va_list* args) {                                          \
+      GENVAARGS(ARGS);                                                  \
+    }                                                                   \
   };                                                                    \
   class LOPC(CLASS, METHOD) : public MethodInfo {                       \
   public:                                                               \
@@ -294,6 +311,15 @@ class MethodInfo {
       void* buffer = frame_alloc(sizeof(FLOPC(CLASS,METHOD)));          \
       FLOPC(CLASS, METHOD) *bound = new(buffer) FLOPC(CLASS, METHOD)(); \
       bound->LCbind(L, pos);                                            \
+      return bound;                                                     \
+    }                                                                   \
+    virtual VoidFunction* framebind(Object* obj, ...) const {           \
+      va_list args;                                                     \
+      va_start(args, obj);                                              \
+      void* buffer = frame_alloc(sizeof(FLOPC(CLASS,METHOD)));          \
+      FLOPC(CLASS, METHOD) *bound = new(buffer) FLOPC(CLASS, METHOD)(); \
+      bound->obj = (CLASS*)obj;                                         \
+      bound->bind(&args);                                               \
       return bound;                                                     \
     }                                                                   \
   };                                                                    \
@@ -317,6 +343,14 @@ class MethodInfo {
     TARGET(LCframebind(L, pos));                                        \
     return 0;                                                           \
   }
+
+#define DEFERRED_INVOKE(TARGET, OBJECT, METHOD, ...)                    \
+  do {                                                                  \
+    const MethodInfo* info = OBJECT->typeinfo()->method(STRINGIFY(METHOD)); \
+    VoidFunction* fn = info->framebind(OBJECT, __VA_ARGS__);            \
+    TARGET(fn);                                                         \
+  } while(false)
+
 
 class Object {
 public:

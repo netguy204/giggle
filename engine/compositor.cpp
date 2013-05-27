@@ -1,5 +1,14 @@
 #include "compositor.h"
 #include "testlib.h"
+#include "testlib_gl.h"
+
+OBJECT_IMPL(FrameBuffer, Object);
+OBJECT_PROPERTY(FrameBuffer, color_buffer);
+
+FrameBuffer::FrameBuffer(void* _empty) {
+}
+
+
 
 class VoidFunctionRenderable : public Renderable {
 public:
@@ -32,3 +41,30 @@ void Compositor::clear_with_color(Color color) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 DEFERRED_OBJECT_METHOD(as_renderable, Compositor, clear_with_color, void, (Color));
+
+Texture* Compositor::texture_create(int width, int height, int filter) {
+  Texture* texture = new Texture();
+  DEFERRED_INVOKE(as_renderable, this, texture_init, texture, width, height, filter);
+  return texture;
+}
+OBJECT_METHOD(Compositor, texture_create, Texture*, (int, int, int));
+
+void Compositor::texture_init(Texture* texture, int width, int height, int filter) {
+  if(texture->texid <= 0) {
+    gl_check(glGenTextures(1, &texture->texid));
+  }
+  texture->bind();
+  gl_check(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+                        width, height,
+                        0, GL_RGB, GL_UNSIGNED_BYTE, NULL));
+  gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+  gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+  gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter));
+  gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter));
+}
+DEFERRED_OBJECT_METHOD(as_renderable, Compositor, texture_init, void, (Texture*, int, int, int));
+
+void Compositor::texture_destroy(Texture* tex) {
+  delete tex;
+}
+DEFERRED_OBJECT_METHOD(as_renderable, Compositor, texture_destroy, void, (Texture*));

@@ -55,4 +55,8 @@ M.STATIC = 0
 M.KINEMATIC = 1
 M.DYNAMIC = 2
 
+-- opengl
+M.GL_NEAREST = 0x2600
+M.GL_LINEAR = 0x2601
+
 return M

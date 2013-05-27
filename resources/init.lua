@@ -568,7 +568,10 @@ function menu_screen(message, offset, fn)
    local pre_render = function(go, comp)
       while true do
          coroutine.yield()
-         universe:compositor():clear_with_color({0.2,0.2,0.2,1.0})
+         local comp = universe:compositor()
+         comp:clear_with_color({0.2,0.2,0.2,1.0})
+         local tex = comp:texture_create(1024, 768, constant.GL_NEAREST)
+         comp:texture_destroy(tex)
       end
    end
 
