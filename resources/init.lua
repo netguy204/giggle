@@ -564,18 +564,6 @@ function menu_screen(message, offset, fn)
       stage:add_component('CScripted', {update_thread=util.thread(thread)})
    end
    Timer():reset(0.2, install_handler)
-
-   local pre_render = function(go, comp)
-      while true do
-         coroutine.yield()
-         local comp = universe:compositor()
-         comp:clear_with_color({0.2,0.2,0.2,1.0})
-         local tex = comp:texture_create(1024, 768, constant.GL_NEAREST)
-         comp:texture_destroy(tex)
-      end
-   end
-
-   stage:find_component('Camera', nil):before_enqueue(util.thread(pre_render))
 end
 
 function game_lose()
@@ -616,9 +604,41 @@ function game_init()
 
 end
 
+function enable_compositor()
+
+   local tex = nil
+   local fbo = nil
+   local czor = universe:compositor()
+
+   local pre_render = function(go, comp)
+      while true do
+         coroutine.yield()
+         if not tex then
+            tex = czor:texture_create(640, 480, constant.GL_NEAREST)
+            fbo = czor:frame_buffer_create(tex)
+         end
+         czor:frame_buffer_bind(fbo)
+         czor:clear_with_color({0.2,0.2,0.2,1.0})
+      end
+   end
+
+   local post_render = function(go, comp)
+      while true do
+         coroutine.yield()
+         czor:frame_buffer_bind(nil)
+         czor:clear_with_color({0, 0, 0, 1})
+         czor:textured_quad({0,0, screen_width, screen_height}, {1,1,1,1}, tex)
+      end
+   end
+
+   stage:find_component('Camera', nil):before_enqueue(util.thread(pre_render))
+   stage:find_component('Camera', nil):after_enqueue(util.thread(post_render))
+end
+
 function level_init()
    Timer.register()
    util.install_basic_keymap()
+   enable_compositor()
 
    sounds={
       hits={world:get_sound('sounds/hit1.ogg', 1),

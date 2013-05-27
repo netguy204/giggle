@@ -24,18 +24,6 @@
 #include "testlib_gl.h"
 #include "pipeline.h"
 
-class ScreenSampler : public Renderable {
- public:
-  OBJECT_PROTO(ScreenSampler);
-  ScreenSampler(void *empty);
-  virtual ~ScreenSampler();
-
-  virtual void render(void *args);
-
-  GLuint fbo;
-  Texture* texture;
-};
-
 class CLeftAndRight : public Component {
  public:
   OBJECT_PROTO(CLeftAndRight);
