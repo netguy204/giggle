@@ -271,6 +271,8 @@ function Camera:init(go, w, h)
    self.d = 10
    self.m = 1
    self.target = vector.new({0,0})
+   self.cam = stage:find_component("Camera", nil)
+
    go:body_type(constant.DYNAMIC)
 end
 
@@ -302,9 +304,13 @@ function Camera:update()
    end
 end
 
+function Camera:set_ortho(minx, maxx, miny, maxy)
+   self.cam:world2camera():orthographic_proj(minx, maxx, miny, maxy, -1, 1)
+end
+
 function Camera:set_viewport()
    local pos = self.go:pos()
-   set_transform(pos[1], pos[1] + self.w, pos[2], pos[2] + self.h)
+   self:set_ortho(pos[1], pos[1] + self.w, pos[2], pos[2] + self.h)
 end
 
 function reset_state(new_state)
@@ -343,12 +349,14 @@ function make_particle_system(player)
                                        {name='PSTimeTerminator'}}}})
 end
 
+local camera = Camera(world:create_go(), screen_width, screen_height)
+
 function game()
    --debugging collisions
    --MouseEnemy(world:create_go(), 1, 32, 32)
    local flash_red = {0.8, 0.0, 0.0, 0.6}
    local flash_off = {0.0, 0.0, 0.0, 0.0}
-   local camera = Camera(world:create_go(), screen_width, screen_height)
+
    kills_remaining = level_data.goal
 
    local flash = stage:add_component('CTestDisplay',
@@ -536,7 +544,7 @@ function menu_screen(message, offset, fn)
                                      atlas=ATLAS,
                                      message=message,
                                      color={1.0,1.0,1.0,1.0}})
-   set_transform(0, screen_width, 0, screen_height)
+
    local falling_edge = util.falling_edge_trigger(false)
 
    local red_max = 1.0
@@ -609,12 +617,14 @@ function enable_compositor()
    local tex = nil
    local fbo = nil
    local czor = universe:compositor()
+   local tform = czor:transform_create()
+   tform:orthographic_proj(0, screen_width, 0, screen_height, -1, 1)
 
    local pre_render = function(go, comp)
       while true do
          coroutine.yield()
          if not tex then
-            tex = czor:texture_create(1024, 768, constant.GL_NEAREST)
+            tex = czor:texture_create(screen_width, screen_height, constant.GL_NEAREST)
             fbo = czor:frame_buffer_create(tex)
          end
          czor:frame_buffer_bind(fbo)
@@ -626,13 +636,14 @@ function enable_compositor()
       while true do
          coroutine.yield()
          czor:frame_buffer_bind(nil)
+         czor:transform_set(tform)
          czor:clear_with_color({0, 0, 0, 1})
          czor:textured_quad({0,0, screen_width, screen_height}, {1,1,1,1}, tex)
       end
    end
 
-   stage:find_component('Camera', nil):before_enqueue(util.thread(pre_render))
-   stage:find_component('Camera', nil):after_enqueue(util.thread(post_render))
+   stage:find_component('Camera', nil):pre_render(util.thread(pre_render))
+   stage:find_component('Camera', nil):post_render(util.thread(post_render))
 end
 
 function level_init()

@@ -531,18 +531,6 @@ int Lrandom_gaussian(lua_State* L) {
   return 1;
 }
 
-int Lset_transform(lua_State* L) {
-  float xmin = luaL_checknumber(L, 1);
-  float xmax = luaL_checknumber(L, 2);
-  float ymin = luaL_checknumber(L, 3);
-  float ymax = luaL_checknumber(L, 4);
-  matrix_orthographic_proj(&orthographic_projection,
-                           xmin, xmax,
-                           ymin, ymax,
-                           -1.0f, 1.0f);
-  return 0;
-}
-
 void init_world() {
   LOGI("init_world");
 
@@ -554,7 +542,6 @@ void init_world() {
 
   lua_register(world->L, "reset_world", Lreset_world);
   lua_register(world->L, "random_gaussian", Lrandom_gaussian);
-  lua_register(world->L, "set_transform", Lset_transform);
 
   LCpush(world->L, universe);
   lua_setglobal(world->L, "universe");

@@ -108,23 +108,29 @@ void step_thread(LuaThread* thread, GO* go, Component* comp) {
 }
 
 OBJECT_IMPL(Camera, Component);
-OBJECT_PROPERTY(Camera, before_enqueue);
-OBJECT_PROPERTY(Camera, after_enqueue);
+OBJECT_PROPERTY(Camera, pre_render);
+OBJECT_PROPERTY(Camera, post_render);
+OBJECT_ACCESSOR(Camera, world2camera, get_world2camera, set_world2camera);
 
 Camera::Camera(void* _go)
-  : Component((GO*)_go, PRIORITY_SHOW) {
+  : Component((GO*)_go, PRIORITY_SHOW), world2camera(NULL) {
   memset(renderables, 0, sizeof(renderables));
   memset(baseLayers, 0, sizeof(baseLayers));
   memset(layers, 0, sizeof(layers));
   memset(particles, 0, sizeof(particles));
   memset(testRects, 0, sizeof(testRects));
+
+  // reasonable default
+  world2camera.orthographic_proj(0.0f, screen_width, 0.0f, screen_height,
+                                 -1.0f, 1.0f);
+
   go->world->cameras.add_head(this);
 }
 
 Camera::~Camera() {
   go->world->cameras.remove(this);
-  free_thread(&before_enqueue);
-  free_thread(&after_enqueue);
+  free_thread(&pre_render);
+  free_thread(&post_render);
 }
 
 void Camera::addRenderable(int layer, Renderable* renderable, void* args) {
@@ -144,8 +150,29 @@ void Camera::addRect(ColoredRect* list, ColoredRect rect) {
   *list = rect;
 }
 
+extern Matrix44 orthographic_projection;
+
+class SetCameraTransform : public Renderable {
+public:
+  SetCameraTransform(Matrix44& m)
+    : Renderable(NULL), matrix(&m) {
+  }
+
+  virtual void render(void* args) {
+    orthographic_projection = matrix;
+  }
+
+  Matrix44 matrix;
+};
+
 void Camera::enqueue() {
-  step_thread(&before_enqueue, go, this);
+  step_thread(&pre_render, go, this);
+
+  // set transform
+  void* stfbuff = frame_alloc(sizeof(SetCameraTransform));
+  SetCameraTransform *stf = new(stfbuff) SetCameraTransform(world2camera);
+  renderable_enqueue_for_screen(stf, NULL);
+
   for(int ii = 0; ii < LAYER_MAX; ++ii) {
     if(renderables[ii]) {
       renderables_enqueue_for_screen(renderables[ii]);
@@ -168,7 +195,15 @@ void Camera::enqueue() {
     particles[ii] = NULL;
     baseLayers[ii] = NULL;
   }
-  step_thread(&after_enqueue, go, this);
+  step_thread(&post_render, go, this);
+}
+
+Matrix44* Camera::get_world2camera() {
+  return &world2camera;
+}
+
+void Camera::set_world2camera(Matrix44* m) {
+  world2camera = *m;
 }
 
 OBJECT_IMPL(GO, Object);
@@ -1072,6 +1107,7 @@ void init_lua(World* world) {
   LClink_metatable(L, LUT_AUDIOHANDLE, NULL);
   LClink_metatable(L, LUT_TEXTURE, NULL);
   LClink_metatable(L, LUT_FRAMEBUFFER, NULL);
+  LClink_metatable(L, LUT_MATRIX, NULL);
 
   LCpush(L, world);
   lua_setglobal(L, "world");

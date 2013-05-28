@@ -6,6 +6,7 @@
 #include "texture.h"
 #include "rect.h"
 #include "gameobject.h"
+#include "matrix.h"
 
 class TextureObject : public Object {
  public:
@@ -40,6 +41,9 @@ class Compositor : public Object {
   Compositor(void* _emtpy);
 
   void clear_with_color(Color color);
+
+  Matrix44* transform_create();
+  void transform_set(Matrix44* mat);
 
   TextureObject* texture_create(int width, int height, int filter);
   void texture_init(TextureObject* tex, int width, int height, int filter);

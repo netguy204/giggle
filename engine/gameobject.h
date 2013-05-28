@@ -49,6 +49,7 @@
 #define LUT_JOINT "Joint"
 #define LUT_TEXTURE "Texture"
 #define LUT_FRAMEBUFFER "FrameBuffer"
+#define LUT_MATRIX "Matrix44"
 
 typedef enum {
   MASK_NON_COLLIDER = 0,
@@ -171,10 +172,14 @@ class Camera : public Component {
   BaseSprite particles[LAYER_MAX];
   ColoredRect testRects[LAYER_MAX];
   DLLNode_ camera_node;
-  Matrix44_ world2camera;
 
-  LuaThread before_enqueue;
-  LuaThread after_enqueue;
+  Matrix44* get_world2camera();
+  void set_world2camera(Matrix44* m);
+
+  Matrix44 world2camera;
+
+  LuaThread pre_render;
+  LuaThread post_render;
 };
 
 class Fixture {

@@ -274,7 +274,7 @@ Program* tile_program_loader() {
   return program;
 }
 
-struct Matrix44_ orthographic_projection;
+Matrix44 orthographic_projection(NULL);
 
 Renderable* basespritelist_renderer;
 Renderable* spritelist_renderer;
@@ -303,10 +303,8 @@ void renderer_resize(int w, int h) {
   // now force the resolution that will be running on the ouya
   screen_width = 1920;
   screen_height = 1080;
-  matrix_orthographic_proj(&orthographic_projection,
-                           0.0f, screen_width,
-                           0.0f, screen_height,
-                           -1.0f, 1.0f);
+  orthographic_projection.orthographic_proj(0.0f, screen_width, 0.0f, screen_height,
+                                            -1.0f, 1.0f);
 }
 
 void renderer_gl_init(int w, int h) {

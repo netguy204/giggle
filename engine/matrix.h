@@ -17,14 +17,34 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
-typedef struct Matrix44_ {
+#include "ooc.h"
+
+class Matrix44 : public Object {
+ public:
+  OBJECT_PROTO(Matrix44);
+  Matrix44(void* _empty);
+
+  Matrix44& operator=(const Matrix44& other);
+  void identity();
+  void orthographic_proj(float xmin, float xmax, float ymin, float ymax,
+                         float zmin, float zmax);
+
   float data[16];
-} *Matrix44;
+};
 
-void matrix_identity(Matrix44 matrix);
 
-void matrix_orthographic_proj(Matrix44 matrix, float xmin, float xmax,
-                              float ymin, float ymax, float zmin, float zmax);
+#define LUT_MATRIX "Matrix44"
+extern void LCpush_lut(lua_State *L, const char* metatable, Object* ut);
+extern Object* LCcheck_lut(lua_State *L, const char* metatable, int pos);
 
+template<>
+inline void LCpush<Matrix44*>(lua_State* L, Matrix44* m) {
+  LCpush_lut(L, LUT_MATRIX, m);
+}
+
+template<>
+inline void LCcheck<Matrix44*>(lua_State* L, Matrix44** m, int pos) {
+  *m = (Matrix44*)LCcheck_lut(L, LUT_MATRIX, pos);
+}
 
 #endif

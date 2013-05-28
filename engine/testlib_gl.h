@@ -95,7 +95,7 @@ void program_bind_uniforms(Program* p, ...);
 
 GLuint next_buffer();
 
-extern struct Matrix44_ orthographic_projection;
+extern Matrix44 orthographic_projection;
 extern GLuint tex0_uniform_location;
 extern GLuint mvp_uniform_location;
 

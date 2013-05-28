@@ -108,6 +108,16 @@ void Compositor::clear_with_color(Color color) {
 }
 DEFERRED_OBJECT_METHOD(as_renderable, Compositor, clear_with_color, void, (Color));
 
+Matrix44* Compositor::transform_create() {
+  return new Matrix44(NULL);
+}
+OBJECT_METHOD(Compositor, transform_create, Matrix44*, ());
+
+void Compositor::transform_set(Matrix44* m) {
+  orthographic_projection = *m;
+}
+DEFERRED_OBJECT_METHOD(as_renderable, Compositor, transform_set, void, (Matrix44*));
+
 TextureObject* Compositor::texture_create(int width, int height, int filter) {
   TextureObject* texture = new TextureObject(new Texture());
   DEFERRED_INVOKE(as_renderable, this, texture_init, texture, width, height, filter);
