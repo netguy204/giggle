@@ -23,6 +23,7 @@ Texture::Texture()
 
 Texture::~Texture() {
   if(texid != 0) {
+    unbind();
     glDeleteTextures(1, &texid);
   }
 }

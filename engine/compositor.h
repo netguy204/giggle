@@ -7,6 +7,17 @@
 #include "rect.h"
 #include "gameobject.h"
 
+class TextureObject : public Object {
+ public:
+  OBJECT_PROTO(TextureObject);
+  TextureObject(void* _texture);
+
+  virtual void destroy();
+  void deferred_destroy();
+
+  Texture* texture;
+};
+
 class FrameBuffer : public Object {
  public:
   OBJECT_PROTO(FrameBuffer);
@@ -16,7 +27,10 @@ class FrameBuffer : public Object {
   virtual void destroy();
   void deferred_destroy();
 
-  Texture* color_buffer;
+  void set_color_buffer(TextureObject* tex);
+  TextureObject* get_color_buffer();
+
+  TextureObject* color_buffer;
   unsigned int fbo;
 };
 
@@ -27,15 +41,14 @@ class Compositor : public Object {
 
   void clear_with_color(Color color);
 
-  Texture* texture_create(int width, int height, int filter);
-  void texture_init(Texture* tex, int width, int height, int filter);
-  void texture_destroy(Texture* tex);
+  TextureObject* texture_create(int width, int height, int filter);
+  void texture_init(TextureObject* tex, int width, int height, int filter);
 
-  FrameBuffer* frame_buffer_create(Texture* color);
-  void frame_buffer_init(FrameBuffer* fb, Texture* color);
+  FrameBuffer* frame_buffer_create(TextureObject* color);
+  void frame_buffer_init(FrameBuffer* fb);
   void frame_buffer_bind(FrameBuffer* fb); // null means the default frame buffer
 
-  void textured_quad(Rect_ rect, Color color, Texture* texture);
+  void textured_quad(Rect_ rect, Color color, TextureObject* texture);
 };
 
 template<>
@@ -49,13 +62,13 @@ inline void LCcheck<Compositor*>(lua_State* L, Compositor** compositor, int pos)
 }
 
 template<>
-inline void LCpush<Texture*>(lua_State* L, Texture* tex) {
-  lua_pushlightuserdata(L, tex);
+inline void LCpush<TextureObject*>(lua_State* L, TextureObject* tex) {
+  LCpush_lut(L, LUT_TEXTURE, tex);
 }
 
 template<>
-inline void LCcheck<Texture*>(lua_State* L, Texture** tex, int pos) {
-  *tex = (Texture*)lua_touserdata(L, pos);
+inline void LCcheck<TextureObject*>(lua_State* L, TextureObject** tex, int pos) {
+  *tex = (TextureObject*)LCcheck_lut(L, LUT_TEXTURE, pos);
 }
 
 template<>

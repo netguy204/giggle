@@ -24,8 +24,24 @@ void as_renderable(VoidFunction* fn) {
   renderable_enqueue_for_screen(vfr, NULL);
 }
 
+OBJECT_IMPL(TextureObject, Object);
+
+TextureObject::TextureObject(void* _texture)
+  : texture((Texture*)_texture) {
+}
+
+void TextureObject::destroy() {
+  DEFERRED_INVOKE(as_renderable, this, deferred_destroy, NULL);
+}
+
+void TextureObject::deferred_destroy() {
+  delete texture;
+  delete this;
+}
+DEFERRED_OBJECT_METHOD(as_renderable, TextureObject, deferred_destroy, void, ());
+
 OBJECT_IMPL(FrameBuffer, Object);
-OBJECT_PROPERTY(FrameBuffer, color_buffer);
+OBJECT_ACCESSOR(FrameBuffer, color_buffer, get_color_buffer, set_color_buffer);
 
 FrameBuffer::FrameBuffer(void* _empty) {
   fail_exit("default FrameBuffer constructor is not valid");
@@ -37,6 +53,9 @@ FrameBuffer::FrameBuffer()
 
 void FrameBuffer::destroy() {
   DEFERRED_INVOKE(as_renderable, this, deferred_destroy, NULL);
+  if(color_buffer) {
+    color_buffer->release();
+  }
 }
 
 void FrameBuffer::deferred_destroy() {
@@ -44,6 +63,17 @@ void FrameBuffer::deferred_destroy() {
   delete this;
 }
 DEFERRED_OBJECT_METHOD(as_renderable, FrameBuffer, deferred_destroy, void, ());
+
+TextureObject* FrameBuffer::get_color_buffer() {
+  return color_buffer;
+}
+
+void FrameBuffer::set_color_buffer(TextureObject* tex) {
+  if(color_buffer) {
+    color_buffer->release();
+  }
+  color_buffer = (TextureObject*)tex->retain();
+}
 
 const char* framebufferstatus(GLenum result) {
   switch(result) {
@@ -78,18 +108,19 @@ void Compositor::clear_with_color(Color color) {
 }
 DEFERRED_OBJECT_METHOD(as_renderable, Compositor, clear_with_color, void, (Color));
 
-Texture* Compositor::texture_create(int width, int height, int filter) {
-  Texture* texture = new Texture();
+TextureObject* Compositor::texture_create(int width, int height, int filter) {
+  TextureObject* texture = new TextureObject(new Texture());
   DEFERRED_INVOKE(as_renderable, this, texture_init, texture, width, height, filter);
+  texture->reference_count = 0; // disown
   return texture;
 }
-OBJECT_METHOD(Compositor, texture_create, Texture*, (int, int, int));
+OBJECT_METHOD(Compositor, texture_create, TextureObject*, (int, int, int));
 
-void Compositor::texture_init(Texture* texture, int width, int height, int filter) {
-  if(texture->texid <= 0) {
-    gl_check(glGenTextures(1, &texture->texid));
+void Compositor::texture_init(TextureObject* texture, int width, int height, int filter) {
+  if(texture->texture->texid <= 0) {
+    gl_check(glGenTextures(1, &texture->texture->texid));
   }
-  texture->bind();
+  texture->texture->bind();
   gl_check(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
                         width, height,
                         0, GL_RGB, GL_UNSIGNED_BYTE, NULL));
@@ -98,29 +129,26 @@ void Compositor::texture_init(Texture* texture, int width, int height, int filte
   gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter));
   gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter));
 }
-DEFERRED_OBJECT_METHOD(as_renderable, Compositor, texture_init, void, (Texture*, int, int, int));
+DEFERRED_OBJECT_METHOD(as_renderable, Compositor, texture_init, void, (TextureObject*, int, int, int));
 
-void Compositor::texture_destroy(Texture* tex) {
-  delete tex;
-}
-DEFERRED_OBJECT_METHOD(as_renderable, Compositor, texture_destroy, void, (Texture*));
-
-FrameBuffer* Compositor::frame_buffer_create(Texture* color) {
+FrameBuffer* Compositor::frame_buffer_create(TextureObject* color) {
   FrameBuffer* fb = new FrameBuffer();
-  DEFERRED_INVOKE(as_renderable, this, frame_buffer_init, fb, color);
+  fb->set_color_buffer(color);
+
+  DEFERRED_INVOKE(as_renderable, this, frame_buffer_init, fb);
   fb->reference_count = 0; // disown
   return fb;
 }
-OBJECT_METHOD(Compositor, frame_buffer_create, FrameBuffer*, (Texture*));
+OBJECT_METHOD(Compositor, frame_buffer_create, FrameBuffer*, (TextureObject*));
 
-void Compositor::frame_buffer_init(FrameBuffer* fb, Texture* tex) {
+void Compositor::frame_buffer_init(FrameBuffer* fb) {
   if(fb->fbo == 0) {
     gl_check(glGenFramebuffers(1, &fb->fbo));
   }
 
   gl_check(glBindFramebuffer(GL_FRAMEBUFFER, fb->fbo));
-  gl_check(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex->texid, 0));
-  fb->color_buffer = tex;
+  gl_check(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                  GL_TEXTURE_2D, fb->color_buffer->texture->texid, 0));
 
   GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
   if(status != GL_FRAMEBUFFER_COMPLETE) {
@@ -128,7 +156,7 @@ void Compositor::frame_buffer_init(FrameBuffer* fb, Texture* tex) {
   }
   gl_check(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 }
-DEFERRED_OBJECT_METHOD(as_renderable, Compositor, frame_buffer_init, void, (FrameBuffer*, Texture*));
+DEFERRED_OBJECT_METHOD(as_renderable, Compositor, frame_buffer_init, void, (FrameBuffer*));
 
 void Compositor::frame_buffer_bind(FrameBuffer* fb) {
   if(fb) {
@@ -139,7 +167,7 @@ void Compositor::frame_buffer_bind(FrameBuffer* fb) {
 }
 DEFERRED_OBJECT_METHOD(as_renderable, Compositor, frame_buffer_bind, void, (FrameBuffer*));
 
-void Compositor::textured_quad(Rect_ rect, Color color, Texture* texture) {
+void Compositor::textured_quad(Rect_ rect, Color color, TextureObject* texture) {
   Program* program = get_program(standard_color_program_loader);
 
   GLfloat verts[] = {
@@ -187,11 +215,11 @@ void Compositor::textured_quad(Rect_ rect, Color color, Texture* texture) {
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, color_buffer));
   gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 4 * 6, colors, GL_DYNAMIC_DRAW));
   gl_check(glVertexAttribPointer(GLPARAM_OTHER0, 4, GL_FLOAT, GL_FALSE, 0, 0));
-  texture->bind();
+  texture->texture->bind();
 
   gl_check(glUniform1i(program->requireUniform(UNIFORM_TEX0), 0));
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
                               1, GL_FALSE, orthographic_projection.data));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, 6));
 }
-DEFERRED_OBJECT_METHOD(as_renderable, Compositor, textured_quad, void, (Rect_, Color, Texture*))
+DEFERRED_OBJECT_METHOD(as_renderable, Compositor, textured_quad, void, (Rect_, Color, TextureObject*))
