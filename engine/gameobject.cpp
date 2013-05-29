@@ -1053,15 +1053,15 @@ void LClink_metatable(lua_State *L, const char* name, const luaL_Reg* table) {
 }
 
 OBJECT_IMPL(World, Object);
-OBJECT_PROPERTY(World, focus);
 OBJECT_PROPERTY(World, dt);
 OBJECT_ACCESSOR(World, time_scale, get_time_scale, set_time_scale);
 OBJECT_ACCESSOR(World, gravity, get_gravity, set_gravity);
+OBJECT_PROPERTY(World, pre_render);
+OBJECT_PROPERTY(World, post_render);
 
 void init_lua(World* world) {
   world->clock = clock_make();
   world->camera_clock = clock_make();
-  world->camera = world->create_go();
   world->stage = world->create_go();
   world->stage->add_component(&Camera::Type);
 
@@ -1112,9 +1112,6 @@ void init_lua(World* world) {
   LCpush(L, world);
   lua_setglobal(L, "world");
 
-  LCpush(L, world->camera);
-  lua_setglobal(L, "camera");
-
   LCpush(L, world->stage);
   lua_setglobal(L, "stage");
 
@@ -1128,7 +1125,7 @@ void init_lua(World* world) {
 }
 
 World::World(void* _universe)
-  : L(NULL), bWorld(b2Vec2(0, -50)), focus(NULL),
+  : L(NULL), bWorld(b2Vec2(0, -50)),
     universe((Universe*)_universe),
     lk_alloc(MAX(sizeof(LuaKeyData), sizeof(LuaSIData)),
              MAX_INFLIGHT_INPUTS, "lk_alloc"),
@@ -1153,6 +1150,9 @@ World::~World() {
       set_si_binding(kb->keyn, NULL);
       return 0;
     });
+  free_thread(&pre_render);
+  free_thread(&post_render);
+
   lua_close(L);
   clock_free(clock);
   clock_free(camera_clock);
@@ -1202,6 +1202,7 @@ void World::update(long delta) {
       });
   }
 
+  step_thread(&pre_render, NULL, NULL);
   cameras.foreach([this](Camera* camera) -> int {
       this->components.foreach([=](Component* comp) -> int {
           comp->render(camera);
@@ -1210,6 +1211,7 @@ void World::update(long delta) {
       camera->enqueue();
       return 0;
     });
+  step_thread(&post_render, NULL, NULL);
 }
 
 void World::load_level(const char* level) {

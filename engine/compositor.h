@@ -17,6 +17,8 @@ class TextureObject : public Object {
   void deferred_destroy();
 
   Texture* texture;
+  int width;
+  int height;
 };
 
 class FrameBuffer : public Object {

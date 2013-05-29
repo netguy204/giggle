@@ -624,7 +624,7 @@ function enable_compositor()
       while true do
          coroutine.yield()
          if not tex then
-            tex = czor:texture_create(screen_width, screen_height, constant.GL_NEAREST)
+            tex = czor:texture_create(screen_width/2, screen_height/2, constant.GL_NEAREST)
             fbo = czor:frame_buffer_create(tex)
          end
          czor:frame_buffer_bind(fbo)
@@ -636,14 +636,25 @@ function enable_compositor()
       while true do
          coroutine.yield()
          czor:frame_buffer_bind(nil)
-         czor:transform_set(tform)
-         czor:clear_with_color({0, 0, 0, 1})
-         czor:textured_quad({0,0, screen_width, screen_height}, {1,1,1,1}, tex)
       end
    end
 
+   local world_post_render = function()
+      while true do
+         coroutine.yield()
+         czor:transform_set(tform)
+         czor:clear_with_color({0, 0, 0, 1})
+         local w2 = screen_width/2
+         local h2 = screen_height/2
+         czor:textured_quad({0,0, w2, h2}, {1,1,1,1}, tex)
+         czor:textured_quad({w2,0,screen_width,h2}, {1,1,1,1}, tex)
+         czor:textured_quad({w2,h2,screen_width,screen_height}, {1,1,1,1}, tex)
+         czor:textured_quad({0,h2,w2,screen_height}, {1,1,1,1}, tex)
+      end
+   end
    stage:find_component('Camera', nil):pre_render(util.thread(pre_render))
    stage:find_component('Camera', nil):post_render(util.thread(post_render))
+   world:post_render(util.thread(world_post_render))
 end
 
 function level_init()

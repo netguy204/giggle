@@ -405,9 +405,7 @@ class World : public Object {
 
   RevJoint* create_joint(GO* ga, Vector la, GO* gb, Vector lb);
 
-  GO* camera;
   GO* stage;
-  GO* focus;
 
   Universe* universe;
 
@@ -423,6 +421,8 @@ class World : public Object {
   FixedAllocator lk_alloc;
   FixedAllocator cmd_alloc;
   CommandQueue command_queue;
+  LuaThread pre_render;
+  LuaThread post_render;
 
   float dt;
 

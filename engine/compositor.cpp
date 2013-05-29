@@ -25,6 +25,8 @@ void as_renderable(VoidFunction* fn) {
 }
 
 OBJECT_IMPL(TextureObject, Object);
+OBJECT_PROPERTY(TextureObject, width);
+OBJECT_PROPERTY(TextureObject, height);
 
 TextureObject::TextureObject(void* _texture)
   : texture((Texture*)_texture) {
@@ -120,8 +122,11 @@ DEFERRED_OBJECT_METHOD(as_renderable, Compositor, transform_set, void, (Matrix44
 
 TextureObject* Compositor::texture_create(int width, int height, int filter) {
   TextureObject* texture = new TextureObject(new Texture());
-  DEFERRED_INVOKE(as_renderable, this, texture_init, texture, width, height, filter);
+  texture->width = width;
+  texture->height = height;
   texture->reference_count = 0; // disown
+
+  DEFERRED_INVOKE(as_renderable, this, texture_init, texture, width, height, filter);
   return texture;
 }
 OBJECT_METHOD(Compositor, texture_create, TextureObject*, (int, int, int));
@@ -171,8 +176,10 @@ DEFERRED_OBJECT_METHOD(as_renderable, Compositor, frame_buffer_init, void, (Fram
 void Compositor::frame_buffer_bind(FrameBuffer* fb) {
   if(fb) {
     gl_check(glBindFramebuffer(GL_FRAMEBUFFER, fb->fbo));
+    glViewport(0, 0, fb->color_buffer->width, fb->color_buffer->height);
   } else {
     gl_check(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+    glViewport(0, 0, real_screen_width, real_screen_height);
   }
 }
 DEFERRED_OBJECT_METHOD(as_renderable, Compositor, frame_buffer_bind, void, (FrameBuffer*));
