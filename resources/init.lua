@@ -646,9 +646,9 @@ function enable_compositor()
          czor:clear_with_color({0, 0, 0, 1})
          local w2 = screen_width/2
          local h2 = screen_height/2
-         czor:textured_quad({0,0, w2, h2}, {1,1,1,1}, tex)
-         czor:textured_quad({w2,0,screen_width,h2}, {1,1,1,1}, tex)
-         czor:textured_quad({w2,h2,screen_width,screen_height}, {1,1,1,1}, tex)
+         czor:textured_quad({0,0, w2, h2}, {1,0,0,1}, tex)
+         czor:textured_quad({w2,0,screen_width,h2}, {0,1,0,1}, tex)
+         czor:textured_quad({w2,h2,screen_width,screen_height}, {0,0,1,1}, tex)
          czor:textured_quad({0,h2,w2,screen_height}, {1,1,1,1}, tex)
       end
    end
