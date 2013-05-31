@@ -616,7 +616,7 @@ function enable_compositor()
 
    local tex = nil
    local fbo = nil
-   local czor = universe:compositor()
+   local czor = world:create_object('Compositor')
    local tform = czor:transform_create()
    tform:orthographic_proj(0, screen_width, 0, screen_height, -1, 1)
 

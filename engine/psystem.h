@@ -334,26 +334,11 @@ class PSConstantRateActivator : public ParticleActivator {
   float bucket;
 };
 
-template<>
-inline void LCpush<ParticleSystemComponent*>(lua_State* L, ParticleSystemComponent* comp) {
-  LCpush_lut(L, LUT_PSCOMPONENT, comp);
-}
-
-template<>
-inline void LCcheck<ParticleSystemComponent*>(lua_State* L, ParticleSystemComponent** comp, int pos) {
-  *comp = (ParticleSystemComponent*)LCcheck_lut(L, LUT_PSCOMPONENT, pos);
-}
-
 // template magic to make SystemDefinition settable from lua
-template<>
-inline void LCpush<SystemDefinition*>(lua_State* L, SystemDefinition* def) {
-  LCpush_lut(L, LUT_PSDEFINITION, def);
-}
-
 template<>
 inline void LCcheck<SystemDefinition*>(lua_State* L, SystemDefinition** def, int pos) {
   if(lua_isuserdata(L, pos)) {
-    *def = (SystemDefinition*)LCcheck_lut(L, LUT_PSDEFINITION, pos);
+    *def = (SystemDefinition*)LCcheck_lut(L, LUT_OBJECT, pos);
     return;
   }
 

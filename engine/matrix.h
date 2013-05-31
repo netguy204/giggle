@@ -32,19 +32,4 @@ class Matrix44 : public Object {
   float data[16];
 };
 
-
-#define LUT_MATRIX "Matrix44"
-extern void LCpush_lut(lua_State *L, const char* metatable, Object* ut);
-extern Object* LCcheck_lut(lua_State *L, const char* metatable, int pos);
-
-template<>
-inline void LCpush<Matrix44*>(lua_State* L, Matrix44* m) {
-  LCpush_lut(L, LUT_MATRIX, m);
-}
-
-template<>
-inline void LCcheck<Matrix44*>(lua_State* L, Matrix44** m, int pos) {
-  *m = (Matrix44*)LCcheck_lut(L, LUT_MATRIX, pos);
-}
-
 #endif

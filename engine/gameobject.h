@@ -42,14 +42,6 @@
 #define LUT_GO "Go"
 #define LUT_COMPONENT "Component"
 #define LUT_UNIVERSE "Universe"
-#define LUT_COMPOSITOR "Compositor"
-#define LUT_PSDEFINITION "PSDefinition"
-#define LUT_PSCOMPONENT "PSComponent"
-#define LUT_AUDIOHANDLE "AudioHandle"
-#define LUT_JOINT "Joint"
-#define LUT_TEXTURE "Texture"
-#define LUT_FRAMEBUFFER "FrameBuffer"
-#define LUT_MATRIX "Matrix44"
 
 typedef enum {
   MASK_NON_COLLIDER = 0,
@@ -131,9 +123,6 @@ class Component : public Object {
   ComponentPriority priority;
   int delete_me;
 };
-
-void LCpush_lut(lua_State *L, const char* metatable, Object* ut);
-Object* LCcheck_lut(lua_State *L, const char* metatable, int pos);
 
 void LCconfigure_object(lua_State *L, Object* obj, int pos);
 
@@ -245,11 +234,6 @@ class GO : public Object {
   virtual ~GO();
 
   Component* add_component(TypeInfo* type);
-
-  template<typename T>
-  T* add_c() {
-    return (T*)add_component(&T::Type);
-  }
 
   virtual void update(float dt);
   void messages_received();
@@ -396,12 +380,13 @@ class World : public Object {
   long current_sample() const;
 
   void broadcast_message(GO* go, float radius, int kind, const char* content, size_t nbytes);
-  GO* next_in_cone(GO* last, Rect bounds, Cone* cone);
+
   void set_time_scale(float scale);
   float get_time_scale();
   void set_gravity(Vector_ vector);
   Vector_ get_gravity();
   GO* create_go();
+  Object* create_object(TypeInfo* type);
 
   RevJoint* create_joint(GO* ga, Vector la, GO* gb, Vector lb);
 
@@ -458,7 +443,6 @@ class Universe : public Object {
 
   LString* stash;
   LString* lua_path;
-  Compositor* compositor;
 
   NameToAtlas name_to_atlas;
   NameToEntity name_to_entity;
@@ -491,9 +475,6 @@ void world_foreach(World* world, Vector pos, float rad, Func func) {
   Rect_ rect = {pos->x - rad, pos->y - rad, pos->x + rad, pos->y + rad};
   world_foreach(world, &rect, func);
 }
-
-int point_in_cone(Cone* cone, Vector point);
-
 
 // lua property accessors
 void LCpush_vector(lua_State* L, Vector v);
@@ -536,26 +517,6 @@ inline void LCpush<World*>(lua_State* L, World* world) {
 template<>
 inline void LCcheck<World*>(lua_State* L, World** world, int pos) {
   *world = (World*)LCcheck_lut(L, LUT_WORLD, pos);
-}
-
-template<>
-inline void LCpush<Universe*>(lua_State* L, Universe* universe) {
-  LCpush_lut(L, LUT_UNIVERSE, universe);
-}
-
-template<>
-inline void LCcheck<Universe*>(lua_State* L, Universe** universe, int pos) {
-  *universe = (Universe*)LCcheck_lut(L, LUT_UNIVERSE, pos);
-}
-
-template<>
-inline void LCpush<RevJoint*>(lua_State* L, RevJoint* joint) {
-  LCpush_lut(L, LUT_JOINT, joint);
-}
-
-template<>
-inline void LCcheck<RevJoint*>(lua_State* L, RevJoint** joint, int pos) {
-  *joint = (RevJoint*)LCcheck_lut(L, LUT_JOINT, pos);
 }
 
 template<>
@@ -687,16 +648,6 @@ inline void LCcheck<SpriteAtlasEntry>(lua_State* L, SpriteAtlasEntry* entry, int
 }
 
 template<>
-inline void LCpush<AudioHandle*>(lua_State* L, AudioHandle* handle) {
-  LCpush_lut(L, LUT_AUDIOHANDLE, handle);
-}
-
-template<>
-inline void LCcheck<AudioHandle*>(lua_State* L, AudioHandle** handle, int pos) {
-  *handle = (AudioHandle*)LCcheck_lut(L, LUT_AUDIOHANDLE, pos);
-}
-
-template<>
 inline void LCcheck<LuaThread>(lua_State* L, LuaThread* thread, int pos) {
   if(thread->state) {
     luaL_unref(L, LUA_REGISTRYINDEX, thread->refid);
@@ -711,6 +662,11 @@ inline void LCcheck<LuaThread>(lua_State* L, LuaThread* thread, int pos) {
   lua_pushvalue(L, pos);
   thread->refid = luaL_ref(L, LUA_REGISTRYINDEX);
   thread->is_initialized = 0;
+}
+
+template<>
+inline void LCpush<LuaThread>(lua_State* L, LuaThread thread) {
+  lua_pushthread(thread.state);
 }
 
 template<>
@@ -802,6 +758,13 @@ inline void LCcheck<Color>(lua_State* L, Color* c, int pos) {
     }                                           \
     lua_pop(L, 1);                              \
   } while(0)
+
+template<>
+inline void LCpush<Fixture>(lua_State* L, Fixture fixture) {
+  // we don't actually have a way to push a Fixture so signal an error
+  // instead
+  luaL_error(L, "don't know how to push Fixture");
+}
 
 template<>
 inline void LCcheck<Fixture>(lua_State* L, Fixture* fixture, int pos) {

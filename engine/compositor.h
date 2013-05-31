@@ -57,34 +57,4 @@ class Compositor : public Object {
   void textured_quad(Rect_ rect, Color color, TextureObject* texture);
 };
 
-template<>
-inline void LCpush<Compositor*>(lua_State* L, Compositor* compositor) {
-  LCpush_lut(L, LUT_COMPOSITOR, compositor);
-}
-
-template<>
-inline void LCcheck<Compositor*>(lua_State* L, Compositor** compositor, int pos) {
-  *compositor = (Compositor*)LCcheck_lut(L, LUT_COMPOSITOR, pos);
-}
-
-template<>
-inline void LCpush<TextureObject*>(lua_State* L, TextureObject* tex) {
-  LCpush_lut(L, LUT_TEXTURE, tex);
-}
-
-template<>
-inline void LCcheck<TextureObject*>(lua_State* L, TextureObject** tex, int pos) {
-  *tex = (TextureObject*)LCcheck_lut(L, LUT_TEXTURE, pos);
-}
-
-template<>
-inline void LCpush<FrameBuffer*>(lua_State* L, FrameBuffer* fb) {
-  LCpush_lut(L, LUT_FRAMEBUFFER, fb);
-}
-
-template<>
-inline void LCcheck<FrameBuffer*>(lua_State* L, FrameBuffer** fb, int pos) {
-  *fb = (FrameBuffer*)LCcheck_lut(L, LUT_FRAMEBUFFER, pos);
-}
-
 #endif

@@ -66,6 +66,18 @@ bool TypeInfo::isInstanceOf(const TypeInfo* other) const {
   return parent()->isInstanceOf(other);
 }
 
+const char* TypeInfo::tag(const char* name) const {
+  TypeTags::const_iterator iter = tags.find(name);
+  if(iter == tags.end()) return NULL;
+  return iter->second.c_str();
+}
+
+void TypeInfo::set_tag(const char* name, const char* value) {
+  tags.insert(std::make_pair(name, std::string(value)));
+}
+
+const char* TypeInfo::METATABLE_TAG = "metatable";
+
 PropertyInfo::PropertyInfo(TypeInfo* type, const char* name, size_t size)
   : m_type(type), m_name(name), m_size(size) {
   m_type->register_property(this);
@@ -115,4 +127,152 @@ MethodInfo::MethodInfo(TypeInfo* type, const char* name)
 
 const char* MethodInfo::name() const {
   return m_name;
+}
+
+static Object* LCcheck_object(lua_State *L, int pos) {
+  return (Object*)LCcheck_lut(L, NULL, pos);
+}
+
+static int Lobject_mutate(lua_State* L) {
+  const char* name = luaL_checkstring(L, lua_upvalueindex(1));
+  Object* obj = LCcheck_object(L, 1);
+
+  // try invoking a method first
+  const MethodInfo* method = obj->typeinfo()->method(name);
+  if(method) {
+    return method->LCinvoke(L, 1);
+  }
+
+
+  const PropertyInfo* prop = obj->typeinfo()->property(name);
+  if(prop == NULL) {
+    luaL_error(L, "`%s' does not have property `%s'",
+               obj->typeinfo()->name(), name);
+  }
+
+  if(lua_gettop(L) == 1) {
+    prop->LCpush_value(obj, L);
+    return 1;
+  } else {
+    prop->LCset_value(obj, L, 2);
+    return 0;
+  }
+}
+
+static int Lobject_index(lua_State* L) {
+  const char* name = luaL_checkstring(L, 2);
+  lua_pushcclosure(L, Lobject_mutate, 1);
+  return 1;
+}
+
+static int Lobject_tostring(lua_State *L) {
+  Object* obj = LCcheck_object(L, 1);
+  lua_pushstring(L, obj->typeinfo()->name());
+  return 1;
+}
+
+static int Lobject_eq(lua_State* L) {
+  void** objA = (void**)lua_touserdata(L, 1);
+  void** objB = (void**)lua_touserdata(L, 2);
+  if(objA != objB && (objA == NULL || objB == NULL)) {
+    lua_pushboolean(L, 0);
+  } else {
+    lua_pushboolean(L, *objA == *objB);
+  }
+  return 1;
+}
+
+static int Lobject_key(lua_State* L) {
+  void** obj = (void**)lua_touserdata(L, 1);
+  if(obj == NULL) {
+    lua_pushnil(L);
+  } else {
+    lua_pushlightuserdata(L, *obj);
+  }
+  return 1;
+}
+
+static int Lobject_gc(lua_State* L) {
+  Object* obj = LCcheck_object(L, 1);
+  obj->release();
+  return 0;
+}
+
+int Lobject_special_gc(lua_State* L) {
+  // used by GO and Component, which do not participate in reference
+  // counting
+  return 0;
+}
+
+void LClink_metatable(lua_State *L, const char* name, const luaL_Reg* table, TypeInfo& type) {
+  static const luaL_Reg object_m[] = {
+    {"__index", Lobject_index},
+    {NULL, NULL}};
+
+  static const luaL_Reg defaults_m[] = {
+    {"__tostring", Lobject_tostring},
+    {"__eq", Lobject_eq},
+    {"__gc", Lobject_gc},
+    {"key", Lobject_key},
+    {NULL, NULL}};
+
+  luaL_newmetatable(L, name);
+  lua_pushstring(L, "__index");
+  lua_pushvalue(L, -2);
+  lua_settable(L, -3);
+  luaL_setfuncs(L, defaults_m, 0);
+  if(table) luaL_setfuncs(L, table, 0);
+
+  lua_newtable(L);
+  luaL_setfuncs(L, object_m, 0);
+  lua_setmetatable(L, -2);
+
+  // remember the metatable name in the type info data
+  type.set_tag(TypeInfo::METATABLE_TAG, name);
+}
+
+void LCinit_object_metatable(lua_State* L) {
+  LClink_metatable(L, LUT_OBJECT, NULL, Object::Type);
+}
+
+void LCpush_lut(lua_State *L, const char* metatable, Object* ut) {
+  if(!ut) {
+    lua_pushnil(L);
+  } else {
+    void** p = (void**)lua_newuserdata(L, sizeof(void*));
+    luaL_setmetatable(L, metatable);
+    *p = ut->retain();
+  }
+}
+
+Object* LCcheck_lut(lua_State *L, const char* metatable, int pos) {
+  static char error_msg[256];
+
+  if(lua_isnil(L, pos)) {
+    return NULL;
+  }
+
+  void **ud;
+  if(metatable) {
+    if(luaL_testudata(L, pos, metatable)) {
+      ud = (void**)luaL_checkudata(L, pos, metatable);
+    } else {
+      Object** obj = (Object**)lua_touserdata(L, pos);
+      const char* obj_mt = (*obj)->typeinfo()->tag(TypeInfo::METATABLE_TAG);
+      if(obj_mt && strcmp(obj_mt, metatable) == 0) {
+        ud = (void**)obj;
+      } else {
+        // do the checkudata anyway (it will fail)
+        ud = (void**)luaL_checkudata(L, pos, metatable);
+      }
+    }
+  } else {
+    ud = (void**)lua_touserdata(L, pos);
+  }
+
+  if(ud == NULL) {
+    snprintf(error_msg, sizeof(error_msg), "`%s' expected", metatable);
+    luaL_argcheck(L, ud != NULL, pos, error_msg);
+  }
+  return (Object*)*ud;
 }

@@ -603,37 +603,6 @@ void CScripted::messages_received() {
   step_thread(&message_thread, go, this);
 }
 
-void LCpush_lut(lua_State *L, const char* metatable, Object* ut) {
-  if(!ut) {
-    lua_pushnil(L);
-  } else {
-    void** p = (void**)lua_newuserdata(L, sizeof(void*));
-    luaL_setmetatable(L, metatable);
-    *p = ut->retain();
-  }
-}
-
-Object* LCcheck_lut(lua_State *L, const char* metatable, int pos) {
-  static char error_msg[256];
-
-  if(lua_isnil(L, pos)) {
-    return NULL;
-  }
-
-  void **ud;
-  if(metatable) {
-    ud = (void**)luaL_checkudata(L, pos, metatable);
-  } else {
-    ud = (void**)lua_touserdata(L, pos);
-  }
-
-  if(ud == NULL) {
-    snprintf(error_msg, sizeof(error_msg), "`%s' expected", metatable);
-    luaL_argcheck(L, ud != NULL, pos, error_msg);
-  }
-  return (Object*)*ud;
-}
-
 struct LuaKeyData {
   void* fnkey;
   World* world;
@@ -807,10 +776,6 @@ static int Laudiohandle_terminate(lua_State* L) {
   return 0;
 }
 
-static Object* LCcheck_object(lua_State *L, int pos) {
-  return (Object*)LCcheck_lut(L, NULL, pos);
-}
-
 void LCconfigure_object(lua_State *L, Object* obj, int pos) {
   // iterate the table using the keys as property names
   const TypeInfo* type = obj->typeinfo();
@@ -957,101 +922,6 @@ static int Lgo_contacts(lua_State* L) {
   return 1;
 }
 
-static int Lobject_mutate(lua_State* L) {
-  const char* name = luaL_checkstring(L, lua_upvalueindex(1));
-  Object* obj = LCcheck_object(L, 1);
-
-  // try invoking a method first
-  const MethodInfo* method = obj->typeinfo()->method(name);
-  if(method) {
-    return method->LCinvoke(L, 1);
-  }
-
-
-  const PropertyInfo* prop = obj->typeinfo()->property(name);
-  if(prop == NULL) {
-    luaL_error(L, "`%s' does not have property `%s'",
-               obj->typeinfo()->name(), name);
-  }
-
-  if(lua_gettop(L) == 1) {
-    prop->LCpush_value(obj, L);
-    return 1;
-  } else {
-    prop->LCset_value(obj, L, 2);
-    return 0;
-  }
-}
-
-static int Lobject_index(lua_State* L) {
-  const char* name = luaL_checkstring(L, 2);
-  lua_pushcclosure(L, Lobject_mutate, 1);
-  return 1;
-}
-
-static int Lobject_tostring(lua_State *L) {
-  Object* obj = LCcheck_object(L, 1);
-  lua_pushstring(L, obj->typeinfo()->name());
-  return 1;
-}
-
-static int Lobject_eq(lua_State* L) {
-  void** objA = (void**)lua_touserdata(L, 1);
-  void** objB = (void**)lua_touserdata(L, 2);
-  if(objA != objB && (objA == NULL || objB == NULL)) {
-    lua_pushboolean(L, 0);
-  } else {
-    lua_pushboolean(L, *objA == *objB);
-  }
-  return 1;
-}
-
-static int Lobject_key(lua_State* L) {
-  void** obj = (void**)lua_touserdata(L, 1);
-  if(obj == NULL) {
-    lua_pushnil(L);
-  } else {
-    lua_pushlightuserdata(L, *obj);
-  }
-  return 1;
-}
-
-static int Lobject_gc(lua_State* L) {
-  Object* obj = LCcheck_object(L, 1);
-  obj->release();
-  return 0;
-}
-
-static int Lobject_special_gc(lua_State* L) {
-  // used by GO and Component, which do not participate in reference
-  // counting
-  return 0;
-}
-
-void LClink_metatable(lua_State *L, const char* name, const luaL_Reg* table) {
-  static const luaL_Reg object_m[] = {
-    {"__index", Lobject_index},
-    {NULL, NULL}};
-
-  static const luaL_Reg defaults_m[] = {
-    {"__tostring", Lobject_tostring},
-    {"__eq", Lobject_eq},
-    {"__gc", Lobject_gc},
-    {"key", Lobject_key},
-    {NULL, NULL}};
-
-  luaL_newmetatable(L, name);
-  lua_pushstring(L, "__index");
-  lua_pushvalue(L, -2);
-  lua_settable(L, -3);
-  luaL_setfuncs(L, defaults_m, 0);
-  if(table) luaL_setfuncs(L, table, 0);
-
-  lua_newtable(L);
-  luaL_setfuncs(L, object_m, 0);
-  lua_setmetatable(L, -2);
-}
-
 OBJECT_IMPL(World, Object);
 OBJECT_PROPERTY(World, dt);
 OBJECT_ACCESSOR(World, time_scale, get_time_scale, set_time_scale);
@@ -1069,11 +939,13 @@ void init_lua(World* world) {
   world->L = L;
 
   luaL_openlibs(L);
+
   if(world->universe->lua_path) {
     lua_getglobal(L, "package");
     LCpush(L, world->universe->lua_path);
     lua_setfield(L, -2, "path");
   }
+  LCinit_object_metatable(L);
 
   static const luaL_Reg world_m[] = {
     {"set_keybinding", Lworld_set_keybinding},
@@ -1081,7 +953,7 @@ void init_lua(World* world) {
     {"__gc", Lobject_special_gc},
     {NULL, NULL}};
 
-  LClink_metatable(L, LUT_WORLD, world_m);
+  LClink_metatable(L, LUT_WORLD, world_m, World::Type);
 
   static const luaL_Reg go_m[] = {
     {"add_component", Lgo_add_component},
@@ -1092,22 +964,12 @@ void init_lua(World* world) {
     {"__gc", Lobject_special_gc},
     {NULL, NULL}};
 
-  LClink_metatable(L, LUT_GO, go_m);
+  LClink_metatable(L, LUT_GO, go_m, GO::Type);
 
   static const luaL_Reg comp_m[] = {
     {"__gc", Lobject_special_gc},
     {NULL, NULL}};
-  LClink_metatable(L, LUT_COMPONENT, comp_m);
-
-  LClink_metatable(L, LUT_UNIVERSE, NULL);
-  LClink_metatable(L, LUT_COMPOSITOR, NULL);
-  LClink_metatable(L, LUT_PSDEFINITION, NULL);
-  LClink_metatable(L, LUT_PSCOMPONENT, NULL);
-  LClink_metatable(L, LUT_JOINT, NULL);
-  LClink_metatable(L, LUT_AUDIOHANDLE, NULL);
-  LClink_metatable(L, LUT_TEXTURE, NULL);
-  LClink_metatable(L, LUT_FRAMEBUFFER, NULL);
-  LClink_metatable(L, LUT_MATRIX, NULL);
+  LClink_metatable(L, LUT_COMPONENT, comp_m, Component::Type);
 
   LCpush(L, world);
   lua_setglobal(L, "world");
@@ -1235,6 +1097,13 @@ GO* World::create_go() {
 }
 OBJECT_METHOD(World, create_go, GO*, ());
 
+Object* World::create_object(TypeInfo* type) {
+  Object* obj = type->makeInstance(this);
+  obj->reference_count = 0; // disown
+  return obj;
+}
+OBJECT_METHOD(World, create_object, Object*, (TypeInfo*));
+
 RevJoint* World::create_joint(GO* ga, Vector la, GO* gb, Vector lb) {
   b2RevoluteJoint *joint;
 
@@ -1339,65 +1208,6 @@ void World::broadcast_message(GO* sender, float radius, int kind, const char* co
     });
 }
 
-int point_in_cone(Cone* cone, Vector point) {
-  Vector_ to_point;
-  vector_sub(&to_point, point, &cone->point);
-  vector_norm(&to_point, &to_point);
-  float dot = vector_dot(&cone->direction, &to_point);
-  return acosf(dot) <= cone->angle;
-}
-
-GO* World::next_in_cone(GO* last, Rect bounds, Cone* cone) {
-  float last_dist = 0;
-  if(last) {
-    Vector_ last_pos;
-    last->pos(&last_pos);
-    last_dist = vector_dist(&last_pos, &cone->point);
-  }
-
-  GO* next_exceeding = NULL;
-  float exceeded_by = INFINITY;
-
-  world_foreach(this, bounds, [&](GO* go, b2Fixture* fixture) -> int {
-      if(go == last) return 0;
-
-      // test the center and the 4 corners of its AABB
-      Vector_ test_points[5];
-      go->pos(&test_points[0]);
-
-      const b2AABB& aabb = fixture->GetAABB(0);
-      Vector_ lower = {aabb.lowerBound.x * BSCALE, aabb.lowerBound.y * BSCALE};
-      Vector_ upper = {aabb.upperBound.x * BSCALE, aabb.upperBound.y * BSCALE};
-
-      test_points[1] = lower; // BL
-      test_points[2].x = upper.x; // BR
-      test_points[2].y = lower.y;
-      test_points[3] = upper; // UR
-      test_points[4].x = lower.x; // UL
-      test_points[4].y = upper.y;
-
-      for(int ii = 0; ii < 5; ++ii) {
-        // if we intersect any of the test points then see if that's
-        // the object with the next closest center
-        if(point_in_cone(cone, &test_points[ii])) {
-          float dist = vector_dist(&test_points[0], &cone->point);
-          if(dist > last_dist) {
-            float my_exceeded_by = dist - last_dist;
-            if(my_exceeded_by < exceeded_by) {
-              next_exceeding = go;
-              exceeded_by = my_exceeded_by;
-            }
-          }
-          // once we've found an intersecting point there's no need to
-          // keep looking. move on to the next object
-          break;
-        }
-      }
-      return 0;
-    });
-  return next_exceeding;
-}
-
 void World::enqueue_command(CommandFunction fn, void* data) {
   Command* command = (Command*)cmd_alloc.alloc();
   command->function = fn;
@@ -1416,10 +1226,9 @@ void World::evaluate_commands() {
 OBJECT_IMPL(Universe, Object);
 OBJECT_PROPERTY(Universe, stash);
 OBJECT_PROPERTY(Universe, lua_path);
-OBJECT_PROPERTY(Universe, compositor);
 
 Universe::Universe(void* _path)
-  : stash(NULL), compositor(new Compositor(NULL)) {
+  : stash(NULL) {
   if(_path) {
     lua_path = malloc_lstring((char*)_path, strlen((char*)_path));
   } else {
@@ -1429,7 +1238,6 @@ Universe::Universe(void* _path)
 
 Universe::~Universe() {
   if(stash) free_lstring(stash);
-  compositor->release();
 
   for(NameToAtlas::iterator iter = name_to_atlas.begin();
       iter != name_to_atlas.end(); ++iter) {

@@ -23,6 +23,7 @@
 #include <stdarg.h>
 
 #include <map>
+#include <string>
 #include <typeinfo>
 
 class Object;
@@ -38,6 +39,7 @@ class MethodInfo;
 
 typedef std::map<const char*, PropertyInfo*, cmp_str> NameToProperty;
 typedef std::map<const char*, MethodInfo*, cmp_str> NameToMethod;
+typedef std::map<const char*, std::string> TypeTags;
 
 class TypeInfo {
 public:
@@ -53,9 +55,15 @@ public:
   Object* makeInstance(void*) const;
   bool isInstanceOf(const TypeInfo* other) const;
 
+  const char* tag(const char* name) const;
+  void set_tag(const char* name, const char* value);
+
+  // name of the metatable tag
+  static const char* METATABLE_TAG;
 private:
   NameToProperty name_to_property;
   NameToMethod name_to_method;
+  TypeTags tags;
 
   const char* m_name;
   CtorFn m_ctor;
@@ -111,16 +119,6 @@ public:
 
   size_t m_offset;
 };
-
-template<typename T>
-inline void LCpush(lua_State* L, T value) {
-  luaL_error(L, "don't know how to push `%s'", typeid(value).name());
-}
-
-template<typename T>
-inline void LCcheck(lua_State* L, T* target, int pos) {
-  luaL_error(L, "don't know how to check `%s'", typeid(target).name());
-}
 
 template <typename Sig>
 class PropertyMethodImpl;
@@ -378,6 +376,74 @@ public:
   int reference_count;
 };
 
+
+#define LUT_OBJECT "Object"
+
+void LClink_metatable(lua_State *L, const char* name, const luaL_Reg* table, TypeInfo& type);
+void LCinit_object_metatable(lua_State* L);
+
+// use this to override __gc if you don't want LUA to participate in
+// reference counting. This is necessary to break some cyclic
+// references and to ensure that certain Object destruction happens
+// independently of Lua's references.
+int Lobject_special_gc(lua_State* L);
+
+void LCpush_lut(lua_State *L, const char* metatable, Object* ut);
+Object* LCcheck_lut(lua_State *L, const char* metatable, int pos);
+
+template<typename T>
+inline void LCpush(lua_State* L, T value) {
+  // assume that it's an object, errors here mean that a new template
+  // specialization is required for the type since this assumption is
+  // invalid.
+  const TypeInfo* info = value->typeinfo();
+
+  // see if there's a metatable designated for this type
+  const char* mt = info->tag(TypeInfo::METATABLE_TAG);
+  if(!mt) {
+    // use the default Object metatable, which should handle most
+    // cases
+    LCpush_lut(L, LUT_OBJECT, value);
+  } else {
+    // use the provided metatable (a common case for using this is
+    // overriding __gc or providing special more explicit lua bindings
+    LCpush_lut(L, mt, value);
+  }
+}
+
+template<typename T>
+inline void LCcheck(lua_State* L, T* target, int pos) {
+  if(lua_isnil(L, pos)) {
+    *target = NULL;
+    return;
+  }
+
+  // we assume that it is an object if it has a metatable. Otherwise,
+  // it's probably primitive or lightuserdata and we don't know how to
+  // handle that here. Those cases mean that a new template
+  // specialization is required.
+  if(!lua_isuserdata(L, pos)) {
+    luaL_error(L, "object at %d is not userdata. need specialized check handler", pos);
+  }
+
+  if(!lua_getmetatable(L, pos)) {
+    luaL_error(L, "object at %d does not have a metatable. need specialized check handler",
+               pos);
+  }
+  lua_pop(L, 1);
+
+  // assume object
+  Object* obj = LCcheck_lut(L, NULL, pos);
+
+  // verify this is a type of what we're looking for via static member
+  // so this deref is safe
+  TypeInfo* tgt_type = &((*target)->Type);
+  if(obj->typeinfo()->isInstanceOf(tgt_type)) {
+    *target = (T)obj;
+  } else {
+    luaL_error(L, "%s is not a kind of %s", obj->typeinfo()->name(), tgt_type->name());
+  }
+}
 
 // specialize the lua getters and setters for the primitives here
 // since we'll always need those.

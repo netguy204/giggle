@@ -315,7 +315,7 @@ int LCtable_count(lua_State* L, int pos) {
   lua_pop(L, 1);
 
 template<>
-void PropertyTypeImpl<TileMap>::LCset_value(Object* obj, lua_State* L, int pos) const {
+void LCcheck<TileMap>(lua_State* L, TileMap* map, int pos) {
   if(!lua_istable(L, pos)) {
     luaL_error(L, "position %d does not contain a map-table", pos);
   }
@@ -333,14 +333,18 @@ void PropertyTypeImpl<TileMap>::LCset_value(Object* obj, lua_State* L, int pos) 
 
   // we automatically create the nil spec entry
   nSpecs = LCtable_count(L, -1) + 1;
-  TileMap map = tilemap_make(width, height, nSpecs, tWidth, tHeight);
-  map->tile_specs[0].image = NULL;
-  map->tile_specs[0].bitmask = 0;
+  if(*map) {
+    tilemap_free(*map);
+  }
+
+  *map = tilemap_make(width, height, nSpecs, tWidth, tHeight);
+  (*map)->tile_specs[0].image = NULL;
+  (*map)->tile_specs[0].bitmask = 0;
 
   // fill in the user defined specs
   for(int speci = 1; speci < nSpecs; ++speci) {
     lua_rawgeti(L, -1, speci);
-    LCcheck_spec(L, -1, &map->tile_specs[speci]);
+    LCcheck_spec(L, -1, &(*map)->tile_specs[speci]);
     lua_pop(L, 1);
   }
   lua_pop(L, 1); // specs
@@ -353,12 +357,15 @@ void PropertyTypeImpl<TileMap>::LCset_value(Object* obj, lua_State* L, int pos) 
     if(!lua_isnumber(L, -1)) {
       luaL_error(L, "all values in `tiles' array must be integers");
     }
-    map->tiles[ii - 1] = lua_tointeger(L, -1);
+    (*map)->tiles[ii - 1] = lua_tointeger(L, -1);
     lua_pop(L, 1);
   }
   lua_pop(L, 1); // tiles
+}
 
-  set_value(obj, &map);
+template<>
+inline void LCpush<TileMap>(lua_State* L, TileMap m) {
+  luaL_error(L, "Don't know how to push TileMap");
 }
 
 OBJECT_IMPL(TileMapRenderer, Renderable);
