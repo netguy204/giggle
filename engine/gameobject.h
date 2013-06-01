@@ -38,11 +38,6 @@
 
 #define BSCALE 64.0f
 
-#define LUT_WORLD "World"
-#define LUT_GO "Go"
-#define LUT_COMPONENT "Component"
-#define LUT_UNIVERSE "Universe"
-
 typedef enum {
   MASK_NON_COLLIDER = 0,
   MASK_PLATFORM = 1,
@@ -481,42 +476,12 @@ void LCpush_vector(lua_State* L, Vector v);
 void LCcheck_vector(lua_State* L, int pos, Vector v);
 
 template<>
-inline void LCpush<GO*>(lua_State* L, GO* go) {
-  LCpush_lut(L, LUT_GO, go);
-}
-
-template<>
-inline void LCcheck<GO*>(lua_State* L, GO** go, int pos) {
-  *go = (GO*)LCcheck_lut(L, LUT_GO, pos);
-}
-
-template<>
-inline void LCpush<Component*>(lua_State* L, Component* comp) {
-  LCpush_lut(L, LUT_COMPONENT, comp);
-}
-
-template<>
-inline void LCcheck<Component*>(lua_State* L, Component** comp, int pos) {
-  *comp = (Component*)LCcheck_lut(L, LUT_COMPONENT, pos);
-}
-
-template<>
 inline void LCcheck<TypeInfo*>(lua_State* L, TypeInfo** type, int pos) {
   const char* name = luaL_checkstring(L, pos);
   *type = TypeRegistry::instance().find_type(name);
   if(*type == NULL) {
     luaL_error(L, "`%s' does not name a registered type", name);
   }
-}
-
-template<>
-inline void LCpush<World*>(lua_State* L, World* world) {
-  LCpush_lut(L, LUT_WORLD, world);
-}
-
-template<>
-inline void LCcheck<World*>(lua_State* L, World** world, int pos) {
-  *world = (World*)LCcheck_lut(L, LUT_WORLD, pos);
 }
 
 template<>

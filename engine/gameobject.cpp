@@ -953,7 +953,7 @@ void init_lua(World* world) {
     {"__gc", Lobject_special_gc},
     {NULL, NULL}};
 
-  LClink_metatable(L, LUT_WORLD, world_m, World::Type);
+  LClink_metatable(L, world_m, World::Type);
 
   static const luaL_Reg go_m[] = {
     {"add_component", Lgo_add_component},
@@ -964,12 +964,12 @@ void init_lua(World* world) {
     {"__gc", Lobject_special_gc},
     {NULL, NULL}};
 
-  LClink_metatable(L, LUT_GO, go_m, GO::Type);
+  LClink_metatable(L, go_m, GO::Type);
 
   static const luaL_Reg comp_m[] = {
     {"__gc", Lobject_special_gc},
     {NULL, NULL}};
-  LClink_metatable(L, LUT_COMPONENT, comp_m, Component::Type);
+  LClink_metatable(L, comp_m, Component::Type);
 
   LCpush(L, world);
   lua_setglobal(L, "world");

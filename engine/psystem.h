@@ -338,7 +338,7 @@ class PSConstantRateActivator : public ParticleActivator {
 template<>
 inline void LCcheck<SystemDefinition*>(lua_State* L, SystemDefinition** def, int pos) {
   if(lua_isuserdata(L, pos)) {
-    *def = (SystemDefinition*)LCcheck_lut(L, LUT_OBJECT, pos);
+    *def = (SystemDefinition*)LCcheck_object(L, pos);
     return;
   }
 

@@ -55,15 +55,13 @@ public:
   Object* makeInstance(void*) const;
   bool isInstanceOf(const TypeInfo* other) const;
 
-  const char* tag(const char* name) const;
-  void set_tag(const char* name, const char* value);
+  const char* metatable() const;
+  void set_metatable_flag(bool flag);
 
-  // name of the metatable tag
-  static const char* METATABLE_TAG;
 private:
   NameToProperty name_to_property;
   NameToMethod name_to_method;
-  TypeTags tags;
+  bool mt_flag;
 
   const char* m_name;
   CtorFn m_ctor;
@@ -379,7 +377,7 @@ public:
 
 #define LUT_OBJECT "Object"
 
-void LClink_metatable(lua_State *L, const char* name, const luaL_Reg* table, TypeInfo& type);
+void LClink_metatable(lua_State *L, const luaL_Reg* table, TypeInfo& type);
 void LCinit_object_metatable(lua_State* L);
 
 // use this to override __gc if you don't want LUA to participate in
@@ -389,26 +387,20 @@ void LCinit_object_metatable(lua_State* L);
 int Lobject_special_gc(lua_State* L);
 
 void LCpush_lut(lua_State *L, const char* metatable, Object* ut);
-Object* LCcheck_lut(lua_State *L, const char* metatable, int pos);
+Object* LCcheck_object(lua_State *L, int pos);
 
 template<typename T>
 inline void LCpush(lua_State* L, T value) {
+  if(value == NULL) {
+    lua_pushnil(L);
+    return;
+  }
+
   // assume that it's an object, errors here mean that a new template
   // specialization is required for the type since this assumption is
   // invalid.
   const TypeInfo* info = value->typeinfo();
-
-  // see if there's a metatable designated for this type
-  const char* mt = info->tag(TypeInfo::METATABLE_TAG);
-  if(!mt) {
-    // use the default Object metatable, which should handle most
-    // cases
-    LCpush_lut(L, LUT_OBJECT, value);
-  } else {
-    // use the provided metatable (a common case for using this is
-    // overriding __gc or providing special more explicit lua bindings
-    LCpush_lut(L, mt, value);
-  }
+  LCpush_lut(L, info->metatable(), value);
 }
 
 template<typename T>
@@ -433,7 +425,7 @@ inline void LCcheck(lua_State* L, T* target, int pos) {
   lua_pop(L, 1);
 
   // assume object
-  Object* obj = LCcheck_lut(L, NULL, pos);
+  Object* obj = LCcheck_object(L, pos);
 
   // verify this is a type of what we're looking for via static member
   // so this deref is safe
