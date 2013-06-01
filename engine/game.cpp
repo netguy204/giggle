@@ -33,7 +33,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <math.h>
-#include <libgen.h>
 
 World* world = NULL;
 Universe* universe;
@@ -705,9 +704,7 @@ void CTire::update(float dt) {
 void game_init(int argc, char** argv) {
   // build up the default lua path
   char buffer[1024];
-  char* mydir = dirname(strdup(argv[0]));
-  snprintf(buffer, sizeof(buffer), "%s/../resources/?.lua;%s/../engine_resources/?.lua", mydir, mydir);
-  free(mydir);
+  snprintf(buffer, sizeof(buffer), "resources/?.lua;%sengine_resources/?.lua", libbase);
 
   // initialize globals
   game_support_init();

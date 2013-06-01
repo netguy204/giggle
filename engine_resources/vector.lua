@@ -22,6 +22,10 @@ function M.__tostring(a)
    return string.format("<%f, %f>", a[1], a[2])
 end
 
+function M.negate(a)
+   return M.new{-a[1], -a[2]}
+end
+
 function M.norm(a)
    local len = a:length()
    return M.new{ a[1] / len, a[2] / len }

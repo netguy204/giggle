@@ -23,6 +23,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <string.h>
+#include <libgen.h>
 
 ThreadBarrier render_barrier;
 FixedAllocator* clock_allocator;
@@ -35,15 +36,7 @@ Random_ rgen;
 uint32_t screen_width;
 uint32_t screen_height;
 
-float screen_x_br = 0.0f;
-float screen_y_br = 0.0f;
-
-void screen_rect(Rect rect) {
-  rect->minx = screen_x_br;
-  rect->miny = screen_y_br;
-  rect->maxx = screen_x_br + screen_width;
-  rect->maxy = screen_y_br + screen_height;
-}
+const char* libbase;
 
 static pthread_t renderer_thread;
 
@@ -82,7 +75,15 @@ void testlib_init() {
   render_barrier = threadbarrier_make(2);
 }
 
-void lib_init() {
+void lib_init(int argc, char** argv) {
+  // won't work on android, need to decide what to do here instead
+  char* dir = dirname(strdup(argv[0]));
+  int nbuffer = strlen(dir) + 32;
+  char* buffer = (char*)malloc(nbuffer);
+  snprintf(buffer, nbuffer, "%s/../", dir);
+  libbase = buffer;
+
+
   testlib_init();
 
   native_init();

@@ -44,16 +44,14 @@
 extern uint32_t screen_width;
 extern uint32_t screen_height;
 
-extern float screen_x_br;
-extern float screen_y_br;
 extern Random_ rgen;
 
-void screen_rect(Rect rect);
+extern const char* libbase;
 
 /* initialize the internal allocators for the library. Must be called
    before other functions */
 void testlib_init(); // called by lib_init
-void lib_init();
+void lib_init(int argc, char** argv);
 
 /* shuts down the renderer and frees memory. Must be called before
    termination */

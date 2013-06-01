@@ -15,6 +15,7 @@
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "utils.h"
+#include "testlib.h"
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -72,7 +73,23 @@ long abs_utime() {
   return timer_elapsed_usecs(&abs_timer);
 }
 
+// resolve a filename on our path
+char resolve_buffer[1024];
+
+const char* filename_resolve(const char* filename) {
+  FILE* f = fopen(filename, "r");
+  if(f) {
+    fclose(f);
+    return filename;
+  }
+
+  snprintf(resolve_buffer, sizeof(resolve_buffer), "%s/%s", libbase, filename);
+  return resolve_buffer;
+}
+
 long filename_size(const char* filename) {
+  filename = filename_resolve(filename);
+
   FILE* f = fopen(filename, "r");
   if(!f) fail_exit("file %s does not exist", filename);
 
@@ -83,6 +100,8 @@ long filename_size(const char* filename) {
 }
 
 char* filename_slurp(const char* filename) {
+  filename = filename_resolve(filename);
+
   long size = filename_size(filename);
   char* data = (char*)malloc(size + 1);
 
