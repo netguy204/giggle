@@ -49,6 +49,16 @@ function M.thread(fn)
    return coroutine.create(threadfn)
 end
 
+function M.fthread(inner_fn)
+   local fn = function(go, comp)
+      while true do
+         coroutine.yield()
+         inner_fn(go, comp)
+      end
+   end
+   return M.thread(fn)
+end
+
 function M.noop_thread()
    local noop = function(go, comp)
       while true do
