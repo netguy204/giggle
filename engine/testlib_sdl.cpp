@@ -32,10 +32,8 @@ static int sdl_remap_table[SDLK_LAST];
 static InputState_ pstate;
 
 void native_init() {
-  /* appears to be the ouya default resolution
-  screen_width = 1920;
-  screen_height = 1080;
-  */
+  /* appears to be the ouya default resolution */
+
   screen_width = 1280;
   screen_height = 720;
 
