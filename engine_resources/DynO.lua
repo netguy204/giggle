@@ -1,5 +1,7 @@
 local oo = require 'oo'
 local Registry = require 'Registry'
+local constant = require 'constant'
+local util = require 'util'
 
 local DynO = oo.class(oo.Object)
 
