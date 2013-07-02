@@ -221,6 +221,20 @@ class PSTimeAlphaUpdater : public ParticleSystemUpdater {
   float max_scale;
 };
 
+class PSFireColorUpdater : public ParticleSystemUpdater {
+ public:
+  OBJECT_PROTO(PSFireColorUpdater);
+
+  PSFireColorUpdater(void* def);
+
+  virtual void update(float dt);
+  virtual unsigned int required_features();
+
+  float max_life;
+  float start_temperature;
+  float end_temperature;
+};
+
 class PSBoxInitializer : public ParticleSystemInitializer {
  public:
   OBJECT_PROTO(PSBoxInitializer);

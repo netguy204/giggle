@@ -16,6 +16,7 @@
 */
 #include "psystem.h"
 #include "testlib_gl.h"
+#include "color.h"
 
 static long system_offset(SystemDefinition* def, ParticleFeature feature) {
   if((def->feature_flags & feature) == 0) {
@@ -741,6 +742,36 @@ void PSTimeAlphaUpdater::update(float dt) {
 
 unsigned int PSTimeAlphaUpdater::required_features() {
   return PF_TIME | PF_COLOR | PF_SCALE;
+}
+
+OBJECT_IMPL(PSFireColorUpdater, ParticleSystemUpdater);
+OBJECT_PROPERTY(PSFireColorUpdater, max_life);
+OBJECT_PROPERTY(PSFireColorUpdater, start_temperature);
+OBJECT_PROPERTY(PSFireColorUpdater, end_temperature);
+
+PSFireColorUpdater::PSFireColorUpdater(void* _def)
+  : ParticleSystemUpdater(_def), max_life(1),
+    start_temperature(6000), end_temperature(4000) {
+}
+
+void PSFireColorUpdater::update(float dt) {
+  float color[3];
+  float* times = def->system_featuref(PF_TIME);
+  Color* colors = def->system_featurec(PF_COLOR);
+
+  float s = (start_temperature - end_temperature) / max_life;
+
+  for(int ii = 0; ii < def->n; ++ii) {
+    float temp = end_temperature + times[ii] * s;
+    color_for_temp(temp, color);
+    colors[ii].r = color[0];
+    colors[ii].g = color[1];
+    colors[ii].b = color[2];
+  }
+}
+
+unsigned int PSFireColorUpdater::required_features() {
+  return PF_TIME | PF_COLOR;
 }
 
 OBJECT_IMPL(PSBoxInitializer, ParticleSystemInitializer);

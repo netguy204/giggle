@@ -19,94 +19,95 @@
 
 #include <math.h>
 
-void steeringresult_complete(SteeringResult result, SteeringParams params) {
+OBJECT_IMPL(Steering, Object);
+OBJECT_PROPERTY(Steering, params);
+OBJECT_PROPERTY(Steering, force);
+OBJECT_PROPERTY(Steering, computed);
+
+Steering::Steering(void* empty) {}
+
+void Steering::begin(SteeringParams p) {
+  params = p;
+  vector_zero(&force);
+  computed = 0;
+}
+OBJECT_METHOD(Steering, begin, void, (SteeringParams));
+
+void Steering::complete() {
   // clamp the force
-  vector_clamp(&result->force, &result->force, params->force_max);
+  vector_clamp(&force, &force, params.force_max);
 }
+OBJECT_METHOD(Steering, complete, void, ());
 
-/*
-void particle_applysteering(Particle* p, SteeringResult r, SteeringParams params, float dt) {
-  struct Vector_ dvdt;
-  vector_scale(&dvdt, &r->force, dt / params->application_time);
-  vector_add(&p->vel, &p->vel, &dvdt);
-  vector_clamp(&p->vel, &p->vel, params->speed_max);
-
-  // no angle change if speed is small
-  float mag = vector_mag(&p->vel);
-  if(mag < 0.01) {
-    return;
-  }
-
-  p->angle = vector_angle(&p->vel);
+void Steering::apply_desired_velocity(Vector desired_vel, Vector src_vel) {
+  vector_sub(&force, desired_vel, src_vel);
+  computed = 1;
 }
-*/
+OBJECT_METHOD(Steering, apply_desired_velocity, void, (Vector, Vector));
 
-void steering_apply_desired_velocity(SteeringResult r, Vector desired_vel, Vector src_vel) {
-  vector_sub(&r->force, desired_vel, src_vel);
-  r->computed = 1;
-}
-
-void steering_seek(SteeringResult r, Vector tgt, Vector src, Vector src_vel, SteeringParams params) {
+void Steering::seek(Vector tgt, Vector src, Vector src_vel) {
   struct Vector_ desired_vel;
-  vector_direction_scaled(&desired_vel, tgt, src, params->speed_max);
-  steering_apply_desired_velocity(r, &desired_vel, src_vel);
+  vector_direction_scaled(&desired_vel, tgt, src, params.speed_max);
+  apply_desired_velocity(&desired_vel, src_vel);
 }
+OBJECT_METHOD(Steering, seek, void, (Vector, Vector, Vector));
 
-void steering_arrival(SteeringResult r, Vector tgt, Vector src, Vector src_vel,
-                      float slowing_dist, SteeringParams params) {
+void Steering::arrival(Vector tgt, Vector src, Vector src_vel, float slowing_dist) {
   struct Vector_ to_target;
   vector_sub(&to_target, tgt, src);
 
   float mag = vector_mag(&to_target);
   if(fabsf(mag) < 0.0001) return;
 
-  float speed = MIN(params->speed_max, (mag / slowing_dist) * params->speed_max);
+  float speed = MIN(params.speed_max, (mag / slowing_dist) * params.speed_max);
 
   struct Vector_ desired_vel;
   vector_scale(&desired_vel, &to_target, speed / mag);
-  steering_apply_desired_velocity(r, &desired_vel, src_vel);
+  apply_desired_velocity(&desired_vel, src_vel);
 }
+OBJECT_METHOD(Steering, arrival, void, (Vector, Vector, Vector, float));
 
-void steering_flee(SteeringResult r, Vector tgt, Vector src, Vector src_vel, SteeringParams params) {
+void Steering::flee(Vector tgt, Vector src, Vector src_vel) {
   struct Vector_ desired_vel;
-  vector_direction_scaled(&desired_vel, src, tgt, params->speed_max);
-  steering_apply_desired_velocity(r, &desired_vel, src_vel);
+  vector_direction_scaled(&desired_vel, src, tgt, params.speed_max);
+  apply_desired_velocity(&desired_vel, src_vel);
 }
+OBJECT_METHOD(Steering, flee, void, (Vector, Vector, Vector));
 
-void steering_predict(Vector prediction, Vector tgt, Vector tgt_vel, Vector src,
-                      SteeringParams params) {
+void Steering::predict(Vector prediction, Vector tgt, Vector tgt_vel, Vector src) {
   // assume the intercept time is the time it would take us to get to
   // where the target is now
   struct Vector_ to_target;
   vector_sub(&to_target, tgt, src);
 
-  float dt = vector_mag(&to_target) / params->speed_max;
+  float dt = vector_mag(&to_target) / params.speed_max;
 
   // project the target to that position
   struct Vector_ dx;
   vector_scale(&dx, tgt_vel, dt);
   vector_add(prediction, tgt, &dx);
 }
+OBJECT_METHOD(Steering, predict, void, (Vector, Vector, Vector, Vector));
 
-void steering_pursuit(SteeringResult r, Vector tgt, Vector tgt_vel,
-                      Vector src, Vector src_vel, SteeringParams params) {
+void Steering::pursuit(Vector tgt, Vector tgt_vel, Vector src, Vector src_vel) {
   struct Vector_ prediction;
-  steering_predict(&prediction, tgt, tgt_vel, src, params);
-  steering_seek(r, &prediction, src, src_vel, params);
+  predict(&prediction, tgt, tgt_vel, src);
+  seek(&prediction, src, src_vel);
 }
+OBJECT_METHOD(Steering, pursuit, void, (Vector, Vector, Vector, Vector));
 
-void steering_evasion(SteeringResult r, Vector tgt, Vector tgt_vel,
-                      Vector src, Vector src_vel, SteeringParams params) {
+void Steering::evasion(Vector tgt, Vector tgt_vel, Vector src, Vector src_vel) {
   struct Vector_ prediction;
-  steering_predict(&prediction, tgt, tgt_vel, src, params);
-  steering_flee(r, &prediction, src, src_vel, params);
+  predict(&prediction, tgt, tgt_vel, src);
+  flee(&prediction, src, src_vel);
 }
+OBJECT_METHOD(Steering, evasion, void, (Vector, Vector, Vector, Vector));
 
-void steering_offsetpursuit(SteeringResult r, Vector tgt, Vector tgt_vel,
-                            Vector src, Vector src_vel, float offset,
-                            SteeringParams params) {
+void Steering::offsetpursuit(Vector tgt, Vector tgt_vel,
+                             Vector src, Vector src_vel, float offset) {
+
   struct Vector_ prediction;
-  steering_predict(&prediction, tgt, tgt_vel, src, params);
+  predict(&prediction, tgt, tgt_vel, src);
 
   struct Vector_ p2s;
   vector_sub(&p2s, src, &prediction);
@@ -117,12 +118,12 @@ void steering_offsetpursuit(SteeringResult r, Vector tgt, Vector tgt_vel,
   struct Vector_ offset_tgt;
   vector_add(&offset_tgt, &prediction, &p2s);
 
-  steering_seek(r, &offset_tgt, src, src_vel, params);
+  seek(&offset_tgt, src, src_vel);
 }
+OBJECT_METHOD(Steering, offsetpursuit, void, (Vector, Vector, Vector, Vector, float));
 
-void steering_offsetarrival(SteeringResult r, Vector tgt, Vector src,
-                            Vector src_vel, float offset, float slowing_dist,
-                            SteeringParams params) {
+void Steering::offsetarrival(Vector tgt, Vector src, Vector src_vel,
+                             float offset, float slowing_dist) {
   struct Vector_ to_src;
 
   vector_sub(&to_src, src, tgt);
@@ -138,14 +139,15 @@ void steering_offsetarrival(SteeringResult r, Vector tgt, Vector src,
   struct Vector_ offset_tgt;
   vector_add(&offset_tgt, tgt, &to_src);
 
-  steering_arrival(r, &offset_tgt, src, src_vel, slowing_dist, params);
+  arrival(&offset_tgt, src, src_vel, slowing_dist);
 }
+OBJECT_METHOD(Steering, offsetarrival, void, (Vector, Vector, Vector, float, float))
 
-int steering_followpath(SteeringResult r, TileMap map, PathInstance pi, Vector src, Vector src_vel,
-                        float max_offset, SteeringParams params) {
+int Steering::followpath(TileMap map, PathInstance pi, Vector src, Vector src_vel,
+                         float max_offset) {
   struct Vector_ projobj;
   struct Vector_ src_vel_offset;
-  vector_scale(&src_vel_offset, src_vel, params->application_time);
+  vector_scale(&src_vel_offset, src_vel, params.application_time);
   vector_add(&projobj, src, &src_vel_offset);
 
   // find the closest point on the path
@@ -159,17 +161,16 @@ int steering_followpath(SteeringResult r, TileMap map, PathInstance pi, Vector s
   }
 
   // steer towards the point
-  steering_seek(r, &tgt, src, src_vel, params);
+  seek(&tgt, src, src_vel);
   return step;
 }
 
-void steering_avoidance(SteeringResult r, SteeringObstacle objs, int nobjs,
-                        Vector src, Vector src_vel, float src_radius, float src_range,
-                        SteeringParams params) {
+void Steering::avoidance(SteeringObstacle* objs, int nobjs, Vector src, Vector src_vel,
+                         float src_radius, float src_range) {
 
   float speed = vector_mag(src_vel);
   if(speed < 0.01) {
-    r->computed = 0;
+    computed = 0;
     return; // don't do anything
   }
 
@@ -177,10 +178,10 @@ void steering_avoidance(SteeringResult r, SteeringObstacle objs, int nobjs,
   vector_scale(&src_vel_norm, src_vel, 1.0f / speed);
 
   int ii;
-  SteeringObstacle closest = NULL;
+  SteeringObstacle* closest = NULL;
   for(ii = 0; ii < nobjs; ++ii) {
     // put the object in our frame
-    SteeringObstacle obj = &objs[ii];
+    SteeringObstacle* obj = &objs[ii];
 
     struct Vector_ objpos;
     vector_sub(&objpos, &obj->center, src);
@@ -209,7 +210,7 @@ void steering_avoidance(SteeringResult r, SteeringObstacle objs, int nobjs,
 
   if(!closest) {
     // we're done
-    r->computed = 0;
+    computed = 0;
     return;
   }
 
@@ -222,6 +223,6 @@ void steering_avoidance(SteeringResult r, SteeringObstacle objs, int nobjs,
     closest->perp_offset.y = -src_vel->x;
     pmag = speed;
   }
-  vector_scale(&goal_vel, &closest->perp_offset, params->speed_max / pmag);
-  steering_apply_desired_velocity(r, &goal_vel, src_vel);
+  vector_scale(&goal_vel, &closest->perp_offset, params.speed_max / pmag);
+  apply_desired_velocity(&goal_vel, src_vel);
 }

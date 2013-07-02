@@ -41,16 +41,15 @@ function M.class(base)
    return c
 end
 
-M.Object = M.class()
+Object = M.class()
+M.Object = Object
 
-local function bind(self, fname)
+function Object:bind(fname)
    local mem = self[fname]
    local fn = function(...)
       mem(self, ...)
    end
    return fn
 end
-
-M.Object.bind = bind
 
 return M

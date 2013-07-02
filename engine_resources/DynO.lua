@@ -20,8 +20,10 @@ function DynO:init(pos)
 
    self.go:pos(pos)
    self.go:body_type(constant.DYNAMIC)
-   self.scripted = self.go:add_component('CScripted', {update_thread=util.fthread(self:bind('update')),
-                                                       message_thread=util.fthread(self:bind('message'))})
+   local update = util.fthread(self:bind('update'))
+   local message = util.fthread(self:bind('message'))
+   self.scripted = self.go:add_component('CScripted', {update_thread=update,
+                                                       message_thread=message})
 end
 
 function DynO:message()
