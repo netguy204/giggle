@@ -45,20 +45,20 @@ class Steering : public Object {
   void begin(SteeringParams params);
   void complete();
 
-  void apply_desired_velocity(Vector desired_vel, Vector src_vel);
-  void seek(Vector tgt, Vector src, Vector src_vel);
-  void arrival(Vector tgt, Vector src, Vector src_vel, float slowing_dist);
-  void flee(Vector tgt, Vector src, Vector src_vel);
-  void predict(Vector prediction, Vector tgt, Vector tgt_vel, Vector src);
-  void pursuit(Vector tgt, Vector tgt_vel, Vector src, Vector src_vel);
-  void evasion(Vector tgt, Vector tgt_vel, Vector src, Vector src_vel);
-  void offsetpursuit(Vector tgt, Vector tgt_vel, Vector src, Vector src_vel, float offset);
-  void offsetarrival(Vector tgt, Vector src, Vector src_vel,
+  void apply_desired_velocity(Vector_ desired_vel, Vector_ src_vel);
+  void seek(Vector_ tgt, Vector_ src, Vector_ src_vel);
+  void arrival(Vector_ tgt, Vector_ src, Vector_ src_vel, float slowing_dist);
+  void flee(Vector_ tgt, Vector_ src, Vector_ src_vel);
+  void predict(Vector prediction, Vector_ tgt, Vector_ tgt_vel, Vector_ src);
+  void pursuit(Vector_ tgt, Vector_ tgt_vel, Vector_ src, Vector_ src_vel);
+  void evasion(Vector_ tgt, Vector_ tgt_vel, Vector_ src, Vector_ src_vel);
+  void offsetpursuit(Vector_ tgt, Vector_ tgt_vel, Vector_ src, Vector_ src_vel, float offset);
+  void offsetarrival(Vector_ tgt, Vector_ src, Vector_ src_vel,
                      float offset, float slowing_dist);
-  void avoidance(SteeringObstacle* objs, int nobjs, Vector src, Vector src_vel,
+  void avoidance(SteeringObstacle* objs, int nobjs, Vector_ src, Vector_ src_vel,
                  float src_radius, float src_range);
-  int followpath(TileMap map, PathInstance path, Vector src,
-                 Vector src_vel, float max_offset);
+  int followpath(TileMap map, PathInstance path, Vector_ src,
+                 Vector_ src_vel, float max_offset);
 
   SteeringParams params;
   Vector_ force;

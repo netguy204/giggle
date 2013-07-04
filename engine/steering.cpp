@@ -39,22 +39,22 @@ void Steering::complete() {
 }
 OBJECT_METHOD(Steering, complete, void, ());
 
-void Steering::apply_desired_velocity(Vector desired_vel, Vector src_vel) {
-  vector_sub(&force, desired_vel, src_vel);
+void Steering::apply_desired_velocity(Vector_ desired_vel, Vector_ src_vel) {
+  vector_sub(&force, &desired_vel, &src_vel);
   computed = 1;
 }
-OBJECT_METHOD(Steering, apply_desired_velocity, void, (Vector, Vector));
+OBJECT_METHOD(Steering, apply_desired_velocity, void, (Vector_, Vector_));
 
-void Steering::seek(Vector tgt, Vector src, Vector src_vel) {
+void Steering::seek(Vector_ tgt, Vector_ src, Vector_ src_vel) {
   struct Vector_ desired_vel;
-  vector_direction_scaled(&desired_vel, tgt, src, params.speed_max);
-  apply_desired_velocity(&desired_vel, src_vel);
+  vector_direction_scaled(&desired_vel, &tgt, &src, params.speed_max);
+  apply_desired_velocity(desired_vel, src_vel);
 }
-OBJECT_METHOD(Steering, seek, void, (Vector, Vector, Vector));
+OBJECT_METHOD(Steering, seek, void, (Vector_, Vector_, Vector_));
 
-void Steering::arrival(Vector tgt, Vector src, Vector src_vel, float slowing_dist) {
+void Steering::arrival(Vector_ tgt, Vector_ src, Vector_ src_vel, float slowing_dist) {
   struct Vector_ to_target;
-  vector_sub(&to_target, tgt, src);
+  vector_sub(&to_target, &tgt, &src);
 
   float mag = vector_mag(&to_target);
   if(fabsf(mag) < 0.0001) return;
@@ -63,54 +63,53 @@ void Steering::arrival(Vector tgt, Vector src, Vector src_vel, float slowing_dis
 
   struct Vector_ desired_vel;
   vector_scale(&desired_vel, &to_target, speed / mag);
-  apply_desired_velocity(&desired_vel, src_vel);
+  apply_desired_velocity(desired_vel, src_vel);
 }
-OBJECT_METHOD(Steering, arrival, void, (Vector, Vector, Vector, float));
+OBJECT_METHOD(Steering, arrival, void, (Vector_, Vector_, Vector_, float));
 
-void Steering::flee(Vector tgt, Vector src, Vector src_vel) {
+void Steering::flee(Vector_ tgt, Vector_ src, Vector_ src_vel) {
   struct Vector_ desired_vel;
-  vector_direction_scaled(&desired_vel, src, tgt, params.speed_max);
-  apply_desired_velocity(&desired_vel, src_vel);
+  vector_direction_scaled(&desired_vel, &src, &tgt, params.speed_max);
+  apply_desired_velocity(desired_vel, src_vel);
 }
-OBJECT_METHOD(Steering, flee, void, (Vector, Vector, Vector));
+OBJECT_METHOD(Steering, flee, void, (Vector_, Vector_, Vector_));
 
-void Steering::predict(Vector prediction, Vector tgt, Vector tgt_vel, Vector src) {
+void Steering::predict(Vector prediction, Vector_ tgt, Vector_ tgt_vel, Vector_ src) {
   // assume the intercept time is the time it would take us to get to
   // where the target is now
   struct Vector_ to_target;
-  vector_sub(&to_target, tgt, src);
+  vector_sub(&to_target, &tgt, &src);
 
   float dt = vector_mag(&to_target) / params.speed_max;
 
   // project the target to that position
   struct Vector_ dx;
-  vector_scale(&dx, tgt_vel, dt);
-  vector_add(prediction, tgt, &dx);
+  vector_scale(&dx, &tgt_vel, dt);
+  vector_add(prediction, &tgt, &dx);
 }
-OBJECT_METHOD(Steering, predict, void, (Vector, Vector, Vector, Vector));
 
-void Steering::pursuit(Vector tgt, Vector tgt_vel, Vector src, Vector src_vel) {
+void Steering::pursuit(Vector_ tgt, Vector_ tgt_vel, Vector_ src, Vector_ src_vel) {
   struct Vector_ prediction;
   predict(&prediction, tgt, tgt_vel, src);
-  seek(&prediction, src, src_vel);
+  seek(prediction, src, src_vel);
 }
-OBJECT_METHOD(Steering, pursuit, void, (Vector, Vector, Vector, Vector));
+OBJECT_METHOD(Steering, pursuit, void, (Vector_, Vector_, Vector_, Vector_));
 
-void Steering::evasion(Vector tgt, Vector tgt_vel, Vector src, Vector src_vel) {
+void Steering::evasion(Vector_ tgt, Vector_ tgt_vel, Vector_ src, Vector_ src_vel) {
   struct Vector_ prediction;
   predict(&prediction, tgt, tgt_vel, src);
-  flee(&prediction, src, src_vel);
+  flee(prediction, src, src_vel);
 }
-OBJECT_METHOD(Steering, evasion, void, (Vector, Vector, Vector, Vector));
+OBJECT_METHOD(Steering, evasion, void, (Vector_, Vector_, Vector_, Vector_));
 
-void Steering::offsetpursuit(Vector tgt, Vector tgt_vel,
-                             Vector src, Vector src_vel, float offset) {
+void Steering::offsetpursuit(Vector_ tgt, Vector_ tgt_vel,
+                             Vector_ src, Vector_ src_vel, float offset) {
 
   struct Vector_ prediction;
   predict(&prediction, tgt, tgt_vel, src);
 
   struct Vector_ p2s;
-  vector_sub(&p2s, src, &prediction);
+  vector_sub(&p2s, &src, &prediction);
   float mag = vector_mag(&p2s);
 
   vector_scale(&p2s, &p2s, offset / mag);
@@ -118,15 +117,15 @@ void Steering::offsetpursuit(Vector tgt, Vector tgt_vel,
   struct Vector_ offset_tgt;
   vector_add(&offset_tgt, &prediction, &p2s);
 
-  seek(&offset_tgt, src, src_vel);
+  seek(offset_tgt, src, src_vel);
 }
-OBJECT_METHOD(Steering, offsetpursuit, void, (Vector, Vector, Vector, Vector, float));
+OBJECT_METHOD(Steering, offsetpursuit, void, (Vector_, Vector_, Vector_, Vector_, float));
 
-void Steering::offsetarrival(Vector tgt, Vector src, Vector src_vel,
+void Steering::offsetarrival(Vector_ tgt, Vector_ src, Vector_ src_vel,
                              float offset, float slowing_dist) {
   struct Vector_ to_src;
 
-  vector_sub(&to_src, src, tgt);
+  vector_sub(&to_src, &src, &tgt);
   float mag = vector_mag(&to_src);
   if(fabsf(mag) > 0.0001f) {
     vector_scale(&to_src, &to_src, offset / mag);
@@ -137,18 +136,18 @@ void Steering::offsetarrival(Vector tgt, Vector src, Vector src_vel,
   }
 
   struct Vector_ offset_tgt;
-  vector_add(&offset_tgt, tgt, &to_src);
+  vector_add(&offset_tgt, &tgt, &to_src);
 
-  arrival(&offset_tgt, src, src_vel, slowing_dist);
+  arrival(offset_tgt, src, src_vel, slowing_dist);
 }
-OBJECT_METHOD(Steering, offsetarrival, void, (Vector, Vector, Vector, float, float))
+OBJECT_METHOD(Steering, offsetarrival, void, (Vector_, Vector_, Vector_, float, float))
 
-int Steering::followpath(TileMap map, PathInstance pi, Vector src, Vector src_vel,
+int Steering::followpath(TileMap map, PathInstance pi, Vector_ src, Vector_ src_vel,
                          float max_offset) {
   struct Vector_ projobj;
   struct Vector_ src_vel_offset;
-  vector_scale(&src_vel_offset, src_vel, params.application_time);
-  vector_add(&projobj, src, &src_vel_offset);
+  vector_scale(&src_vel_offset, &src_vel, params.application_time);
+  vector_add(&projobj, &src, &src_vel_offset);
 
   // find the closest point on the path
   struct Vector_ tgt;
@@ -161,21 +160,21 @@ int Steering::followpath(TileMap map, PathInstance pi, Vector src, Vector src_ve
   }
 
   // steer towards the point
-  seek(&tgt, src, src_vel);
+  seek(tgt, src, src_vel);
   return step;
 }
 
-void Steering::avoidance(SteeringObstacle* objs, int nobjs, Vector src, Vector src_vel,
+void Steering::avoidance(SteeringObstacle* objs, int nobjs, Vector_ src, Vector_ src_vel,
                          float src_radius, float src_range) {
 
-  float speed = vector_mag(src_vel);
+  float speed = vector_mag(&src_vel);
   if(speed < 0.01) {
     computed = 0;
     return; // don't do anything
   }
 
   struct Vector_ src_vel_norm;
-  vector_scale(&src_vel_norm, src_vel, 1.0f / speed);
+  vector_scale(&src_vel_norm, &src_vel, 1.0f / speed);
 
   int ii;
   SteeringObstacle* closest = NULL;
@@ -184,7 +183,7 @@ void Steering::avoidance(SteeringObstacle* objs, int nobjs, Vector src, Vector s
     SteeringObstacle* obj = &objs[ii];
 
     struct Vector_ objpos;
-    vector_sub(&objpos, &obj->center, src);
+    vector_sub(&objpos, &obj->center, &src);
 
     // project along our direction of travel. bail if behind us
     struct Vector_ objproj;
@@ -219,10 +218,10 @@ void Steering::avoidance(SteeringObstacle* objs, int nobjs, Vector src, Vector s
   float pmag = vector_mag(&closest->perp_offset);
   if(pmag < 0.01) {
     // obstacle is dead-ahead, just turn
-    closest->perp_offset.x = src_vel->y;
-    closest->perp_offset.y = -src_vel->x;
+    closest->perp_offset.x = src_vel.y;
+    closest->perp_offset.y = -src_vel.x;
     pmag = speed;
   }
   vector_scale(&goal_vel, &closest->perp_offset, params.speed_max / pmag);
-  apply_desired_velocity(&goal_vel, src_vel);
+  apply_desired_velocity(goal_vel, src_vel);
 }
