@@ -416,7 +416,7 @@ function M.loop_music(songs)
       end
       local song = songs[next_song]
 
-      current_handle = world:stream_sound(song, world:current_sound_sample())
+      current_handle = world:stream_sound(song, world:current_sample())
       local stop_time = current_handle:last_sample()
       M.add_to_stash({song_num=next_song, song_end=stop_time,
                       handle_name=current_handle:handle()})
@@ -430,7 +430,7 @@ function M.loop_music(songs)
             coroutine.yield()
             if go:has_message(CHECK_MUSIC) then
                local stop_time = M.get_stash_value('song_end', 0)
-               if stop_time < world:current_sound_sample() then
+               if stop_time < world:current_sample() then
                   play_next_music()
                end
                go:add_component('CTimer', {time_remaining=1, kind=CHECK_MUSIC})
