@@ -78,9 +78,25 @@ function M.rand_exponential(rate)
    return math.log(1-u)/(-rate)
 end
 
+function M.rand_idx(tbl)
+   return math.floor(math.random() * M.count(tbl)) + 1
+end
+
 function M.rand_choice(tbl)
-   local idx = math.floor(math.random() * M.count(tbl)) + 1
+   local idx = M.rand_idx(tbl)
    return tbl[idx]
+end
+
+function M.rand_shuffle(tbl)
+   tbl = M.table_copy(tbl)
+   local cnt = M.count(tbl)
+   local result = {}
+   for ii=1,cnt do
+      local idx = M.rand_idx(tbl)
+      local obj = table.remove(tbl, idx)
+      table.insert(result, obj)
+   end
+   return result
 end
 
 function M.table_copy(tbl)
