@@ -91,6 +91,19 @@ function M.table_copy(tbl)
    return new
 end
 
+function M.table_remove(tbl, obj)
+   local found = nil
+   for ii, v in ipairs(tbl) do
+      if v == obj then
+         found = ii
+         break
+      end
+   end
+   if found then
+      table.remove(tbl, found)
+   end
+end
+
 function M.merge_into(target, source)
    if not source then
       return target
