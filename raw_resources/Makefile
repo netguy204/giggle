@@ -1,1 +1,0 @@
-include ../build/Resources.mk
