@@ -127,7 +127,6 @@ struct LuaThread {
   lua_State* state;
   int refid;
   int is_initialized;
-  int is_valid;
 };
 
 class Camera : public Component {
@@ -210,6 +209,8 @@ class CScripted : public Component {
 
   LuaThread update_thread;
   LuaThread message_thread;
+  int frame_skip;
+  int current_frame;
 };
 
 /* GO: GameObject

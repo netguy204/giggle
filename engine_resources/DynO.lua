@@ -23,8 +23,8 @@ function DynO:init(pos)
    self._go:body_type(constant.DYNAMIC)
    local update = util.fthread(self:bind('update'))
    local message = util.fthread(self:bind('message'))
-   self.scripted = self._go:add_component('CScripted', {update_thread=update,
-                                                       message_thread=message})
+   self.script = self._go:add_component('CScripted', {update_thread=update,
+                                                      message_thread=message})
 end
 
 function DynO:go()
@@ -34,7 +34,11 @@ function DynO:go()
 end
 
 function DynO:message()
-   local go = self._go
+   local go = self:go()
+   if not go then
+      return
+   end
+
    local msgs = { go:has_message(constant.COLLIDING) }
    for ii, msg in ipairs(msgs) do
       local obj = DynO.find(msg.source)
@@ -49,22 +53,37 @@ function DynO:colliding_with(obj)
 end
 
 function DynO:add_sensor(parms)
+   local go = self:go()
+   if not go then
+      return
+   end
+
    if not self.sensors then
       self.sensors = {}
    end
-   table.insert(self.sensors, self._go:add_component('CSensor', parms))
+   table.insert(self.sensors, go:add_component('CSensor', parms))
 end
 
 function DynO:add_collider(parms)
+   local go = self:go()
+   if not go then
+      return
+   end
+
    if not self.colliders then
       self.colliders = {}
    end
-   table.insert(self.colliders, self._go:add_component('CCollidable', parms))
+   table.insert(self.colliders, go:add_component('CCollidable', parms))
 end
 
 function DynO:terminate()
-   self._go:delete_me(1)
-   DynO.reg:unregister(self._go)
+   local go = self:go()
+   if not go then
+      return
+   end
+
+   go:delete_me(1)
+   DynO.reg:unregister(go)
    self.alive = false
 end
 

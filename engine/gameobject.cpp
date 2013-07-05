@@ -561,15 +561,17 @@ void CSensor::update(float dt) {
 }
 
 LuaThread::LuaThread()
-  : state(NULL), refid(-1) {
+  : state(NULL), refid(-1), is_initialized(0) {
 }
 
 OBJECT_IMPL(CScripted, Component);
 OBJECT_PROPERTY(CScripted, update_thread);
 OBJECT_PROPERTY(CScripted, message_thread);
+OBJECT_PROPERTY(CScripted, frame_skip);
+OBJECT_PROPERTY(CScripted, current_frame);
 
 CScripted::CScripted(void* go)
-  : Component((GO*)go, PRIORITY_ACT) {
+  : Component((GO*)go, PRIORITY_ACT), frame_skip(1), current_frame(0) {
 }
 
 CScripted::~CScripted() {
@@ -591,7 +593,9 @@ void CScripted::init() {
 
 void CScripted::update(float dt) {
   // init guaranteed that we always have at least one script
-  step_thread(&update_thread, go, this);
+  if(((current_frame++) % frame_skip) == 0) {
+    step_thread(&update_thread, go, this);
+  }
 
   // when both threads exit, remove ourselves
   if(!message_thread.state && !update_thread.state) {
