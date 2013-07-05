@@ -71,7 +71,7 @@ class CStaticSprite : public Component {
 
   Vector_ offset;
   SpriteAtlasEntry entry;
-  float angle;
+  float angle_offset;
   int layer;
 };
 

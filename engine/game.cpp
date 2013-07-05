@@ -119,11 +119,11 @@ OBJECT_IMPL(CStaticSprite, Component);
 OBJECT_PROPERTY(CStaticSprite, entry);
 OBJECT_PROPERTY(CStaticSprite, layer);
 OBJECT_PROPERTY(CStaticSprite, offset);
-OBJECT_PROPERTY(CStaticSprite, angle);
+OBJECT_PROPERTY(CStaticSprite, angle_offset);
 
 CStaticSprite::CStaticSprite(void* go)
   : Component((GO*)go, PRIORITY_SHOW), entry(NULL),
-    layer(LAYER_PLAYER), angle(0.0) {
+    layer(LAYER_PLAYER), angle_offset(0.0) {
   vector_zero(&offset);
 }
 
@@ -138,7 +138,7 @@ void CStaticSprite::render(Camera* camera) {
   sprite->displayY = pos.y;
   sprite->originX = 0.5;
   sprite->originY = 0.5;
-  sprite->angle = angle;
+  sprite->angle = go->angle() + angle_offset;
 
   camera->addSprite(&camera->layers[layer], sprite);
 }
@@ -167,7 +167,7 @@ void CColoredSprite::render(Camera* camera) {
   sprite->displayY = pos.y;
   sprite->originX = 0.5;
   sprite->originY = 0.5;
-  sprite->angle = angle;
+  sprite->angle = go->angle() + angle_offset;
   sprite->color[0] = color.r;
   sprite->color[1] = color.g;
   sprite->color[2] = color.b;
