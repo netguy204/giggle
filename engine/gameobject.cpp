@@ -861,13 +861,22 @@ static int Lgo_has_message(lua_State *L) {
 
   go->inbox.foreach([&] (Message* msg) -> int {
       if(msg->kind == type) {
+        if(rvalues == 0) {
+          // create the return table
+          lua_newtable(L);
+        }
+
         LCpush(L, msg);
-        ++rvalues;
+        lua_rawseti(L, -2, ++rvalues);
       }
       return 0;
     });
 
-  return rvalues;
+  if(rvalues > 0) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 static int Lgo_contacts(lua_State* L) {

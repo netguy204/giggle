@@ -39,11 +39,13 @@ function DynO:message()
       return
    end
 
-   local msgs = { go:has_message(constant.COLLIDING) }
-   for ii, msg in ipairs(msgs) do
-      local obj = DynO.find(msg.source)
-      if obj then
-         self:colliding_with(obj)
+   local msgs = go:has_message(constant.COLLIDING)
+   if msgs then
+      for ii, msg in ipairs(msgs) do
+         local obj = DynO.find(msg.source)
+         if obj then
+            self:colliding_with(obj)
+         end
       end
    end
 end

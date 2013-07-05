@@ -1057,10 +1057,11 @@ void PSConstantRateActivator::activate(float dt) {
   if(available == 0) return;
 
   int actual = 0;
-  for(int ii = 0; ii < available; ++ii) {
+  for(int ii = 0; ii < def->n && available > 0; ++ii) {
     if(!valids[ii]) {
       valids[ii] = 1;
       ++actual;
+      --available;
     }
   }
 
