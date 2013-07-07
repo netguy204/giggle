@@ -113,7 +113,7 @@ SystemRenderer* SystemDefinition::set_renderer(TypeInfo* type) {
 
 ParticleActivator* SystemDefinition::set_activator(TypeInfo* type) {
   if(activator) {
-    delete activator;
+    activator->release();
   }
   activator = (ParticleActivator*)type->makeInstance(this);
   return activator;
@@ -172,17 +172,17 @@ void SystemDefinition::init() {
 
 SystemDefinition::~SystemDefinition() {
   initializers.foreach([this](ParticleSystemComponent* p) -> int {
-      delete p;
+      p->release();
       return 0;
     });
 
   updaters.foreach([this](ParticleSystemComponent* p) -> int {
-      delete p;
+      p->release();
       return 0;
     });
 
   terminators.foreach([this](ParticleSystemComponent* p) -> int {
-      delete p;
+      p->release();
       return 0;
     });
 
