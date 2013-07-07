@@ -218,7 +218,7 @@ OBJECT_ACCESSOR(GO, angle_rate, angle_rate, set_angle_rate);
 OBJECT_PROPERTY(GO, delete_me);
 
 GO::GO(void* _world)
-  : world((World*)_world), delete_me(0), stash(NULL) {
+  : world((World*)_world), delete_me(0), stash(NULL), _handle(NULL) {
   world->game_objects.add_head(this);
 
   // the manual says to avoid setting major body properties (like
@@ -231,6 +231,11 @@ GO::GO(void* _world)
 }
 
 GO::~GO() {
+  if(_handle) {
+    _handle->go = NULL;
+    _handle->release();
+  }
+
   this->components.foreach([](Component* comp) -> int {
       delete comp;
       return 0;
@@ -452,6 +457,13 @@ void GO::print_description() {
     });
 }
 
+GOHandle* GO::handle() {
+  if(!_handle) {
+    _handle = new GOHandle(this);
+  }
+  return _handle;
+}
+
 Message* GO::create_message(int kind, const char* content, size_t nbytes) {
   Message* msg = (Message*)frame_alloc(sizeof(Message) + nbytes);
   msg->source = this;
@@ -469,6 +481,12 @@ void GO::send_message(Message* message) {
   inbox_pending.add_tail(message);
 }
 OBJECT_METHOD(GO, send_message, void, (Message*));
+
+OBJECT_IMPL(GOHandle, Object);
+
+GOHandle::GOHandle(void* _go)
+  : go((GO*)_go) {
+}
 
 OBJECT_IMPL(Component, Object);
 OBJECT_PROPERTY(Component, delete_me);

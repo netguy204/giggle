@@ -46,6 +46,7 @@ typedef enum {
 } CollisionMask;
 
 class GO;
+class GOHandle;
 
 enum MessageKind {
   MESSAGE_COLLIDING,      // agent is colliding with other (cother, cself)
@@ -277,6 +278,7 @@ class GO : public Object {
 
   Component* find_component(const TypeInfo* info, Component* last);
   void print_description();
+  GOHandle* handle();
 
   struct DLLNode_ messages_waiting_node;
   struct DLLNode_ world_node;
@@ -292,6 +294,19 @@ class GO : public Object {
   b2Body* body;
 
   int delete_me;
+
+
+  GOHandle* _handle;
+};
+
+// instead of retaining a reference to a GO, keep a reference to its
+// handle instead so that others can safely free the GO
+class GOHandle : public Object {
+ public:
+  OBJECT_PROTO(GOHandle);
+  GOHandle(void* _go);
+
+  GO* go;
 };
 
 typedef std::map<const char*, SpriteAtlas, cmp_str> NameToAtlas;
@@ -665,7 +680,6 @@ inline void LCpush<LString*>(lua_State* L, LString* str) {
   }
 }
 
-
 template<>
 inline void LCcheck<LString*>(lua_State* L, LString** str, int pos) {
   if(*str) {
@@ -675,6 +689,23 @@ inline void LCcheck<LString*>(lua_State* L, LString** str, int pos) {
   size_t length;
   const char* value = lua_tolstring(L, pos, &length);
   *str =  malloc_lstring(value, length);
+}
+
+// for now, GOHandles are a detail we hide from Lua.
+template<>
+inline void LCpush<GOHandle*>(lua_State* L, GOHandle* handle) {
+  LCpush(L, handle->go);
+}
+
+template<>
+inline void LCcheck<GOHandle*>(lua_State* L, GOHandle** handle, int pos) {
+  GO* go;
+  LCcheck(L, &go, pos);
+  if(go) {
+    *handle = go->handle();
+  } else {
+    *handle = NULL;
+  }
 }
 
 template<>
