@@ -171,6 +171,8 @@ void SystemDefinition::init() {
 }
 
 SystemDefinition::~SystemDefinition() {
+  if(activator) activator->release();
+
   initializers.foreach([this](ParticleSystemComponent* p) -> int {
       p->release();
       return 0;
