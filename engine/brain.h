@@ -41,6 +41,10 @@ DEF_STEERING_BRAIN(SeekBrain)
   Vector_ tgt;
 };
 
+DEF_STEERING_BRAIN(VelocityBrain)
+  Vector_ tgt_vel;
+};
+
 DEF_STEERING_BRAIN(PursuitBrain)
 
   void set_tgt(GOHandle* go);

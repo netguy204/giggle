@@ -55,6 +55,17 @@ IMPL_STEERING_BRAIN(SeekBrain) {
 }
 OBJECT_PROPERTY(SeekBrain, tgt);
 
+IMPL_STEERING_BRAIN(VelocityBrain) {
+  Vector_ vel;
+  go->vel(&vel);
+
+  steering.begin(params);
+  steering.apply_desired_velocity(tgt_vel, vel);
+  steering.complete();
+  go->apply_force(&steering.force);
+}
+OBJECT_PROPERTY(VelocityBrain, tgt_vel);
+
 OBJECT_IMPL(PursuitBrain, Brain);
 OBJECT_ACCESSOR(PursuitBrain, tgt, get_tgt, set_tgt);
 
