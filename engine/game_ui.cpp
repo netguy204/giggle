@@ -67,29 +67,6 @@ void CDrawText::render(Camera* camera) {
                                     pos.x, pos.y, &color);
 }
 
-OBJECT_IMPL(CDrawConsoleText, CDrawText);
-OBJECT_PROPERTY(CDrawConsoleText, w);
-
-CDrawConsoleText::CDrawConsoleText(void *_go)
-  : CDrawText(_go) {
-  w = 100;
-}
-
-void CDrawConsoleText::render(Camera* camera) {
-  if(!message) return;
-  if(!font) fail_exit("CDrawConsoleText was not given a font atlas");
-
-  BaseSprite* spritep = &camera->particles[layer];
-  Vector_ pos;
-  go->pos(&pos);
-
-  vector_add(&pos, &pos, &offset);
-
-  *spritep = spritelist_from_consoletext(
-        *spritep, font, message->str, pos.x, pos.y,
-        w, &color);
-}
-
 typedef enum {
   EP_TL,
   EP_T,
@@ -125,16 +102,20 @@ Font::Font(void* _world)
   : scale(1.0) {
   world = (World*)_world;
   memset(table, 0, sizeof(table));
+  memset(widths, 0, sizeof(widths));
+  memset(leads, 0, sizeof(leads));
 }
 
 void Font::load(SpriteAtlas atlas, const char* prefix, const char* character_map) {
   memset(table, 0, sizeof(table));
+  memset(widths, 0, sizeof(widths));
 
   char tempname[128];
   int idx = 1;
   for(const char* ch = character_map; *ch != '\0'; ++ch) {
     snprintf(tempname, sizeof(tempname), "%s%d", prefix, idx++);
     table[*ch] = world->atlas_entry(atlas, tempname);
+    widths[*ch] = table[*ch]->w;
   }
 
   word_separation = MAX(2, table['m']->w/2);
@@ -142,6 +123,97 @@ void Font::load(SpriteAtlas atlas, const char* prefix, const char* character_map
   line_separation = table['Q']->h + character_separation;
 }
 OBJECT_METHOD(Font, load, void, (SpriteAtlas, const char*, const char*));
+
+int Font::char_width(char ch) {
+  SpriteAtlasEntry entry = table[ch];
+  if(entry == NULL) {
+    return word_separation * scale;
+  } else {
+    return (widths[ch] + character_separation) * scale;
+  }
+}
+OBJECT_METHOD(Font, char_width, int, (char));
+
+int Font::char_lead(char ch) {
+  return leads[ch] * scale;
+}
+OBJECT_METHOD(Font, char_lead, int, (char));
+
+void Font::set_char_width(char ch, int w) {
+  widths[ch] = w;
+}
+OBJECT_METHOD(Font, set_char_width, void, (char, int));
+
+void Font::set_char_lead(char ch, int l) {
+  leads[ch] = l;
+}
+OBJECT_METHOD(Font, set_char_lead, void, (char, int));
+
+int Font::line_height() {
+  return line_separation * scale;
+}
+OBJECT_METHOD(Font, line_height, int, ());
+
+int Font::string_width(const char* string) {
+  int width = 0;
+  for(; *string; ++string) {
+    width += char_lead(*string) + char_width(*string);
+  }
+  return width;
+}
+OBJECT_METHOD(Font, string_width, int, (const char*));
+
+static int is_whitespace(char ch) {
+  return ch == ' ' || ch == '\n' || ch == '\t';
+}
+
+static HeapVector ws_output = NULL;
+
+const char* Font::wrap_string(const char* input, int width) {
+  const int max_chars = width / char_width('m');
+  const char* ip;
+  int xpos;
+
+  if(ws_output == NULL) {
+    ws_output = heapvector_make();
+  }
+
+  while(*input) {
+    // count up next word
+    for(ip=input; *ip && !is_whitespace(*ip); ++ip);
+
+    // insert newline if needed
+    if(xpos + (ip - input) > max_chars) {
+      char newline = '\n';
+      HV_PUSH_VALUE(ws_output, char, newline);
+      xpos = 0;
+    }
+
+    // copy the word
+    for(;input != ip; ++input) {
+      HV_PUSH_VALUE(ws_output, char, *input);
+      ++xpos;
+    }
+
+    // copy any spaces
+    while(is_whitespace(*input)) {
+      HV_PUSH_VALUE(ws_output, char, *input);
+      if(*input == '\n') {
+        xpos = 0;
+      } else {
+        ++xpos;
+      }
+
+      ++input;
+    }
+  }
+
+  char eos = '\0';
+  HV_PUSH_VALUE(ws_output, char, eos);
+  heapvector_clear(ws_output);
+  return ws_output->data;
+}
+OBJECT_METHOD(Font, wrap_string, const char*, (const char*, int));
 
 SpriteAtlasEntry patch_cache[EP_MAX];
 
@@ -213,77 +285,6 @@ BaseSprite spritelist_from_8patch(BaseSprite list, SpriteAtlas atlas, Rect rect)
   return list;
 }
 
-static int ui_ord(char ch) {
-  if(ch >= 'a' && ch <= 'z') return ch - 'a';
-  if(ch >= 'A' && ch <= 'z') return 26 + (ch - 'A');
-  if(ch >= '0' && ch <= '9') return 52 + (ch - '0');
-  return -1;
-}
-
-int ui_char_width(Font* font, char ch) {
-  SpriteAtlasEntry entry = font->table[ch];
-  if(entry == NULL) {
-    return font->word_separation * font->scale;
-  } else {
-    return (entry->w + font->character_separation) * font->scale;
-  }
-}
-
-int ui_line_height(Font* font) {
-  return font->line_separation * font->scale;
-}
-
-int ui_string_width(Font* font, const char* string) {
-  int width = 0;
-  for(; *string; ++string) {
-    width += ui_char_width(font, *string);
-  }
-
-  return width;
-}
-
-int is_whitespace(char ch) {
-  return ch == ' ' || ch == '\n' || ch == '\t';
-}
-
-void ui_wrap_string(HeapVector output, const char* input, int max_chars) {
-  const char* ip;
-  int xpos;
-
-  while(*input) {
-    // count up next word
-    for(ip=input; *ip && !is_whitespace(*ip); ++ip);
-
-    // insert newline if needed
-    if(xpos + (ip - input) > max_chars) {
-      char newline = '\n';
-      HV_PUSH_VALUE(output, char, newline);
-      xpos = 0;
-    }
-
-    // copy the word
-    for(;input != ip; ++input) {
-      HV_PUSH_VALUE(output, char, *input);
-      ++xpos;
-    }
-
-    // copy any spaces
-    while(is_whitespace(*input)) {
-      HV_PUSH_VALUE(output, char, *input);
-      if(*input == '\n') {
-        xpos = 0;
-      } else {
-        ++xpos;
-      }
-
-      ++input;
-    }
-  }
-
-  char eos = '\0';
-  HV_PUSH_VALUE(output, char, eos);
-}
-
 int is_number(char ch) {
   return (ch >= '0' && ch <= '9') || ch == '.';
 }
@@ -297,7 +298,7 @@ BaseSprite spritelist_from_string(BaseSprite list, Font* font, const char* strin
 
   for(; *string; ++string) {
     if(*string == '\n') {
-      bl_y -= ui_line_height(font);
+      bl_y -= font->line_height();
       bl_x = xstart;
       continue;
     }
@@ -322,34 +323,16 @@ BaseSprite spritelist_from_string(BaseSprite list, Font* font, const char* strin
 
     SpriteAtlasEntry entry = font->table[*string];
     if(entry) {
+      bl_x += font->char_lead(*string);
       Sprite sprite = ui_make_sprite(entry, bl_x, bl_y, &c);
       sprite->w *= font->scale;
       sprite->h *= font->scale;
       sprite_append(list, sprite);
     }
 
-    bl_x += ui_char_width(font, *string);
+    bl_x += font->char_width(*string);
   }
 
-  return list;
-}
-
-HeapVector consoletext_hv = NULL;
-
-BaseSprite spritelist_from_consoletext(
-      BaseSprite list, Font* font, const char* string,
-      int bl_x, int bl_y, int width, Color* c) {
-
-  int char_width = ui_char_width(font, 'm');
-  int num_chars = width / char_width;
-
-  if(consoletext_hv == NULL) {
-    consoletext_hv = heapvector_make();
-  }
-
-  ui_wrap_string(consoletext_hv, string, num_chars);
-  list = spritelist_from_string(list, font, consoletext_hv->data, bl_x, bl_y, c);
-  heapvector_clear(consoletext_hv);
   return list;
 }
 

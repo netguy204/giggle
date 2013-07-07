@@ -251,8 +251,13 @@ class MethodInfo {
 
 #define FLOAT2DOUBLE(TYPE) IF_ELSE(CHECK_FLOAT(TYPE), double, TYPE)
 
+#define CHECK_CHAR(X) CHECK(JOIN(CHECK_CHAR_, X))
+#define CHECK_CHAR_char ~, 1,
+
+#define CHAR2INT(TYPE) IF_ELSE(CHECK_CHAR(TYPE), int, TYPE)
+
 #define GENVAARGS2(TYPE, OFFSET)                               \
-  JOIN(var, OFFSET) = va_arg(*args, FLOAT2DOUBLE(TYPE));
+  JOIN(var, OFFSET) = va_arg(*args, CHAR2INT(FLOAT2DOUBLE(TYPE)));
 #define GENVAARGS1($, X) GENVAARGS2(HEAD(TAIL(X)), HEAD(X))
 #define GENVAARGS(X) IF(NOT(ISEMPTY(X)), JOIN(RECR_D, 0)(1, LLC, GENVAARGS1, LLU, LLF, CONS(1, X)))
 
@@ -477,6 +482,19 @@ inline void LCpush<const char*>(lua_State* L, const char* str) {
 template<>
 inline void LCcheck<const char*>(lua_State* L, const char** str, int pos) {
   *str = luaL_checkstring(L, pos);
+}
+
+template<>
+inline void LCpush<char>(lua_State* L, char ch) {
+  char str[] = {ch, '\0'};
+  lua_pushstring(L, str);
+}
+
+template<>
+inline void LCcheck<char>(lua_State* L, char* ch, int pos) {
+  const char* str = luaL_checkstring(L, pos);
+  if(strlen(str) != 1) luaL_argerror(L, pos, "is not a single character string");
+  *ch = *str;
 }
 
 #endif

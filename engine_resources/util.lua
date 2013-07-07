@@ -193,29 +193,23 @@ function M.print_table(t)
    print('}')
 end
 
-function M.split(str, delim, maxNb)
+function M.split(str, delim)
    -- Eliminate bad cases...
    if string.find(str, delim) == nil then
       return { str }
    end
-   if maxNb == nil or maxNb < 1 then
-      maxNb = 0    -- No limit
+
+   local pos,arr = 0,{}
+   local searcher = function()
+      return string.find(str,delim,pos,true)
    end
-   local result = {}
-   local pat = "(.-)" .. delim .. "()"
-   local nb = 0
-   local lastPos
-   for part, pos in string.gfind(str, pat) do
-      nb = nb + 1
-      result[nb] = part
-      lastPos = pos
-      if nb == maxNb then break end
+
+   for st,sp in searcher do
+      table.insert(arr,string.sub(str,pos,st-1))
+      pos = sp + 1
    end
-   -- Handle the last field
-   if nb ~= maxNb then
-      result[nb + 1] = string.sub(str, lastPos)
-   end
-   return result
+   table.insert(arr,string.sub(str,pos))
+   return arr
 end
 
 function M.split_names(names)
@@ -263,49 +257,6 @@ function M.deserialize(str)
    end
 end
 
-function M.set_stash(value)
-   universe:stash(M.serialize(value))
-end
-
-function M.get_stash()
-   return M.deserialize(universe:stash())
-end
-
-function M.add_to_stash(value)
-   local stash = M.get_stash() or {}
-   stash = M.merge_into(stash, value)
-   M.set_stash(stash)
-end
-
-function M.set_stash_value(key, value)
-   local t = {}
-   t[key] = value
-   M.add_to_stash(t)
-end
-
-function M.get_stash_value(key, default)
-   local stash = M.get_stash()
-   return (stash and stash[key]) or default
-end
-
-function M.get_level()
-   return M.get_stash_value('level', 1)
-end
-
-function M.set_level(level)
-   M.add_to_stash({level=level})
-end
-
-function M.increment_level()
-   local new_level = M.get_level() + 1
-   M.set_level(new_level)
-end
-
-function M.increment_deaths()
-   local deaths = M.get_stash_value('deaths', 0)
-   M.set_stash_value('deaths', deaths + 1)
-end
-
 function M.count(tbl)
    local count = 0
    for ii, v in ipairs(tbl) do
@@ -331,14 +282,15 @@ function M.contains(tbl, item)
 end
 
 function M.loop_music(songs)
+   local stash = require 'stash'
    local current_handle = nil
-   local current_handle_name = M.get_stash_value('handle_name', nil)
+   local current_handle_name = stash:get('handle_name', nil)
    if current_handle_name ~= nil then
       current_handle = world:sound_handle(current_handle_name)
    end
 
    local play_next_music = function()
-      local next_song = M.get_stash_value('song_num', 0) + 1
+      local next_song = stash:get('song_num', 0) + 1
       if next_song > M.count(songs) then
          next_song = 1
       end
@@ -346,8 +298,9 @@ function M.loop_music(songs)
 
       current_handle = world:stream_sound(song, world:current_sample())
       local stop_time = current_handle:last_sample()
-      M.add_to_stash({song_num=next_song, song_end=stop_time,
-                      handle_name=current_handle:handle()})
+      stash:update({song_num=next_song,
+                    song_end=stop_time,
+                    handle_name=current_handle:handle()})
    end
 
    local keep_music_playing = function()
@@ -357,7 +310,7 @@ function M.loop_music(songs)
          while true do
             coroutine.yield()
             if go:has_message(CHECK_MUSIC) then
-               local stop_time = M.get_stash_value('song_end', 0)
+               local stop_time = stash:get('song_end', 0)
                if stop_time < world:current_sample() then
                   play_next_music()
                end

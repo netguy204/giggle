@@ -28,6 +28,16 @@ class Font : public Object {
   Font(void* world);
 
   void load(SpriteAtlas atlas, const char* prefix, const char* character_map);
+  const char* wrap_string(const char* string, int width);
+
+  int char_width(char ch);
+  int char_lead(char ch);
+  void set_char_width(char ch, int w);
+  void set_char_lead(char ch, int w);
+
+  int line_height();
+  int string_width(const char* string);
+  SpriteAtlasEntry entry(char ch);
 
   int character_separation;
   int word_separation;
@@ -35,6 +45,9 @@ class Font : public Object {
   float scale;
 
   SpriteAtlasEntry table[256];
+  int widths[256];
+  int leads[256];
+
   World* world;
 };
 
@@ -55,16 +68,6 @@ class CDrawText : public Component {
   int layer;
 };
 
-class CDrawConsoleText : public CDrawText {
- public:
-  OBJECT_PROTO(CDrawConsoleText);
-  CDrawConsoleText(void *go);
-
-  virtual void render(Camera* camera);
-
-  float w;
-};
-
 BaseSprite spritelist_from_8patch(BaseSprite list, SpriteAtlas atlas,
                                   Rect screen_rect);
 
@@ -72,9 +75,6 @@ BaseSprite spritelist_from_string(BaseSprite list, Font* font,
                                   const char* string, int bl_x, int bl_y,
                                   Color* c);
 
-
-BaseSprite spritelist_from_consoletext(BaseSprite list, Font* font, const char* string,
-                                       int bl_x, int bl_y, int width, Color *c);
 
 void gameui_submit();
 
