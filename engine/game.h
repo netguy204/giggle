@@ -161,32 +161,6 @@ class CDrawTilemap : public Component {
   int map_dirty;
 };
 
-class CDrawText : public Component {
- public:
-  OBJECT_PROTO(CDrawText);
-  CDrawText(void* go);
-  virtual ~CDrawText();
-
-  virtual void render(Camera* camera);
-
-  Vector_ offset;
-  LString* message;
-  LString* atlas;
-  Color color;
-  int font_size;
-  int layer;
-};
-
-class CDrawConsoleText : public CDrawText {
- public:
-  OBJECT_PROTO(CDrawConsoleText);
-  CDrawConsoleText(void *go);
-
-  virtual void render(Camera* camera);
-
-  float w;
-};
-
 struct GradientScreenRectParams {
   BaseSprite texture;
   Vector_ corners[4];

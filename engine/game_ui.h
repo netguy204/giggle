@@ -20,24 +20,63 @@
 #include "testlib.h"
 #include "spriteatlas.h"
 #include "color.h"
+#include "gameobject.h"
 
-typedef enum {
-  FONT_SMALL,
-  FONT_MEDIUM,
-  FONT_FIXED,
-  FONT_MAX
-} FontSize;
+class Font : public Object {
+ public:
+  OBJECT_PROTO(Font);
+  Font(void* world);
+
+  void load(SpriteAtlas atlas, const char* prefix, const char* character_map);
+
+  int character_separation;
+  int word_separation;
+  int line_separation;
+  float scale;
+
+  SpriteAtlasEntry table[256];
+  World* world;
+};
+
+class CDrawText : public Component {
+ public:
+  OBJECT_PROTO(CDrawText);
+  CDrawText(void* go);
+  virtual ~CDrawText();
+
+  virtual void render(Camera* camera);
+  void set_font(Font* font);
+  Font* get_font();
+
+  Vector_ offset;
+  LString* message;
+  Font* font;
+  Color color;
+  int layer;
+};
+
+class CDrawConsoleText : public CDrawText {
+ public:
+  OBJECT_PROTO(CDrawConsoleText);
+  CDrawConsoleText(void *go);
+
+  virtual void render(Camera* camera);
+
+  float w;
+};
 
 BaseSprite spritelist_from_8patch(BaseSprite list, SpriteAtlas atlas,
                                   Rect screen_rect);
 
-BaseSprite spritelist_from_string(BaseSprite list, SpriteAtlas atlas, FontSize size,
+BaseSprite spritelist_from_string(BaseSprite list, Font* font,
                                   const char* string, int bl_x, int bl_y,
                                   Color* c);
 
-BaseSprite spritelist_from_consoletext(BaseSprite list, SpriteAtlas atlas, const char* string,
+
+BaseSprite spritelist_from_consoletext(BaseSprite list, Font* font, const char* string,
                                        int bl_x, int bl_y, int width, Color *c);
 
 void gameui_submit();
+
 
 #endif

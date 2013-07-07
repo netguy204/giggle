@@ -1144,9 +1144,13 @@ SpriteAtlas World::atlas(const char* atlas) {
 OBJECT_METHOD(World, atlas, SpriteAtlas, (const char*));
 
 SpriteAtlasEntry World::atlas_entry(const char* atlas_name, const char* entry) {
-  return universe->atlas_entry(atlas_name, entry);
+  return atlas_entry(universe->atlas(atlas_name), entry);
 }
 OBJECT_METHOD(World, atlas_entry, SpriteAtlasEntry, (const char*, const char*));
+
+SpriteAtlasEntry World::atlas_entry(SpriteAtlas atlas, const char* entry) {
+  return universe->atlas_entry(atlas, entry);
+}
 
 Animation* World::animation(const char* filename, const char* atlas_name, const char* anim) {
   return universe->animation(filename, atlas(atlas_name), anim);
@@ -1279,8 +1283,8 @@ SpriteAtlas Universe::atlas(const char* atlas_name) {
   return atlas;
 }
 
-SpriteAtlasEntry Universe::atlas_entry(const char* atlas_name, const char* entry) {
-  return spriteatlas_find(atlas(atlas_name), entry);
+SpriteAtlasEntry Universe::atlas_entry(SpriteAtlas atlas, const char* entry) {
+  return spriteatlas_find(atlas, entry);
 }
 
 Entity* Universe::scml_entity(const char* filename, SpriteAtlas atlas) {

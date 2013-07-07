@@ -367,6 +367,7 @@ class World : public Object {
 
   SpriteAtlas atlas(const char* atlas);
   SpriteAtlasEntry atlas_entry(const char* atlas, const char* entry);
+  SpriteAtlasEntry atlas_entry(SpriteAtlas atlas, const char* entry);
   Animation* animation(const char* scml, const char* atlas, const char* anim);
 
   Sound* get_sound(const char* name, float scale);
@@ -424,7 +425,7 @@ class Universe : public Object {
   virtual ~Universe();
 
   SpriteAtlas atlas(const char* atlas);
-  SpriteAtlasEntry atlas_entry(const char* atlas, const char* entry);
+  SpriteAtlasEntry atlas_entry(SpriteAtlas atlas, const char* entry);
 
   Entity* scml_entity(const char* filename, SpriteAtlas atlas);
   Animation* animation(const char* scml, SpriteAtlas atlas, const char* anim);
