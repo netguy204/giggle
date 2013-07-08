@@ -51,7 +51,7 @@ IMPL_STEERING_BRAIN(SeekBrain) {
   steering.begin(params);
   steering.seek(tgt, pos, vel);
   steering.complete();
-  go->apply_force(&steering.force);
+  go->apply_force(steering.force);
 }
 OBJECT_PROPERTY(SeekBrain, tgt);
 
@@ -62,7 +62,7 @@ IMPL_STEERING_BRAIN(VelocityBrain) {
   steering.begin(params);
   steering.apply_desired_velocity(tgt_vel, vel);
   steering.complete();
-  go->apply_force(&steering.force);
+  go->apply_force(steering.force);
 }
 OBJECT_PROPERTY(VelocityBrain, tgt_vel);
 
@@ -89,7 +89,7 @@ void PursuitBrain::update(GO* go, float dt) {
   steering.begin(params);
   steering.pursuit(tpos, tvel, pos, vel);
   steering.complete();
-  go->apply_force(&steering.force);
+  go->apply_force(steering.force);
 }
 
 void PursuitBrain::set_tgt(GOHandle* gh) {

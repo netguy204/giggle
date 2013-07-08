@@ -208,9 +208,6 @@ class CTire : public Component {
 void game_init(int argc, char** argv);
 void game_shutdown();
 
-GO* platform_make(float x, float y, float w, float h);
-GO* slidingplatform_make(float x, float y, float w, float h, float speed,
-                         float minx, float maxx);
-GO* bomb_make(Vector pos, Vector vel);
+void print_lstack(lua_State* L);
 
 #endif

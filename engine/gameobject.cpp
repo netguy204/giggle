@@ -379,13 +379,13 @@ int GO::get_active() {
   return body->IsActive();
 }
 
-void GO::apply_impulse(Vector imp) {
+void GO::apply_impulse(Vector_ imp) {
   b2Vec2 bImp;
-  bImp.x = imp->x / BSCALE;
-  bImp.y = imp->y / BSCALE;
+  bImp.x = imp.x / BSCALE;
+  bImp.y = imp.y / BSCALE;
   body->ApplyLinearImpulse(bImp, body->GetWorldCenter());
 }
-OBJECT_METHOD(GO, apply_impulse, void, (Vector));
+OBJECT_METHOD(GO, apply_impulse, void, (Vector_));
 
 void GO::apply_angular_impulse(float angimp) {
   body->ApplyAngularImpulse(angimp);
@@ -397,14 +397,14 @@ void GO::apply_torque(float torque) {
 }
 OBJECT_METHOD(GO, apply_torque, void, (float));
 
-void GO::apply_force(Vector force) {
+void GO::apply_force(Vector_ force) {
   b2Vec2 bForce;
-  bForce.x = force->x / BSCALE;
-  bForce.y = force->y / BSCALE;
+  bForce.x = force.x / BSCALE;
+  bForce.y = force.y / BSCALE;
 
   body->ApplyForceToCenter(bForce);
 }
-OBJECT_METHOD(GO, apply_force, void, (Vector));
+OBJECT_METHOD(GO, apply_force, void, (Vector_));
 
 float GO::mass() {
   return body->GetMass();
@@ -975,8 +975,8 @@ void init_lua(World* world) {
     lua_getglobal(L, "package");
     LCpush(L, world->universe->lua_path);
     lua_setfield(L, -2, "path");
+    lua_pop(L, 1);
   }
-  LCinit_object_metatable(L);
 
   static const luaL_Reg world_m[] = {
     {"set_keybinding", Lworld_set_keybinding},
@@ -1135,7 +1135,7 @@ Object* World::create_object(TypeInfo* type) {
 }
 OBJECT_METHOD(World, create_object, Object*, (TypeInfo*));
 
-RevJoint* World::create_joint(GO* ga, Vector la, GO* gb, Vector lb) {
+RevJoint* World::create_joint(GO* ga, Vector_ la, GO* gb, Vector_ lb) {
   b2RevoluteJoint *joint;
 
   //car class constructor
@@ -1144,17 +1144,17 @@ RevJoint* World::create_joint(GO* ga, Vector la, GO* gb, Vector lb) {
   jointDef.enableLimit = true;
   jointDef.lowerAngle = 0;//with both these at zero...
   jointDef.upperAngle = 0;//...the joint will not move
-  jointDef.localAnchorA.Set(la->x / BSCALE, la->y / BSCALE);
+  jointDef.localAnchorA.Set(la.x / BSCALE, la.y / BSCALE);
 
   jointDef.bodyB = gb->body;
-  jointDef.localAnchorB.Set(lb->x / BSCALE, lb->y / BSCALE);
+  jointDef.localAnchorB.Set(lb.x / BSCALE, lb.y / BSCALE);
 
   joint = (b2RevoluteJoint*)bWorld.CreateJoint( &jointDef );
   RevJoint* rj = new RevJoint(joint);
   rj->world = this;
   return rj;
 }
-OBJECT_METHOD(World, create_joint, RevJoint*, (GO*, Vector, GO*, Vector));
+OBJECT_METHOD(World, create_joint, RevJoint*, (GO*, Vector_, GO*, Vector_));
 
 SpriteAtlas World::atlas(const char* atlas) {
   return universe->atlas(atlas);

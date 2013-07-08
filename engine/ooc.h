@@ -55,13 +55,11 @@ public:
   Object* makeInstance(void*) const;
   bool isInstanceOf(const TypeInfo* other) const;
 
-  const char* metatable() const;
-  void set_metatable_flag(bool flag);
+  void push_metatable(lua_State* L) const;
 
 private:
   NameToProperty name_to_property;
   NameToMethod name_to_method;
-  bool mt_flag;
 
   const char* m_name;
   CtorFn m_ctor;
@@ -369,7 +367,7 @@ public:
 
   inline void release() {
     --reference_count;
-    if(reference_count <= 0) {
+    if(reference_count == 0) {
       destroy();
     }
   }
@@ -383,7 +381,6 @@ public:
 #define LUT_OBJECT "Object"
 
 void LClink_metatable(lua_State *L, const luaL_Reg* table, TypeInfo& type);
-void LCinit_object_metatable(lua_State* L);
 
 // use this to override __gc if you don't want LUA to participate in
 // reference counting. This is necessary to break some cyclic
@@ -391,7 +388,7 @@ void LCinit_object_metatable(lua_State* L);
 // independently of Lua's references.
 int Lobject_special_gc(lua_State* L);
 
-void LCpush_lut(lua_State *L, const char* metatable, Object* ut);
+void LCpush_lut(lua_State *L, Object* ut);
 Object* LCcheck_object(lua_State *L, int pos);
 
 template<typename T>
@@ -405,7 +402,7 @@ inline void LCpush(lua_State* L, T value) {
   // specialization is required for the type since this assumption is
   // invalid.
   const TypeInfo* info = value->typeinfo();
-  LCpush_lut(L, info->metatable(), value);
+  LCpush_lut(L, value);
 }
 
 template<typename T>

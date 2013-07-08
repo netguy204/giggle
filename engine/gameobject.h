@@ -269,10 +269,10 @@ class GO : public Object {
   void set_active(int val);
   int get_active();
 
-  void apply_impulse(Vector imp);
+  void apply_impulse(Vector_ imp);
   void apply_angular_impulse(float angimp);
   void apply_torque(float torque);
-  void apply_force(Vector force);
+  void apply_force(Vector_ force);
   float mass();
   float inertia();
 
@@ -400,7 +400,7 @@ class World : public Object {
   GO* create_go();
   Object* create_object(TypeInfo* type);
 
-  RevJoint* create_joint(GO* ga, Vector la, GO* gb, Vector lb);
+  RevJoint* create_joint(GO* ga, Vector_ la, GO* gb, Vector_ lb);
 
   GO* stage;
 
