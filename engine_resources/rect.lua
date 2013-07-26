@@ -6,7 +6,8 @@ function M.union(a, b)
       math.min(a[1], b[1]),
       math.min(a[2], b[2]),
       math.max(a[3], b[3]),
-      math.max(a[4], b[4])}
+      math.max(a[4], b[4])
+   }
 end
 
 function M.shift(r, off)
@@ -54,6 +55,15 @@ function M.intersect(a, b)
    else
       return true
    end
+end
+
+function M.corners(a, b)
+   return {
+      math.min(a[1], b[1]),
+      math.min(a[2], b[2]),
+      math.max(a[1], b[1]),
+      math.max(a[2], b[2])
+   }
 end
 
 return M

@@ -14,6 +14,12 @@ function DynO.find(go)
    return DynO.reg:find(go)
 end
 
+function DynO.with_all(fn)
+   for key, obj in pairs(DynO.reg.db) do
+      fn(obj)
+   end
+end
+
 function DynO:init(pos)
    self._go = world:create_go()
    self.alive = true
