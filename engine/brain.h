@@ -53,4 +53,9 @@ DEF_STEERING_BRAIN(PursuitBrain)
   GOHandle* tgt;
 };
 
+DEF_STEERING_BRAIN(ArrivalBrain)
+  Vector_ tgt;
+  float slowing_distance;
+};
+
 #endif

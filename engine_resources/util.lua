@@ -265,6 +265,13 @@ function M.count(tbl)
    return count
 end
 
+function M.empty(tbl)
+   for ii, v in ipairs(tbl) do
+      return false
+   end
+   return true
+end
+
 function M.curry1(fn, arg1)
       local newfn = function(arg2)
          return fn(arg1, arg2)

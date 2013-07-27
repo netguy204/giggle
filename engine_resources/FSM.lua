@@ -10,7 +10,10 @@ end
 function FSM:enter(state)
    --print('entering state ' .. state .. ' from ' .. last_state)
 
-   self.last_state = self.state
+   if self.state and self.states[self.state].exit then
+      self.states[self.state].exit()
+   end
+
    self.state = state
 
    if self.states[self.state].enter then

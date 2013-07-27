@@ -101,3 +101,17 @@ void PursuitBrain::set_tgt(GOHandle* gh) {
 GOHandle* PursuitBrain::get_tgt() {
   return tgt;
 }
+
+
+IMPL_STEERING_BRAIN(ArrivalBrain) {
+  Vector_ pos, vel;
+  go->pos(&pos);
+  go->vel(&vel);
+
+  steering.begin(params);
+  steering.arrival(tgt, pos, vel, slowing_distance);
+  steering.complete();
+  go->apply_force(steering.force);
+}
+OBJECT_PROPERTY(ArrivalBrain, tgt);
+OBJECT_PROPERTY(ArrivalBrain, slowing_distance);
