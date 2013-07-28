@@ -23,7 +23,6 @@
 #include "ooc.h"
 #include "soundmgr.h"
 #include "spriter.h"
-#include "pipeline.h"
 #include "color.h"
 #include "utils.h"
 #include "input.h"

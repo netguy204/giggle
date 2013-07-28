@@ -22,7 +22,6 @@
 #include "spriteatlas.h"
 #include "tiles.h"
 #include "testlib_gl.h"
-#include "pipeline.h"
 
 class CLeftAndRight : public Component {
  public:
