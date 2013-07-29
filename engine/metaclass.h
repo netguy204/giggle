@@ -19,6 +19,10 @@ unsigned int member_offset(T mfun) {
   return ((uintptr_t)ptr) / sizeof(void*);
 }
 
+inline void* untyped_userdata(void* base, size_t basesz) {
+  return (void*)((char*)base + basesz + sizeof(void*));
+}
+
 // means that no additional storage is necessary for the dynamic
 // subtype
 struct NULL_TYPE {};

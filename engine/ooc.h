@@ -46,7 +46,7 @@ typedef std::map<const char*, std::string> TypeTags;
 
 class TypeInfo {
 public:
-  TypeInfo(const char* name, CtorFn ctor, TypeInfo* parent);
+  TypeInfo(const char* name, CtorFn ctor, size_t size, TypeInfo* parent);
   void register_property(PropertyInfo* property);
   void register_method(MethodInfo* method);
 
@@ -55,6 +55,8 @@ public:
 
   const char* name() const;
   const TypeInfo* parent() const;
+  size_t size() const;
+
   Object* makeInstance(void*) const;
   bool isInstanceOf(const TypeInfo* other) const;
 
@@ -67,6 +69,7 @@ private:
   const char* m_name;
   CtorFn m_ctor;
   TypeInfo* m_parent;
+  size_t m_size;
 };
 
 class PropertyType;
@@ -183,11 +186,12 @@ class MetaclassObject;
   static Object* CreateInstance(void*)
 
 #define MCO(name) MCO ## name
+#define MCOH(name) MCOH ## name
 
-#define OBJECT_BIMPL(name, ptype)                               \
-  TypeInfo name::Type(#name, name::CreateInstance, ptype);      \
-  const TypeInfo* name::typeinfo() const {                      \
-    return &(name::Type);                                       \
+#define OBJECT_BIMPL(name, ptype)                                       \
+  TypeInfo name::Type(#name, name::CreateInstance, sizeof(name), ptype); \
+  const TypeInfo* name::typeinfo() const {                              \
+    return &(name::Type);                                               \
   }
 
 #define OBJECT_IMPL(name, pname)                                        \
@@ -196,12 +200,19 @@ class MetaclassObject;
   }                                                                     \
   class MCO(name) : public MetaclassObject {                            \
   public:                                                               \
-    Metaclass<name, MCO(name)*>* mc;                                    \
+    class ObjData {                                                     \
+    public:                                                             \
+      MCO(name)* mco;                                                   \
+      ~ObjData() {                                                      \
+        mco->release();                                                 \
+      }                                                                 \
+    };                                                                  \
+    Metaclass<name, ObjData>* mc;                                       \
     lua_State* L;                                                       \
     long* refid_table;                                                  \
     MCO(name)(lua_State* _L, const name* archetype) {                   \
       L = _L;                                                           \
-      mc = new Metaclass<name, MCO(name)*>(archetype);                  \
+      mc = new Metaclass<name, ObjData>(archetype);                     \
       size_t tbl_sz = sizeof(long) * mc->vtable_nummembers(archetype);  \
       refid_table = (long*)malloc(tbl_sz);                              \
       memset(refid_table, 0, tbl_sz);                                   \
@@ -212,8 +223,9 @@ class MetaclassObject;
     }                                                                   \
     virtual Object* spawn(Object* arg) {                                \
       name* obj = SPAWN(name, (*mc), arg);                              \
-      MCO(name)** mco = mc->userdata(obj);                              \
-      *mco = this;                                                      \
+      ObjData* od = mc->userdata(obj);                                  \
+      od->mco = this;                                                   \
+      this->retain();                                                   \
       return obj;                                                       \
     }                                                                   \
     virtual void override(const char* mname, long refid) {              \
@@ -356,12 +368,13 @@ class MethodInfo {
     }                                                                   \
   };                                                                    \
   static RTYPE LOPC_VLO(CLASS, METHOD) CONS(CLASS* obj, MAP(TYPEANDVARNAME, ARGS)) { \
-    MCO(CLASS)* mco = *(Metaclass<CLASS, MCO(CLASS)*>::userdata(obj));  \
-    lua_State* L = mco->L;                                              \
+    void* udata = untyped_userdata(obj, obj->sizeOf());                 \
+    MCO(CLASS)::ObjData* data = (MCO(CLASS)::ObjData*)udata;            \
+    lua_State* L = data->mco->L;                                        \
     RTYPE (CLASS::*member)ARGS = (RTYPE (CLASS::*)ARGS)&CLASS::METHOD;  \
     void* ptr = *(void**)&member;                                       \
     uintptr_t idx = (uintptr_t)ptr / sizeof(void*);                     \
-    lua_pushnumber(L, mco->refid_table[idx]);                           \
+    lua_pushnumber(L, data->mco->refid_table[idx]);                     \
     lua_gettable(L, LUA_REGISTRYINDEX);                                 \
     GENPUSHES(ARGS);                                                    \
     lua_call(L, LEN(0, ARGS), IF_ELSE(CHECK_VOID(RTYPE), 0, 1));        \
@@ -455,6 +468,10 @@ public:
     if(reference_count == 0) {
       destroy();
     }
+  }
+
+  inline size_t sizeOf() {
+    return typeinfo()->size();
   }
 
   virtual void destroy();

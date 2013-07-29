@@ -16,8 +16,8 @@
 */
 #include "ooc.h"
 
-TypeInfo::TypeInfo(const char* name, CtorFn ctor, TypeInfo* parent)
-  : m_name(name), m_ctor(ctor), m_parent(parent) {
+TypeInfo::TypeInfo(const char* name, CtorFn ctor, size_t size, TypeInfo* parent)
+  : m_name(name), m_ctor(ctor), m_parent(parent), m_size(size) {
   TypeRegistry::instance().register_type(this);
 }
 
@@ -53,6 +53,10 @@ const char* TypeInfo::name() const {
 
 const TypeInfo* TypeInfo::parent() const {
   return m_parent;
+}
+
+size_t TypeInfo::size() const {
+  return m_size;
 }
 
 Object* TypeInfo::makeInstance(void* init) const {
@@ -183,6 +187,7 @@ static int Lobject_metaclass_object(lua_State* L) {
 
   LCcheck(L, &obj, 1);
   mco = obj->metaclass_object(L);
+  mco->reference_count = 0; // disown
   LCpush(L, mco);
   return 1;
 }
@@ -326,6 +331,7 @@ OBJECT_BIMPL(MetaclassObject, &Object::Type);
 
 Object* MetaclassObject::spawn(Object* arg) {
   fail_exit("MetaclassObject::spawn not implemented");
+  return NULL;
 }
 
 void MetaclassObject::override(const char* name, long refid) {

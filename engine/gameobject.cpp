@@ -513,15 +513,19 @@ Component::~Component() {
 
 void Component::init() {
 }
+OBJECT_METHOD(Component, init, void, ());
 
 void Component::update(float dt) {
 }
+OBJECT_METHOD(Component, update, void, (float));
 
 void Component::messages_received() {
 }
+OBJECT_METHOD(Component, messages_received, void, ());
 
 void Component::render(Camera* camera) {
 }
+OBJECT_METHOD(Component, render, void, (Camera*));
 
 Fixture::Fixture()
   : comp(NULL), fixture(NULL) {
