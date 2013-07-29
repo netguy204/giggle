@@ -26,6 +26,9 @@
 #include <string>
 #include <typeinfo>
 
+#include "metaclass.h"
+#include "utils.h"
+
 class Object;
 
 typedef Object*(*CtorFn)(void*);
@@ -171,22 +174,60 @@ class TypeRegistry {
   NameToType name_to_type;
 };
 
-#define OBJECT_PROTO(name)                            \
-  virtual const TypeInfo* typeinfo();                 \
-  static TypeInfo Type;                               \
+class MetaclassObject;
+
+#define OBJECT_PROTO(name)                                              \
+  virtual const TypeInfo* typeinfo() const;                             \
+  virtual MetaclassObject* metaclass_object(lua_State* L) const;        \
+  static TypeInfo Type;                                                 \
   static Object* CreateInstance(void*)
 
+#define MCO(name) MCO ## name
 
 #define OBJECT_BIMPL(name, ptype)                               \
   TypeInfo name::Type(#name, name::CreateInstance, ptype);      \
-  const TypeInfo* name::typeinfo() {                            \
+  const TypeInfo* name::typeinfo() const {                      \
     return &(name::Type);                                       \
   }
 
-#define OBJECT_IMPL(name, pname)                        \
-  Object* name::CreateInstance(void* init) {            \
-    return new name(init);                              \
-  }                                                     \
+#define OBJECT_IMPL(name, pname)                                        \
+  Object* name::CreateInstance(void* init) {                            \
+    return new name(init);                                              \
+  }                                                                     \
+  class MCO(name) : public MetaclassObject {                            \
+  public:                                                               \
+    Metaclass<name, MCO(name)*>* mc;                                    \
+    lua_State* L;                                                       \
+    long* refid_table;                                                  \
+    MCO(name)(lua_State* _L, const name* archetype) {                   \
+      L = _L;                                                           \
+      mc = new Metaclass<name, MCO(name)*>(archetype);                  \
+      size_t tbl_sz = sizeof(long) * mc->vtable_nummembers(archetype);  \
+      refid_table = (long*)malloc(tbl_sz);                              \
+      memset(refid_table, 0, tbl_sz);                                   \
+    }                                                                   \
+    ~MCO(name)() {                                                      \
+      delete(mc);                                                       \
+      free(refid_table);                                                \
+    }                                                                   \
+    virtual Object* spawn(Object* arg) {                                \
+      name* obj = SPAWN(name, (*mc), arg);                              \
+      MCO(name)** mco = mc->userdata(obj);                              \
+      *mco = this;                                                      \
+      return obj;                                                       \
+    }                                                                   \
+    virtual void override(const char* mname, long refid) {              \
+      const MethodInfo* method = name::Type.method(mname);              \
+      if(!method) fail_exit("%s does not exist", mname);                \
+      if(method->m_voffset < 0) fail_exit("%s is not virtual", mname);  \
+      refid_table[method->m_voffset] = refid;                           \
+      mc->override_slot(method->m_voffset,                              \
+                        method->vtable_lua_override());                 \
+    }                                                                   \
+  };                                                                    \
+  MetaclassObject* name::metaclass_object(lua_State* L) const {         \
+    return new MCO(name)(L, this);                                      \
+  }                                                                     \
   OBJECT_BIMPL(name, &pname::Type)
 
 #define STRINGIFY(name) #name
@@ -222,9 +263,11 @@ class MethodInfo {
   virtual int LCinvoke(lua_State* L, int pos) const = 0;
   virtual VoidFunction* LCframebind(lua_State* L, int pos) const = 0;
   virtual VoidFunction* framebind(Object* obj, ...) const = 0;
+  virtual void* vtable_lua_override() const = 0;
 
   TypeInfo* m_type;
   const char* m_name;
+  int m_voffset;
 };
 
 // now for some serious pre-processor black magic.
@@ -259,8 +302,15 @@ class MethodInfo {
 #define GENVAARGS1($, X) GENVAARGS2(HEAD(TAIL(X)), HEAD(X))
 #define GENVAARGS(X) IF(NOT(ISEMPTY(X)), JOIN(RECR_D, 0)(1, LLC, GENVAARGS1, LLU, LLF, CONS(1, X)))
 
+#define GENPUSHES2(TYPE, OFFSET) LCpush(L, JOIN(var, OFFSET));
+#define GENPUSHES1($, X) GENPUSHES2(HEAD(TAIL(X)), HEAD(X))
+#define GENPUSHES(X) IF(NOT(ISEMPTY(X)), JOIN(RECR_D, 0)(1, LLC, GENPUSHES1, LLU, LLF, CONS(1, X)))
+
 #define VARNAME0(item, pos1) JOIN(var, pos1)
 #define VARNAME(item, pos) VARNAME0(var, INC(pos))
+
+#define TYPEANDVARNAME0(item, pos1) item JOIN(var, pos1)
+#define TYPEANDVARNAME(item, pos) TYPEANDVARNAME0(item, INC(pos))
 
 #define CHECK_VOID(X) CHECK(JOIN(CHECK_VOID_, X))
 #define CHECK_VOID_void ~, 1,
@@ -274,8 +324,16 @@ class MethodInfo {
   obj->METHOD MAP(VARNAME, ARGS);                \
   return 0;
 
+#define VLO_RETURNS(TYPE)                               \
+  TYPE r;                                               \
+  LCcheck(L, &r, -1);                                   \
+  return r;
+
+#define VLO_NORETURN
+
 #define LOP(name, method_name) L ## name ## method_name
 #define LOPC(name, method_name) LCLASS ## name ## method_name
+#define LOPC_VLO(name, method_name) vtable_lua_override_ ## name ## method_name
 #define FLOPC(name, method_name) FLCLASS ## name ## method_name
 
 #define OBJECT_BASE_METHOD(CLASS, METHOD, RTYPE, ARGS)                  \
@@ -297,11 +355,33 @@ class MethodInfo {
       GENVAARGS(ARGS);                                                  \
     }                                                                   \
   };                                                                    \
+  static RTYPE LOPC_VLO(CLASS, METHOD) CONS(CLASS* obj, MAP(TYPEANDVARNAME, ARGS)) { \
+    MCO(CLASS)* mco = *(Metaclass<CLASS, MCO(CLASS)*>::userdata(obj));  \
+    lua_State* L = mco->L;                                              \
+    RTYPE (CLASS::*member)ARGS = (RTYPE (CLASS::*)ARGS)&CLASS::METHOD;  \
+    void* ptr = *(void**)&member;                                       \
+    uintptr_t idx = (uintptr_t)ptr / sizeof(void*);                     \
+    lua_pushnumber(L, mco->refid_table[idx]);                           \
+    lua_gettable(L, LUA_REGISTRYINDEX);                                 \
+    GENPUSHES(ARGS);                                                    \
+    lua_call(L, LEN(0, ARGS), IF_ELSE(CHECK_VOID(RTYPE), 0, 1));        \
+    IF_ELSE(CHECK_VOID(RTYPE),                                          \
+            VLO_NORETURN,                                               \
+            VLO_RETURNS(RTYPE));                                        \
+  }                                                                     \
   class LOPC(CLASS, METHOD) : public MethodInfo {                       \
   public:                                                               \
                                                                         \
   LOPC(CLASS, METHOD)()                                                 \
     : MethodInfo(&CLASS::Type, STRINGIFY(METHOD)) {                     \
+      RTYPE (CLASS::*member)ARGS = (RTYPE (CLASS::*)ARGS)&CLASS::METHOD; \
+      void* ptr = *(void**)&member;                                     \
+      uintptr_t idx = (uintptr_t)ptr / sizeof(void*);                   \
+      if(idx < 100) {                                                   \
+        m_voffset = idx;                                                \
+        const char* name = STRINGIFY(CLASS) "::" STRINGIFY(METHOD);     \
+        printf("%lu offset: %s\n", idx, name);                          \
+      }                                                                 \
     }                                                                   \
                                                                         \
     virtual int LCinvoke(lua_State* L, int pos) const;                  \
@@ -320,6 +400,9 @@ class MethodInfo {
       bound->obj = (CLASS*)obj;                                         \
       bound->bind(&args);                                               \
       return bound;                                                     \
+    }                                                                   \
+    virtual void* vtable_lua_override() const {                         \
+      return (void*)&LOPC_VLO(CLASS, METHOD);                           \
     }                                                                   \
   };                                                                    \
   static LOPC(CLASS, METHOD) LOP(CLASS, METHOD);                        \
@@ -353,12 +436,14 @@ class MethodInfo {
 
 class Object {
 public:
-  OBJECT_PROTO(Object);
-
   // a newly constructed object will have a reference count of 1
   inline Object()
     : reference_count(1) {
   }
+
+  virtual ~Object();
+
+  OBJECT_PROTO(Object);
 
   inline Object* retain() {
     ++reference_count;
@@ -377,6 +462,14 @@ public:
   int reference_count;
 };
 
+class MetaclassObject : public Object {
+ public:
+  virtual const TypeInfo* typeinfo() const;
+  virtual void override(const char* name, long refid);
+  virtual Object* spawn(Object* arg);
+
+  static TypeInfo Type;
+};
 
 #define LUT_OBJECT "Object"
 
@@ -390,6 +483,7 @@ int Lobject_special_gc(lua_State* L);
 
 void LCpush_lut(lua_State *L, Object* ut);
 Object* LCcheck_object(lua_State *L, int pos);
+void LCprepare_ooc(lua_State* L);
 
 template<typename T>
 inline void LCpush(lua_State* L, T value) {
@@ -447,7 +541,7 @@ inline void LCpush<int>(lua_State* L, int val) {
 }
 
 template<>
-inline void LCcheck(lua_State* L, int* target, int pos) {
+inline void LCcheck<int>(lua_State* L, int* target, int pos) {
   *target = luaL_checkinteger(L, pos);
 }
 

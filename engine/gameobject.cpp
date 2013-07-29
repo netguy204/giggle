@@ -272,6 +272,7 @@ void GO::update(float dt) {
       return 0;
     });
 }
+OBJECT_METHOD(GO, update, void, (float));
 
 void GO::messages_received() {
   // notify components
@@ -970,6 +971,7 @@ void init_lua(World* world) {
   world->L = L;
 
   luaL_openlibs(L);
+  LCprepare_ooc(L);
 
   if(world->universe->lua_path) {
     lua_getglobal(L, "package");

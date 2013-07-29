@@ -177,6 +177,16 @@ static int Lobject_gc(lua_State* L) {
   return 0;
 }
 
+static int Lobject_metaclass_object(lua_State* L) {
+  Object* obj;
+  MetaclassObject* mco;
+
+  LCcheck(L, &obj, 1);
+  mco = obj->metaclass_object(L);
+  LCpush(L, mco);
+  return 1;
+}
+
 void TypeInfo::push_metatable(lua_State* L) const {
   if(luaL_newmetatable(L, name())) {
     static const luaL_Reg object_m[] = {
@@ -188,6 +198,7 @@ void TypeInfo::push_metatable(lua_State* L) const {
       {"__eq", Lobject_eq},
       {"__gc", Lobject_gc},
       {"key", Lobject_key},
+      {"metaclass_object", Lobject_metaclass_object},
       {NULL, NULL}};
     luaL_setfuncs(L, defaults_m, 0);
 
@@ -221,6 +232,45 @@ void LClink_metatable(lua_State* L, const luaL_Reg* funcs, TypeInfo& info) {
   info.push_metatable(L);
   luaL_setfuncs(L, funcs, 0);
   lua_pop(L, 1);
+}
+
+static int Lmco_override(lua_State* L) {
+  MetaclassObject *mco;
+  const char* name;
+
+  LCcheck(L, &mco, 1);
+  LCcheck(L, &name, 2);
+
+  if(!lua_isfunction(L, 3)) {
+    luaL_argerror(L, 3, "expected function");
+  }
+
+  lua_pushvalue(L, 3);
+  long refid = luaL_ref(L, LUA_REGISTRYINDEX);
+  mco->override(name, refid);
+  return 0;
+}
+
+static int Lmco_spawn(lua_State* L) {
+  MetaclassObject *mco;
+  Object *arg;
+
+  LCcheck(L, &mco, 1);
+  LCcheck(L, &arg, 2);
+
+  Object* result = mco->spawn(arg);
+  result->reference_count = 0; // disown
+  LCpush(L, result);
+  return 1;
+}
+
+void LCprepare_ooc(lua_State* L) {
+  static const luaL_Reg mco_m[] = {
+    {"override", Lmco_override},
+    {"spawn", Lmco_spawn},
+    {NULL, NULL}};
+
+  LClink_metatable(L, mco_m, MetaclassObject::Type);
 }
 
 PropertyInfo::PropertyInfo(TypeInfo* type, const char* name, size_t size)
@@ -257,16 +307,33 @@ TypeInfo* TypeRegistry::find_type(const char* name) {
 
 OBJECT_BIMPL(Object, NULL);
 
+Object::~Object() {
+}
+
 Object* Object::CreateInstance(void* init) {
   return new Object();
+}
+
+MetaclassObject* Object::metaclass_object(lua_State* L) const {
+  return NULL;
 }
 
 void Object::destroy() {
   delete this;
 }
 
+OBJECT_BIMPL(MetaclassObject, &Object::Type);
+
+Object* MetaclassObject::spawn(Object* arg) {
+  fail_exit("MetaclassObject::spawn not implemented");
+}
+
+void MetaclassObject::override(const char* name, long refid) {
+  fail_exit("MetaclassObject::override not implemented");
+}
+
 MethodInfo::MethodInfo(TypeInfo* type, const char* name)
-  : m_type(type), m_name(name) {
+  : m_type(type), m_name(name), m_voffset(-1) {
   m_type->register_method(this);
 }
 

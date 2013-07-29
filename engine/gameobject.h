@@ -380,7 +380,7 @@ class World : public Object {
   void load_level(const char* level);
 
   SpriteAtlas atlas(const char* atlas);
-  SpriteAtlasEntry atlas_entry(const char* atlas, const char* entry);
+  virtual SpriteAtlasEntry atlas_entry(const char* atlas, const char* entry);
   SpriteAtlasEntry atlas_entry(SpriteAtlas atlas, const char* entry);
   Animation* animation(const char* scml, const char* atlas, const char* anim);
 
@@ -490,6 +490,11 @@ void world_foreach(World* world, Vector pos, float rad, Func func) {
 // lua property accessors
 void LCpush_vector(lua_State* L, Vector v);
 void LCcheck_vector(lua_State* L, int pos, Vector v);
+
+template<>
+inline void LCpush<TypeInfo*>(lua_State* L, TypeInfo* type) {
+  lua_pushstring(L, type->name());
+}
 
 template<>
 inline void LCcheck<TypeInfo*>(lua_State* L, TypeInfo** type, int pos) {
