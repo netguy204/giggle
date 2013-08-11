@@ -2,6 +2,7 @@ local M = {}
 
 local constant = require 'constant'
 local rect = require 'rect'
+local vector = require 'vector'
 
 function M.printf(...)
    print(string.format(...))
@@ -392,8 +393,37 @@ function M.install_basic_keymap()
    M.install_keymap(keymap)
 end
 
+local mouse_state = vector.new({0,0})
+
+function M.install_mouse_map()
+   local key = 'SI_MOUSE'
+   local callback = function(x, y)
+      mouse_state = vector.new({x,y})
+   end
+   world:set_sibinding(key, callback)
+
+   local mouse_buttons = {
+      mouse1 = 'K_MOUSE1',
+      mouse2 = 'K_MOUSE2',
+      mosue3 = 'K_MOUSE3',
+      mouse4 = 'K_MOUSE4',
+      mouse5 = 'K_MOUSE5',
+      mouse6 = 'K_MOUSE6',
+      mouse7 = 'K_MOUSE7',
+      mouse8 = 'K_MOUSE8'
+   }
+
+   for name, button in pairs(mouse_buttons) do
+      world:set_keybinding(button, M.button_fn(name))
+   end
+end
+
 function M.input_state()
    return input_state
+end
+
+function M.mouse_state()
+   return mouse_state
 end
 
 function M.d2r(deg)
