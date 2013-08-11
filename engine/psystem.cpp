@@ -46,7 +46,7 @@ SystemDefinition::SystemDefinition(void* empty) {
 }
 
 SystemDefinition::SystemDefinition(unsigned int n)
-  : feature_flags(0), n(n), renderer(NULL), activator(new PSAlwaysActivator(this)),
+  : renderer(NULL), activator(new PSAlwaysActivator(this)), n(n), feature_flags(0),
     layer(LAYER_PLAYER) {
 
 }
@@ -1046,7 +1046,7 @@ OBJECT_IMPL(PSConstantRateActivator, ParticleActivator);
 OBJECT_PROPERTY(PSConstantRateActivator, rate);
 
 PSConstantRateActivator::PSConstantRateActivator(void* _def)
-  : ParticleActivator(_def), bucket(0), rate(0) {
+  : ParticleActivator(_def), rate(0), bucket(0) {
 }
 
 void PSConstantRateActivator::activate(float dt) {

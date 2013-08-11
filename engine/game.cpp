@@ -123,7 +123,7 @@ OBJECT_PROPERTY(CStaticSprite, angle_offset);
 
 CStaticSprite::CStaticSprite(void* go)
   : Component((GO*)go, PRIORITY_SHOW), entry(NULL),
-    layer(LAYER_PLAYER), angle_offset(0.0) {
+    angle_offset(0.0), layer(LAYER_PLAYER) {
   vector_zero(&offset);
 }
 
@@ -402,7 +402,6 @@ void TileMapRenderer::render(void* _sprites) {
     texture->bind();
   }
 
-  GLfloat light[] = {0.0, 1000.0, 1000.0};
   gl_check(glUniform1i(program->requireUniform(UNIFORM_TEX0), 0));
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
                               1, GL_FALSE, orthographic_projection.data));
@@ -417,8 +416,8 @@ OBJECT_PROPERTY(CDrawTilemap, h);
 OBJECT_PROPERTY(CDrawTilemap, layer);
 
 CDrawTilemap::CDrawTilemap(void* _go)
-  : Component((GO*)_go, PRIORITY_SHOW), map(NULL), layer(LAYER_BACKGROUND),
-    w(300), h(300), map_dirty(1) {
+  : Component((GO*)_go, PRIORITY_SHOW), map(NULL),
+    w(300), h(300), layer(LAYER_BACKGROUND), map_dirty(1) {
   vector_zero(&offset);
   renderer = new TileMapRenderer(NULL);
 }
@@ -574,7 +573,7 @@ OBJECT_PROPERTY(CGradientScreenRect, tl_c);
 OBJECT_PROPERTY(CGradientScreenRect, tr_c);
 
 CGradientScreenRect::CGradientScreenRect(void* _go)
-  : Component((GO*)_go, PRIORITY_SHOW), layer(LAYER_BACKGROUND), entry(NULL) {
+  : Component((GO*)_go, PRIORITY_SHOW), entry(NULL), layer(LAYER_BACKGROUND) {
   renderer = new GradientScreenRectRenderer(NULL);
 }
 

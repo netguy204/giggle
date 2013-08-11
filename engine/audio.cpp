@@ -49,7 +49,7 @@ void PlayListSample::operator delete(void* obj) {
 }
 
 long PlayListSample::next_sampler_handle = 0;
-FixedAllocator PlayListSample::allocator(sizeof(struct PlayListSample),
+FixedAllocator PlayListSample::allocator(sizeof(PlayListSample),
                                          MAX_NUM_SAMPLERS,
                                          "pls_allocator");
 
@@ -142,7 +142,7 @@ PlayListSample* PlayList::find_sample(long handle) {
 void audio_init() {
   sampler_init();
 
-  cmd_allocator = new FixedAllocator(sizeof(struct Command), MAX_NUM_SAMPLERS,
+  cmd_allocator = new FixedAllocator(sizeof(Command), MAX_NUM_SAMPLERS,
                                      "audio_cmd_allocator");
 
   playlist = new PlayList();

@@ -42,8 +42,8 @@ class CTimer : public Component {
 
   virtual void update(float dt);
 
-  int kind;
   float time_remaining;
+  int kind;
 };
 
 class CTestDisplay : public Component {

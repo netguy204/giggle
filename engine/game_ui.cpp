@@ -30,7 +30,7 @@ OBJECT_PROPERTY(CDrawText, color);
 OBJECT_PROPERTY(CDrawText, offset);
 
 CDrawText::CDrawText(void* _go)
-  : Component((GO*)_go, PRIORITY_SHOW), layer(LAYER_MENU), message(NULL), font(NULL) {
+  : Component((GO*)_go, PRIORITY_SHOW), message(NULL), font(NULL), layer(LAYER_MENU) {
   vector_zero(&offset);
   color.r = 1.0;
   color.g = 1.0;
@@ -114,38 +114,38 @@ void Font::load(SpriteAtlas atlas, const char* prefix, const char* character_map
   int idx = 1;
   for(const char* ch = character_map; *ch != '\0'; ++ch) {
     snprintf(tempname, sizeof(tempname), "%s%d", prefix, idx++);
-    table[*ch] = world->atlas_entry(atlas, tempname);
-    widths[*ch] = table[*ch]->w;
+    table[(unsigned)*ch] = world->atlas_entry(atlas, tempname);
+    widths[(unsigned)*ch] = table[(unsigned)*ch]->w;
   }
 
-  word_separation = MAX(2, table['m']->w/2);
+  word_separation = MAX(2, table[(unsigned)'m']->w/2);
   character_separation = MAX(1, word_separation/2);
-  line_separation = table['Q']->h + character_separation;
+  line_separation = table[(unsigned)'Q']->h + character_separation;
 }
 OBJECT_METHOD(Font, load, void, (SpriteAtlas, const char*, const char*));
 
 int Font::char_width(char ch) {
-  SpriteAtlasEntry entry = table[ch];
+  SpriteAtlasEntry entry = table[(unsigned)ch];
   if(entry == NULL) {
     return word_separation * scale;
   } else {
-    return (widths[ch] + character_separation) * scale;
+    return (widths[(unsigned)ch] + character_separation) * scale;
   }
 }
 OBJECT_METHOD(Font, char_width, int, (char));
 
 int Font::char_lead(char ch) {
-  return leads[ch] * scale;
+  return leads[(unsigned)ch] * scale;
 }
 OBJECT_METHOD(Font, char_lead, int, (char));
 
 void Font::set_char_width(char ch, int w) {
-  widths[ch] = w;
+  widths[(unsigned)ch] = w;
 }
 OBJECT_METHOD(Font, set_char_width, void, (char, int));
 
 void Font::set_char_lead(char ch, int l) {
-  leads[ch] = l;
+  leads[(unsigned)ch] = l;
 }
 OBJECT_METHOD(Font, set_char_lead, void, (char, int));
 
@@ -321,7 +321,7 @@ BaseSprite spritelist_from_string(BaseSprite list, Font* font, const char* strin
       continue;
     }
 
-    SpriteAtlasEntry entry = font->table[*string];
+    SpriteAtlasEntry entry = font->table[(unsigned)*string];
     if(entry) {
       bl_x += font->char_lead(*string);
       Sprite sprite = ui_make_sprite(entry, bl_x, bl_y, &c);

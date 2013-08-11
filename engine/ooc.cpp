@@ -143,7 +143,6 @@ static int Lobject_mutate(lua_State* L) {
 }
 
 static int Lobject_index(lua_State* L) {
-  const char* name = luaL_checkstring(L, 2);
   lua_pushcclosure(L, Lobject_mutate, 1);
   return 1;
 }
@@ -279,7 +278,7 @@ void LCprepare_ooc(lua_State* L) {
 }
 
 PropertyInfo::PropertyInfo(TypeInfo* type, const char* name, size_t size)
-  : m_type(type), m_name(name), m_size(size) {
+  : m_type(type), m_size(size), m_name(name) {
   m_type->register_property(this);
 }
 

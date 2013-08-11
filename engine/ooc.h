@@ -133,7 +133,7 @@ public:
 
   PropertyMethodImpl(TypeInfo* type, const char* name,
                      Getter getter, Setter setter)
-    : PropertyInfo(type, name, sizeof(T)), m_setter(setter), m_getter(getter) {
+    : PropertyInfo(type, name, sizeof(T)), m_getter(getter), m_setter(setter) {
   }
 
   virtual void set_value(Object* _obj, void* _value) const {
@@ -512,7 +512,6 @@ inline void LCpush(lua_State* L, T value) {
   // assume that it's an object, errors here mean that a new template
   // specialization is required for the type since this assumption is
   // invalid.
-  const TypeInfo* info = value->typeinfo();
   LCpush_lut(L, value);
 }
 

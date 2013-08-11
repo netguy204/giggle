@@ -29,8 +29,9 @@ OBJECT_PROPERTY(CPlatformer, parent);
 OBJECT_PROPERTY(CPlatformer, offset);
 
 CPlatformer::CPlatformer(void* go)
-  : Component((GO*)go, PRIORITY_THINK), w(10), h(10),
-    density(1), friction(0.2), fixture(NULL), parent(NULL) {
+  : Component((GO*)go, PRIORITY_THINK),
+    fixture(NULL), parent(NULL), w(10), h(10),
+    density(1), friction(0.2) {
   this->go->body->SetType(b2_dynamicBody);
   vector_zero(&offset);
 }
@@ -44,7 +45,6 @@ void CPlatformer::init() {
   float hw = (w/2) / BSCALE;
   float hh = (h/2) / BSCALE;
   float tweak = (w * 0.1) / BSCALE;
-  float s2 = sqrtf(2.0);
   float ox = offset.x / BSCALE;
   float oy = offset.y / BSCALE;
 

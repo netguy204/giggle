@@ -218,7 +218,7 @@ OBJECT_ACCESSOR(GO, angle_rate, angle_rate, set_angle_rate);
 OBJECT_PROPERTY(GO, delete_me);
 
 GO::GO(void* _world)
-  : world((World*)_world), delete_me(0), stash(NULL), _handle(NULL) {
+  : world((World*)_world), stash(NULL), delete_me(0), _handle(NULL) {
   world->game_objects.add_head(this);
 
   // the manual says to avoid setting major body properties (like
@@ -553,8 +553,8 @@ OBJECT_PROPERTY(CSensor, fixture);
 OBJECT_PROPERTY(CSensor, kind);
 
 CSensor::CSensor(void* _go)
-  : Component((GO*)_go, PRIORITY_THINK), kind(MESSAGE_COLLIDING),
-    fixture(this) {
+  : Component((GO*)_go, PRIORITY_THINK),
+    fixture(this), kind(MESSAGE_COLLIDING) {
 }
 
 CSensor::~CSensor() {
@@ -665,7 +665,7 @@ static void unregister_lua_fn(void* _ud) {
 }
 
 LuaKeyBinding::LuaKeyBinding(KeyNumber keyn, World* world)
-  : keyn(keyn), world(world) {
+  : world(world), keyn(keyn) {
   world->keybindings.add_head(this);
 }
 
@@ -708,7 +708,7 @@ static int Lworld_set_keybinding(lua_State *L) {
 }
 
 LuaSIBinding::LuaSIBinding(SpatialInputNumber keyn, World* world)
-  : keyn(keyn), world(world) {
+  : world(world), keyn(keyn) {
   world->sibindings.add_head(this);
 }
 
@@ -795,13 +795,6 @@ void RevJoint::destroy() {
   world->bWorld.DestroyJoint(joint);
 }
 OBJECT_METHOD(RevJoint, destroy, void, ());
-
-static int Laudiohandle_terminate(lua_State* L) {
-  AudioHandle* h;
-  LCcheck(L, &h, 1);
-  h->terminate();
-  return 0;
-}
 
 void LCconfigure_object(lua_State *L, Object* obj, int pos) {
   // iterate the table using the keys as property names
@@ -1024,8 +1017,8 @@ void init_lua(World* world) {
 }
 
 World::World(void* _universe)
-  : L(NULL), bWorld(b2Vec2(0, -50)),
-    universe((Universe*)_universe),
+  : universe((Universe*)_universe),
+    L(NULL), bWorld(b2Vec2(0, -50)),
     lk_alloc(MAX(sizeof(LuaKeyData), sizeof(LuaSIData)),
              MAX_INFLIGHT_INPUTS, "lk_alloc"),
     cmd_alloc(sizeof(Command), MAX_INFLIGHT_INPUTS*2, "cmd_alloc") {

@@ -41,7 +41,7 @@ FixedAllocator::FixedAllocator(size_t obj_size, unsigned int n,
   void* mem = malloc(obj_size * n);
 
 #ifdef DEBUG_MEMORY
-  name = name;
+  this->name = name;
   inflight = 0;
   max_inflight = 0;
 #endif
@@ -264,7 +264,6 @@ int circularbuffer_read(CircularBuffer buffer, char * target, int length) {
   circularbuffer_read_buffers(buffer, &b1, &s1, &b2, &s2, length);
 
   int to_read = MIN(length, s1);
-  int read = 0;
 
   assert(b1);
   memcpy(target, b1, to_read);

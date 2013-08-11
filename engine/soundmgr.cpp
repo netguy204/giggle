@@ -56,7 +56,6 @@ Sound* SoundMgr::get_sync(const char* filename, float scale) {
   sound->buffer = (int16_t*)malloc(sound->nsamples * sizeof(int16_t));
 
   int channels = vi->channels;
-  int rate = vi->rate;
 
   int section;
   int read = 0;
