@@ -46,7 +46,6 @@ DEF_STEERING_BRAIN(VelocityBrain)
 };
 
 DEF_STEERING_BRAIN(PursuitBrain)
-
   void set_tgt(GOHandle* go);
   GOHandle* get_tgt();
 

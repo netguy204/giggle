@@ -21,14 +21,14 @@ function FSM:enter(state)
    end
 end
 
-function FSM:update()
+function FSM:update(...)
    -- if not state then go to start state
    if not self.state then
       self:enter('start')
    end
 
    -- perform update
-   self.states[self.state].update(self)
+   self.states[self.state].update(self, ...)
 end
 
 return FSM
