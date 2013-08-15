@@ -784,8 +784,13 @@ inline void LCcheck<Fixture>(lua_State* L, Fixture* fixture, int pos) {
   // destruct
   b2PolygonShape shape;
   b2PolygonShape poly;
+  b2CircleShape circle;
+  b2EdgeShape edge;
 
   OPT_PARM(pos, "density", fixtureDef.density = luaL_checknumber(L, -1));
+  OPT_PARM(pos, "restitution", fixtureDef.restitution = luaL_checknumber(L, -1));
+  OPT_PARM(pos, "friction", fixtureDef.friction = luaL_checknumber(L, -1));
+
   OPT_PARM(pos, "category", fixtureDef.filter.categoryBits = luaL_checkinteger(L, -1));
   OPT_PARM(pos, "mask", fixtureDef.filter.maskBits = luaL_checkinteger(L, -1));
   OPT_PARM(pos, "group", fixtureDef.filter.groupIndex = luaL_checkinteger(L, -1));
@@ -810,6 +815,7 @@ inline void LCcheck<Fixture>(lua_State* L, Fixture* fixture, int pos) {
     float h = lua_tonumber(L, -1);
     lua_pop(L, 1);
 
+    // optional offset
     Vector_ offset;
     vector_zero(&offset);
     OPT_PARM(pos, "center", LCcheck_vector(L, -1, &offset));
@@ -850,6 +856,44 @@ inline void LCcheck<Fixture>(lua_State* L, Fixture* fixture, int pos) {
 
     poly.Set(corners, idx - 2);
     fixtureDef.shape = &poly;
+  } else if(strcmp(type, "circle") == 0) {
+
+    lua_getfield(L, pos, "radius");
+    if(!lua_isnumber(L, -1)) {
+      luaL_error(L, "circle fixture type requires a radius");
+    }
+
+    float r = lua_tonumber(L, -1);
+    lua_pop(L, 1);
+
+    // optional offset
+    Vector_ offset;
+    vector_zero(&offset);
+    OPT_PARM(pos, "center", LCcheck_vector(L, -1, &offset));
+    b2Vec2 center;
+    center.x = offset.x / BSCALE;
+    center.y = offset.y / BSCALE;
+
+    //circle.m_p = center;
+    circle.m_radius = r / BSCALE;
+
+    fixtureDef.shape = &circle;
+  } else if(strcmp(type, "edge") == 0) {
+    Vector_ p1;
+    lua_getfield(L, pos, "p1");
+    LCcheck_vector(L, -1, &p1);
+    lua_pop(L, 1);
+
+    Vector_ p2;
+    lua_getfield(L, pos, "p2");
+    LCcheck_vector(L, -1, &p2);
+    lua_pop(L, 1);
+
+    b2Vec2 bp1(p1.x / BSCALE, p1.y / BSCALE);
+    b2Vec2 bp2(p2.x / BSCALE, p2.y / BSCALE);
+
+    edge.Set(bp1, bp2);
+    fixtureDef.shape = &edge;
   } else {
     luaL_error(L, "fixture type `%s' is not recognized", type);
   }
