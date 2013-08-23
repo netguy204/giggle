@@ -1,28 +1,36 @@
 CPP_SRC=testlib_sdl.cpp audio_sdl.cpp
 BIN=sdlmain
 
-CFLAGS+=-Ivender
+SDL_BASE=$(PWD)/vender/SDL-1.2.15
+SDL_ROOT=$(PWD)/vender/SDL-root
+
+CFLAGS+=-Ivender -I$(SDL_ROOT)/include
 
 EXE_OBJS+=glew.o
 
+SDL_LIBS=$(SDL_ROOT)/bin/sdl-config
+SDL_LIBS_FLAGS=`$(SDL_LIBS) --static-libs`
+SDL_LIBS_CFLAGS=`$(SDL_LIBS) --cflags`
+
+$(SDL_LIBS):
+	cd $(SDL_BASE) && ./configure --prefix=$(SDL_ROOT) && make install
+
+SDL_INJECT=-include "SDL/SDL.h"
+
 PLATFORM:=$(shell uname)
 ifeq ($(PLATFORM), Darwin)
-	LDFLAGS+= -Fvender/ -framework OpenGL -framework SDL -framework Cocoa -ldl
-	CFLAGS+= -Ivender/SDL.framework/Headers -DBUILD_SDL -mmacosx-version-min=10.5
-	SDL_INJECT=-Ivender/SDL.framework/Headers -include "SDL.h"
-	EXE_OBJS+=SDLMain.o
+	LDFLAGS+= -Fvender/ $(SDL_LIBS_FLAGS)
+	CFLAGS+= -DBUILD_SDL -mmacosx-version-min=10.5
+	EXE_OBJS+=
 	PLATFORM=macosx
 else
 ifeq ($(PLATFORM), MINGW32_NT-5.1)
-	SDL_LIBS=`vender/SDL-1.2.15.msys/bin/sdl-config --libs`
-	LDFLAGS+= -Lvender/SDL-1.2.15.msys/lib -Lvender/pthreads.msys/lib -lglu32 -lopengl32 $(SDL_LIBS)
-	CFLAGS+= -Ivender/SDL-1.2.15.msys/include -Ivender/pthreads.msys/include -DBUILD_SDL -DWINDOWS -DGLEW_STATIC
-	SDL_INJECT=-include "SDL/SDL.h" -Ivender/SDL-1.2.15.msys/include
+	LDFLAGS+=-Lvender/pthreads.msys/lib -lglu32 -lopengl32 $(SDL_LIBS_FLAGS)
+	CFLAGS+=-Ivender/pthreads.msys/include -DBUILD_SDL -DWINDOWS -DGLEW_STATIC
 	PLATFORM=windows
 else
-	LDFLAGS+= -lGL -lm -lutil `sdl-config --libs` -ldl
-	CFLAGS+=`sdl-config --cflags` -DBUILD_SDL
-	SDL_INJECT=-include "SDL/SDL.h"
+	LDFLAGS+= -lGL -lm -lutil $(SDL_LIBS_FLAGS)
+	CFLAGS+=$(SDL_LIBS_CFLAGS) -DBUILD_SDL
 	PLATFORM=linux
 endif
 endif
@@ -32,10 +40,10 @@ include Common.mk
 # force include of SDL header so that it can do it's main redirection
 # magic
 gambitmain.o: gambitmain.cpp
-	$(CXX) -c $< $(SDL_INJECT)
+	$(CXX) -c $< $(CFLAGS) $(SDL_INJECT)
 
 SDLMain.o: SDLMain.m
-	$(CXX) -c $< -Ivender/SDL.framework/Headers
+	$(CXX) -c $< $(CFLAGS)
 
 audio_test: audio_test.cpp sampler.cpp
 	gcc -g -o audio_test sampler.cpp audio_test.cpp `sdl-config --libs` `sdl-config --cflags`
