@@ -19,9 +19,9 @@
 
 #include "listlib.h"
 #include "config.h"
+#include "threadlib.h"
 
 #include <stdlib.h>
-#include <pthread.h>
 
 class FixedAllocator {
  public:
@@ -36,7 +36,7 @@ class FixedAllocator {
   long max_inflight;
 #endif
 
-  pthread_mutex_t mutex;
+  Mutex mutex;
   size_t allocation_size;
   void* first_free;
 };

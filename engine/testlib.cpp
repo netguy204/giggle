@@ -38,7 +38,7 @@ uint32_t screen_height;
 
 const char* libbase;
 
-static pthread_t renderer_thread;
+static Thread renderer_thread;
 
 void process_render_command() {
   Command* command = render_queue->dequeue();
@@ -89,7 +89,7 @@ void lib_init(int argc, char** argv) {
   native_init();
 
   renderer_running = 1;
-  pthread_create(&renderer_thread, NULL, renderer_exec, NULL);
+  renderer_thread = thread_create(renderer_exec, NULL);
 
   // let the renderer finish init
   renderer_enqueue_sync(renderer_init, NULL);
@@ -161,10 +161,13 @@ void image_free(ImageResource resource) {
 }
 
 void images_free() {
-  image_resources.foreach([](ImageResource resource) -> int {
-      image_free(resource);
-      return 0;
-    });
+  DLLNode node = image_resources.head;
+  while(node) {
+    DLLNode next = node->next;
+    ImageResource resource = image_resources.to_element(node);
+    image_free(resource);
+    node = next;
+  }
 }
 
 /* portable implementation */

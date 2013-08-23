@@ -40,7 +40,7 @@ OGG_HEADER=vender/libogg-1.3.0/include/ogg/config_types.h
 C_SRC+=sfmt/SFMT.c spectra.c $(OGG_SRC) $(TREMOR_SRC) $(LUA_SRC) stb_image.c
 
 CFLAGS+=-Isfmt/ -Ivender/tremor/ -Ivender/libogg-1.3.0/include/ -Ivender/lua-5.2.1/src
-CXXFLAGS+=$(CFLAGS) -std=c++0x -Wno-invalid-offsetof -I$(B2D_BASE)
+CXXFLAGS+=$(CFLAGS) -std=c++0x -U__STRICT_ANSI__ -Wno-invalid-offsetof -I$(B2D_BASE)
 
 LDFLAGS+=-lpthread
 C_OBJS=\

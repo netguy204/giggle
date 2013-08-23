@@ -144,14 +144,17 @@ class DLL : public SimpleDLL {
     }
 
     int found = 0;
-    foreach([=, &found](E* e) -> int {
-        if(e != h && func(e)) {
-          insert_before(DLL<E,OFFSET>::to_node(e), DLL<E,OFFSET>::to_node(element));
-          found = 1;
-          return 1;
-        }
-        return 0;
-      });
+    DLLNode node = this->head;
+    while(node) {
+      DLLNode next = node->next;
+      E* e = DLL<E,OFFSET>::to_element(node);
+      if(e != h && func(e)) {
+        insert_before(DLL<E,OFFSET>::to_node(e), DLL<E,OFFSET>::to_node(element));
+        found = 1;
+        break;
+      }
+      node = next;
+    }
 
     if(!found) {
       add_tail(element);

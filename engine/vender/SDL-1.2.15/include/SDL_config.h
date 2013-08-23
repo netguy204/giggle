@@ -60,13 +60,13 @@
 #if HAVE_LIBC
 
 /* Useful headers */
-#define HAVE_ALLOCA_H 1
+/* #undef HAVE_ALLOCA_H */
 #define HAVE_SYS_TYPES_H 1
 #define HAVE_STDIO_H 1
 #define STDC_HEADERS 1
 #define HAVE_STDLIB_H 1
 #define HAVE_STDARG_H 1
-/* #undef HAVE_MALLOC_H */
+#define HAVE_MALLOC_H 1
 #define HAVE_MEMORY_H 1
 #define HAVE_STRING_H 1
 #define HAVE_STRINGS_H 1
@@ -83,39 +83,39 @@
 #define HAVE_CALLOC 1
 #define HAVE_REALLOC 1
 #define HAVE_FREE 1
-#define HAVE_ALLOCA 1
+/* #undef HAVE_ALLOCA */
 #ifndef _WIN32 /* Don't use C runtime versions of these on Windows */
 #define HAVE_GETENV 1
 #define HAVE_PUTENV 1
-#define HAVE_UNSETENV 1
+/* #undef HAVE_UNSETENV */
 #endif
 #define HAVE_QSORT 1
 #define HAVE_ABS 1
-#define HAVE_BCOPY 1
+/* #undef HAVE_BCOPY */
 #define HAVE_MEMSET 1
 #define HAVE_MEMCPY 1
 #define HAVE_MEMMOVE 1
 #define HAVE_MEMCMP 1
 #define HAVE_STRLEN 1
-#define HAVE_STRLCPY 1
-#define HAVE_STRLCAT 1
+/* #undef HAVE_STRLCPY */
+/* #undef HAVE_STRLCAT */
 #define HAVE_STRDUP 1
-/* #undef HAVE__STRREV */
-/* #undef HAVE__STRUPR */
-/* #undef HAVE__STRLWR */
+#define HAVE__STRREV 1
+#define HAVE__STRUPR 1
+#define HAVE__STRLWR 1
 /* #undef HAVE_INDEX */
 /* #undef HAVE_RINDEX */
 #define HAVE_STRCHR 1
 #define HAVE_STRRCHR 1
 #define HAVE_STRSTR 1
-/* #undef HAVE_ITOA */
-/* #undef HAVE__LTOA */
+#define HAVE_ITOA 1
+#define HAVE__LTOA 1
 /* #undef HAVE__UITOA */
-/* #undef HAVE__ULTOA */
+#define HAVE__ULTOA 1
 #define HAVE_STRTOL 1
 #define HAVE_STRTOUL 1
-/* #undef HAVE__I64TOA */
-/* #undef HAVE__UI64TOA */
+#define HAVE__I64TOA 1
+#define HAVE__UI64TOA 1
 #define HAVE_STRTOLL 1
 #define HAVE_STRTOULL 1
 #define HAVE_STRTOD 1
@@ -123,21 +123,21 @@
 #define HAVE_ATOF 1
 #define HAVE_STRCMP 1
 #define HAVE_STRNCMP 1
-/* #undef HAVE__STRICMP */
+#define HAVE__STRICMP 1
 #define HAVE_STRCASECMP 1
-/* #undef HAVE__STRNICMP */
+#define HAVE__STRNICMP 1
 #define HAVE_STRNCASECMP 1
 #define HAVE_SSCANF 1
 #define HAVE_SNPRINTF 1
 #define HAVE_VSNPRINTF 1
 /* #undef HAVE_ICONV */
-#define HAVE_SIGACTION 1
-#define HAVE_SA_SIGACTION 1
-#define HAVE_SETJMP 1
-#define HAVE_NANOSLEEP 1
+/* #undef HAVE_SIGACTION */
+/* #undef HAVE_SA_SIGACTION */
+/* #undef HAVE_SETJMP */
+/* #undef HAVE_NANOSLEEP */
 /* #undef HAVE_CLOCK_GETTIME */
 /* #undef HAVE_GETPAGESIZE */
-#define HAVE_MPROTECT 1
+/* #undef HAVE_MPROTECT */
 /* #undef HAVE_SEM_TIMEDWAIT */
 
 #else
@@ -164,7 +164,7 @@
 /* #undef SDL_AUDIO_DRIVER_ARTS_DYNAMIC */
 /* #undef SDL_AUDIO_DRIVER_BAUDIO */
 /* #undef SDL_AUDIO_DRIVER_BSD */
-#define SDL_AUDIO_DRIVER_COREAUDIO 1
+/* #undef SDL_AUDIO_DRIVER_COREAUDIO */
 /* #undef SDL_AUDIO_DRIVER_DART */
 /* #undef SDL_AUDIO_DRIVER_DC */
 #define SDL_AUDIO_DRIVER_DISK 1
@@ -185,7 +185,7 @@
 /* #undef SDL_AUDIO_DRIVER_QNXNTO */
 /* #undef SDL_AUDIO_DRIVER_SNDMGR */
 /* #undef SDL_AUDIO_DRIVER_SUNAUDIO */
-/* #undef SDL_AUDIO_DRIVER_WAVEOUT */
+#define SDL_AUDIO_DRIVER_WAVEOUT 1
 
 /* Enable various cdrom drivers */
 /* #undef SDL_CDROM_AIX */
@@ -196,13 +196,13 @@
 /* #undef SDL_CDROM_FREEBSD */
 /* #undef SDL_CDROM_LINUX */
 /* #undef SDL_CDROM_MACOS */
-#define SDL_CDROM_MACOSX 1
+/* #undef SDL_CDROM_MACOSX */
 /* #undef SDL_CDROM_MINT */
 /* #undef SDL_CDROM_OPENBSD */
 /* #undef SDL_CDROM_OS2 */
 /* #undef SDL_CDROM_OSF */
 /* #undef SDL_CDROM_QNX */
-/* #undef SDL_CDROM_WIN32 */
+#define SDL_CDROM_WIN32 1
 
 /* Enable various input drivers */
 /* #undef SDL_INPUT_LINUXEV */
@@ -210,36 +210,36 @@
 /* #undef SDL_JOYSTICK_BEOS */
 /* #undef SDL_JOYSTICK_DC */
 /* #undef SDL_JOYSTICK_DUMMY */
-#define SDL_JOYSTICK_IOKIT 1
+/* #undef SDL_JOYSTICK_IOKIT */
 /* #undef SDL_JOYSTICK_LINUX */
 /* #undef SDL_JOYSTICK_MACOS */
 /* #undef SDL_JOYSTICK_MINT */
 /* #undef SDL_JOYSTICK_OS2 */
 /* #undef SDL_JOYSTICK_RISCOS */
-/* #undef SDL_JOYSTICK_WINMM */
+#define SDL_JOYSTICK_WINMM 1
 /* #undef SDL_JOYSTICK_USBHID */
 /* #undef SDL_JOYSTICK_USBHID_MACHINE_JOYSTICK_H */
 
 /* Enable various shared object loading systems */
 /* #undef SDL_LOADSO_BEOS */
 /* #undef SDL_LOADSO_DLCOMPAT */
-#define SDL_LOADSO_DLOPEN 1
+/* #undef SDL_LOADSO_DLOPEN */
 /* #undef SDL_LOADSO_DUMMY */
 /* #undef SDL_LOADSO_LDG */
 /* #undef SDL_LOADSO_MACOS */
 /* #undef SDL_LOADSO_OS2 */
-/* #undef SDL_LOADSO_WIN32 */
+#define SDL_LOADSO_WIN32 1
 
 /* Enable various threading systems */
 /* #undef SDL_THREAD_BEOS */
 /* #undef SDL_THREAD_DC */
 /* #undef SDL_THREAD_OS2 */
 /* #undef SDL_THREAD_PTH */
-#define SDL_THREAD_PTHREAD 1
-#define SDL_THREAD_PTHREAD_RECURSIVE_MUTEX 1
+/* #undef SDL_THREAD_PTHREAD */
+/* #undef SDL_THREAD_PTHREAD_RECURSIVE_MUTEX */
 /* #undef SDL_THREAD_PTHREAD_RECURSIVE_MUTEX_NP */
 /* #undef SDL_THREAD_SPROC */
-/* #undef SDL_THREAD_WIN32 */
+#define SDL_THREAD_WIN32 1
 
 /* Enable various timer systems */
 /* #undef SDL_TIMER_BEOS */
@@ -249,8 +249,8 @@
 /* #undef SDL_TIMER_MINT */
 /* #undef SDL_TIMER_OS2 */
 /* #undef SDL_TIMER_RISCOS */
-#define SDL_TIMER_UNIX 1
-/* #undef SDL_TIMER_WIN32 */
+/* #undef SDL_TIMER_UNIX */
+#define SDL_TIMER_WIN32 1
 /* #undef SDL_TIMER_WINCE */
 
 /* Enable various video drivers */
@@ -259,7 +259,7 @@
 /* #undef SDL_VIDEO_DRIVER_CACA */
 /* #undef SDL_VIDEO_DRIVER_DC */
 /* #undef SDL_VIDEO_DRIVER_DDRAW */
-#define SDL_VIDEO_DRIVER_DGA 1
+/* #undef SDL_VIDEO_DRIVER_DGA */
 /* #undef SDL_VIDEO_DRIVER_DIRECTFB */
 /* #undef SDL_VIDEO_DRIVER_DRAWSPROCKET */
 #define SDL_VIDEO_DRIVER_DUMMY 1
@@ -275,30 +275,30 @@
 /* #undef SDL_VIDEO_DRIVER_PS2GS */
 /* #undef SDL_VIDEO_DRIVER_PS3 */
 /* #undef SDL_VIDEO_DRIVER_QTOPIA */
-#define SDL_VIDEO_DRIVER_QUARTZ 1
+/* #undef SDL_VIDEO_DRIVER_QUARTZ */
 /* #undef SDL_VIDEO_DRIVER_RISCOS */
 /* #undef SDL_VIDEO_DRIVER_SVGALIB */
 /* #undef SDL_VIDEO_DRIVER_TOOLBOX */
 /* #undef SDL_VIDEO_DRIVER_VGL */
-/* #undef SDL_VIDEO_DRIVER_WINDIB */
+#define SDL_VIDEO_DRIVER_WINDIB 1
 /* #undef SDL_VIDEO_DRIVER_WSCONS */
-#define SDL_VIDEO_DRIVER_X11 1
-#define SDL_VIDEO_DRIVER_X11_DGAMOUSE 1
-#define SDL_VIDEO_DRIVER_X11_DYNAMIC "/usr/X11R6/lib/libX11.6.dylib"
-#define SDL_VIDEO_DRIVER_X11_DYNAMIC_XEXT "/usr/X11R6/lib/libXext.6.dylib"
-#define SDL_VIDEO_DRIVER_X11_DYNAMIC_XRANDR "/usr/X11R6/lib/libXrandr.2.dylib"
-#define SDL_VIDEO_DRIVER_X11_DYNAMIC_XRENDER "/usr/X11R6/lib/libXrender.1.dylib"
-#define SDL_VIDEO_DRIVER_X11_VIDMODE 1
-#define SDL_VIDEO_DRIVER_X11_XINERAMA 1
-#define SDL_VIDEO_DRIVER_X11_XME 1
-#define SDL_VIDEO_DRIVER_X11_XRANDR 1
-#define SDL_VIDEO_DRIVER_X11_XV 1
+/* #undef SDL_VIDEO_DRIVER_X11 */
+/* #undef SDL_VIDEO_DRIVER_X11_DGAMOUSE */
+/* #undef SDL_VIDEO_DRIVER_X11_DYNAMIC */
+/* #undef SDL_VIDEO_DRIVER_X11_DYNAMIC_XEXT */
+/* #undef SDL_VIDEO_DRIVER_X11_DYNAMIC_XRANDR */
+/* #undef SDL_VIDEO_DRIVER_X11_DYNAMIC_XRENDER */
+/* #undef SDL_VIDEO_DRIVER_X11_VIDMODE */
+/* #undef SDL_VIDEO_DRIVER_X11_XINERAMA */
+/* #undef SDL_VIDEO_DRIVER_X11_XME */
+/* #undef SDL_VIDEO_DRIVER_X11_XRANDR */
+/* #undef SDL_VIDEO_DRIVER_X11_XV */
 /* #undef SDL_VIDEO_DRIVER_XBIOS */
 
 /* Enable OpenGL support */
 #define SDL_VIDEO_OPENGL 1
-#define SDL_VIDEO_OPENGL_GLX 1
-/* #undef SDL_VIDEO_OPENGL_WGL */
+/* #undef SDL_VIDEO_OPENGL_GLX */
+#define SDL_VIDEO_OPENGL_WGL 1
 /* #undef SDL_VIDEO_OPENGL_OSMESA */
 /* #undef SDL_VIDEO_OPENGL_OSMESA_DYNAMIC */
 

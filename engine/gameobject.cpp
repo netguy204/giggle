@@ -236,10 +236,13 @@ GO::~GO() {
     _handle->release();
   }
 
-  this->components.foreach([](Component* comp) -> int {
-      delete comp;
-      return 0;
-    });
+  DLLNode node = components.head;
+  while(node) {
+    DLLNode next = node->next;
+    Component* comp = components.to_element(node);
+    delete comp;
+    node = next;
+  }
 
   world->game_objects.remove(this);
 
@@ -258,28 +261,42 @@ Component* GO::add_component(TypeInfo* type) {
   return (Component*)type->makeInstance(this);
 }
 
+struct LowerPriority {
+  Component* comp;
+  LowerPriority(Component* comp)
+    : comp(comp) {
+  }
+
+  bool operator()(Component* other) {
+    return comp->priority < other->priority;
+  }
+};
+
 void GO::update(float dt) {
   // initialize new components
-  uninitialized_components.foreach([this](Component* comp) -> int {
-      comp->init();
-      uninitialized_components.remove(comp);
-      components.insert_before_when(comp, [&comp, this](Component* other) {
-          return comp->priority < other->priority;
-        });
-      world->components.insert_before_when(comp, [&](Component* other) {
-          return comp->priority < other->priority;
-        });
-      return 0;
-    });
+  DLLNode node = uninitialized_components.head;
+  while(node) {
+    DLLNode next = node->next;
+    Component* comp = uninitialized_components.to_element(node);
+    comp->init();
+    uninitialized_components.remove(comp);
+
+    components.insert_before_when(comp, LowerPriority(comp));
+    world->components.insert_before_when(comp, LowerPriority(comp));
+    node = next;
+  }
 }
 OBJECT_METHOD(GO, update, void, (float));
 
 void GO::messages_received() {
   // notify components
-  components.foreach([](Component* comp) -> int {
-      comp->messages_received();
-      return 0;
-    });
+  DLLNode node = components.head;
+  while(node) {
+    DLLNode next = node->next;
+    Component* comp = components.to_element(node);
+    comp->messages_received();
+    node = next;
+  }
 
   // clear the inbox. remember, messages are stack allocated so we
   // don't need to free them explicitly
@@ -444,19 +461,6 @@ Component* GO::find_component(const TypeInfo* info, Component* last) {
   return NULL;
 }
 OBJECT_METHOD(GO, find_component, Component*, (TypeInfo*, Component*));
-
-void GO::print_description() {
-  fprintf(stderr, "UNINITIALIZED COMPONENTS\n");
-  uninitialized_components.foreach([](Component* c) -> int {
-      fprintf(stderr, "%s\n", c->typeinfo()->name());
-      return 0;
-    });
-  fprintf(stderr, "ACTIVE COMPONENTS\n");
-  components.foreach([](Component* c) -> int {
-      fprintf(stderr, "%s\n", c->typeinfo()->name());
-      return 0;
-    });
-}
 
 GOHandle* GO::handle() {
   if(!_handle) {
@@ -875,18 +879,23 @@ static int Lgo_has_message(lua_State *L) {
   int type = luaL_checkinteger(L, 2);
   int rvalues = 0;
 
-  go->inbox.foreach([&] (Message* msg) -> int {
-      if(msg->kind == type) {
-        if(rvalues == 0) {
-          // create the return table
-          lua_newtable(L);
-        }
+  DLLNode node = go->inbox.head;
+  while(node) {
+    DLLNode next = node->next;
+    Message* msg = go->inbox.to_element(node);
 
-        LCpush(L, msg);
-        lua_rawseti(L, -2, ++rvalues);
+    if(msg->kind == type) {
+      if(rvalues == 0) {
+        // create the return table
+        lua_newtable(L);
       }
-      return 0;
-    });
+
+      LCpush(L, msg);
+      lua_rawseti(L, -2, ++rvalues);
+    }
+
+    node = next;
+  }
 
   if(rvalues > 0) {
     return 1;
@@ -1025,23 +1034,44 @@ World::World(void* _universe)
   init_lua(this);
 }
 
+struct DeleteGO {
+  bool operator()(GO* go) {
+    delete go;
+    return 0;
+  }
+};
+
+struct NullKeyBinding {
+  World* world;
+  NullKeyBinding(World* world)
+    : world(world) {
+  }
+
+  bool operator()(LuaKeyBinding* kb) {
+    set_key_binding(kb->keyn, NULL);
+    return 0;
+  }
+};
+
+struct NullSIBinding {
+  World* world;
+  NullSIBinding(World* world)
+    : world(world) {
+  }
+
+  bool operator()(LuaSIBinding* kb) {
+    set_si_binding(kb->keyn, NULL);
+    return 0;
+  }
+};
+
 World::~World() {
-  game_objects.foreach([](GO* go) -> int {
-      delete go;
-      return 0;
-    });
+  game_objects.foreach(DeleteGO());
 
-  keybindings.foreach([](LuaKeyBinding* kb) -> int {
-      // the keybinding logic deletes the encumbant
-      set_key_binding(kb->keyn, NULL);
-      return 0;
-    });
+  keybindings.foreach(NullKeyBinding(this));
 
-  sibindings.foreach([](LuaSIBinding* kb) -> int {
-      // the keybinding logic deletes the encumbant
-      set_si_binding(kb->keyn, NULL);
-      return 0;
-    });
+  sibindings.foreach(NullSIBinding(this));
+
   free_thread(&pre_render);
   free_thread(&post_render);
 
@@ -1060,49 +1090,65 @@ void World::update(long delta) {
   bWorld.Step(dt, 6, 2);
 
   // let the game objects initialize any new components
-  game_objects.foreach([=](GO* go) -> int {
-      if(go->delete_me) {
-        delete go;
-      } else {
-        go->update(dt);
-      }
-      return 0;
-    });
+  DLLNode node = game_objects.head;
+  while(node) {
+    DLLNode next = node->next;
+    GO* go = game_objects.to_element(node);
+    if(go->delete_me) {
+      delete go;
+    } else {
+      go->update(dt);
+    }
+    node = next;
+  }
 
   // update the comonents
-  this->components.foreach([=](Component* comp) -> int {
-      if(comp->delete_me) {
-        delete(comp);
-      } else {
-        comp->update(dt);
-      }
-      return 0;
-    });
+  node = components.head;
+  while(node) {
+    DLLNode next = node->next;
+    Component* comp = components.to_element(node);
+    if(comp->delete_me) {
+      delete(comp);
+    } else {
+      comp->update(dt);
+    }
+    node = next;
+  }
 
   // run go messages until all messages have been handled
   while(have_waiting_messages.head) {
-    have_waiting_messages.foreach([this](GO* go) -> int {
-        // move the pending messages into the inbox and remove from
-        // waiting list
-        go->inbox = go->inbox_pending;
-        go->inbox_pending.zero();
-        have_waiting_messages.remove(go);
+    node = have_waiting_messages.head;
+    while(node) {
+      DLLNode next = node->next;
+      GO* go = have_waiting_messages.to_element(node);
+      // move the pending messages into the inbox and remove from
+      // waiting list
+      go->inbox = go->inbox_pending;
+      go->inbox_pending.zero();
+      have_waiting_messages.remove(go);
 
-        // tell GO to consume messages
-        go->messages_received();
-        return 0;
-      });
+      // tell GO to consume messages
+      go->messages_received();
+      node = next;
+    }
   }
 
   step_thread(&pre_render, NULL, NULL);
-  cameras.foreach([this](Camera* camera) -> int {
-      this->components.foreach([=](Component* comp) -> int {
-          comp->render(camera);
-          return 0;
-        });
-      camera->enqueue();
-      return 0;
-    });
+  node = cameras.head;
+  while(node) {
+    DLLNode next = node->next;
+    Camera* camera = cameras.to_element(node);
+
+    DLLNode cnode = components.head;
+    while(cnode) {
+      DLLNode cnext = cnode->next;
+      Component* comp = components.to_element(cnode);
+      comp->render(camera);
+      cnode = cnext;
+    }
+    camera->enqueue();
+    node = next;
+  }
   step_thread(&post_render, NULL, NULL);
 }
 
@@ -1223,23 +1269,34 @@ Vector_ World::get_gravity() {
   return vector;
 }
 
+struct SendMessage {
+  GO* sender;
+  int kind;
+  const char* content;
+  size_t nbytes;
+
+  SendMessage(GO* sender, int kind, const char* content, size_t nbytes)
+    : sender(sender), kind(kind), content(content), nbytes(nbytes) {
+  }
+
+  bool operator()(GO* go) {
+    go->send_message(sender->create_message(kind, content, nbytes));
+    return 0;
+  }
+};
+
 void World::broadcast_message(GO* sender, float radius, int kind, const char* content, size_t nbytes) {
   if(radius <= 0) {
     // assume global broadcast
-    game_objects.foreach([=](GO* go) -> int {
-        go->send_message(sender->create_message(kind, content, nbytes));
-        return 0;
-      });
+    game_objects.foreach(SendMessage(sender, kind, content, nbytes));
     return;
   }
 
   Vector_ pos;
   sender->pos(&pos);
 
-  world_foreach(this, &pos, radius, [=](GO* go, b2Fixture*) -> int {
-      go->send_message(sender->create_message(kind, content, nbytes));
-      return 0;
-    });
+  world_foreach(this, &pos, radius,
+                SendMessage(sender, kind, content, nbytes));
 }
 
 void World::enqueue_command(CommandFunction fn, void* data) {

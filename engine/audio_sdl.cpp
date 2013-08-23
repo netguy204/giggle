@@ -21,19 +21,20 @@
 
 #include "audio.h"
 #include "memlib.h"
+#include "threadlib.h"
 
 #define NUM_SAMPLES 2048
 
 char * audio_pre_buffer;
 CircularBuffer audio_buffer;
-pthread_t audio_thread;
-pthread_mutex_t audio_mutex;
+Thread audio_thread;
+Mutex audio_mutex;
 
 int buffer_samples_can_write() {
   int result;
-  pthread_mutex_lock(&audio_mutex);
+  mutex_lock(audio_mutex);
   result = circularbuffer_bytes_writable(audio_buffer);
-  pthread_mutex_unlock(&audio_mutex);
+  mutex_unlock(audio_mutex);
   return result / 2;
 }
 
@@ -51,7 +52,7 @@ void* audio_exec(void* udata) {
     audio_fill_buffer((int16_t*)audio_pre_buffer, nsamples);
 
     // now lock the circular buffer and copy
-    pthread_mutex_lock(&audio_mutex);
+    mutex_lock(audio_mutex);
 
     int s1, s2;
     char *b1, *b2;
@@ -68,7 +69,7 @@ void* audio_exec(void* udata) {
       memcpy(b2, &audio_pre_buffer[s1], to_write);
     }
 
-    pthread_mutex_unlock(&audio_mutex);
+    mutex_unlock(audio_mutex);
 
     // don't immediately bang on the lock
     usleep(buffer_time_us / 4);
@@ -79,7 +80,7 @@ void fill_audio(void *udata, Uint8 *stream, int len) {
   int s1, s2;
   char *b1, *b2;
 
-  pthread_mutex_lock(&audio_mutex);
+  mutex_lock(audio_mutex);
   circularbuffer_read_buffers(audio_buffer, &b1, &s1, &b2, &s2,
                               len);
 
@@ -92,7 +93,7 @@ void fill_audio(void *udata, Uint8 *stream, int len) {
     memcpy(stream, b2, tocopy);
   }
 
-  pthread_mutex_unlock(&audio_mutex);
+  mutex_unlock(audio_mutex);
 }
 
 /*
@@ -108,8 +109,8 @@ void native_audio_init() {
   audio_buffer = circularbuffer_make(buffer_size);
   audio_pre_buffer = (char*)malloc(buffer_size);
 
-  pthread_mutex_init(&audio_mutex, NULL);
-  pthread_create(&audio_thread, NULL, audio_exec, NULL);
+  audio_mutex = mutex_create();
+  audio_thread = thread_create(audio_exec, NULL);
 
   SDL_AudioSpec wanted;
 

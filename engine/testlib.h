@@ -38,7 +38,6 @@
 #include "random.h"
 #include "ooc.h"
 
-#include <pthread.h>
 #include <stdint.h>
 
 extern uint32_t screen_width;

@@ -18,62 +18,88 @@
 #define THREADLIB_H
 
 #include <stdlib.h>
+
+#ifdef BUILD_SDL
+#include <SDL/SDL_thread.h>
+
+#define Thread SDL_Thread*
+#define Mutex SDL_mutex*
+#define Condition SDL_cond*
+
+typedef int(*THREAD_FN)(void*);
+#define thread_create(fn, arg) SDL_CreateThread((THREAD_FN)fn, (void*)arg)
+
+#define mutex_create() SDL_CreateMutex()
+#define mutex_destroy(m) SDL_DestroyMutex(m)
+#define mutex_lock(m) SDL_LockMutex(m)
+#define mutex_unlock(m) SDL_UnlockMutex(m)
+
+#define condition_create() SDL_CreateCond()
+#define condition_destroy(c) SDL_DestroyCond(c)
+#define condition_signal(c) SDL_CondSignal(c)
+#define condition_broadcast(c) SDL_CondBroadcast(c)
+#define condition_wait(c, m) SDL_CondWait(c, m)
+
+#else
 #include <pthread.h>
+#error "pthread bindings incomplete"
+#endif
+
 #include "listlib.h"
 
 template<typename E, int OFFSET>
 class Queue {
  public:
   DLL<E,OFFSET> list;
-  pthread_mutex_t mutex;
-  pthread_cond_t cond;
+  Mutex mutex;
+  Condition cond;
 
   Queue() {
-    pthread_mutex_init(&this->mutex, NULL);
-    pthread_cond_init(&this->cond, NULL);
+    mutex = mutex_create();
+    cond = condition_create();
   }
 
   ~Queue() {
-    pthread_cond_destroy(&this->cond);
-    pthread_mutex_destroy(&this->mutex);
+    condition_destroy(cond);
+    mutex_destroy(mutex);
   }
 
   void enqueue(E* element) {
-    pthread_mutex_lock(&this->mutex);
+    mutex_lock(mutex);
     this->list.add_head(element);
-    pthread_mutex_unlock(&this->mutex);
+    mutex_unlock(mutex);
 
-    pthread_cond_signal(&this->cond);
+    condition_signal(cond);
   }
 
   E* dequeue() {
-    pthread_mutex_lock(&this->mutex);
+    mutex_lock(mutex);
     while(1) {
       if(this->list.tail) {
         E* result = this->list.remove_tail();
-        pthread_mutex_unlock(&this->mutex);
+        mutex_unlock(mutex);
         return result;
       } else {
         /* need to wait for something to be put in the queue */
-        pthread_cond_wait(&this->cond, &this->mutex);
+        condition_wait(cond, mutex);
       }
     }
   }
 
   E* dequeue_noblock() {
-    pthread_mutex_lock(&this->mutex);
+    mutex_lock(mutex);
     E* result = NULL;
     if(this->list.tail) {
       result = this->list.remove_tail();
     }
-    pthread_mutex_unlock(&this->mutex);
+    mutex_unlock(mutex);
     return result;
   }
 };
 
 typedef struct ThreadBarrier_ {
-  pthread_mutex_t mutex;
-  pthread_cond_t cond;
+  Mutex mutex;
+  Condition cond;
   int nthreads;
   int threads_waiting;
   int seq_no; // number of times we've waited at this barrier, overflow ok

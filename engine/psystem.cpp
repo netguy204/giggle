@@ -73,33 +73,34 @@ ParticleSystemComponent* SystemDefinition::find_component(TypeInfo* info) {
     return activator;
   }
 
-  ParticleSystemComponent* found = NULL;
-  updaters.foreach([&](ParticleSystemUpdater* p) -> int {
-      if(p->typeinfo()->isInstanceOf(info)) {
-        found = p;
-        return 1;
-      }
-      return 0;
-    });
-  if(found) return found;
+  DLLNode node = updaters.head;
+  while(node) {
+    ParticleSystemUpdater* p = updaters.to_element(node);
+    if(p->typeinfo()->isInstanceOf(info)) {
+      return p;
+    }
+    node = node->next;
+  }
 
-  initializers.foreach([&](ParticleSystemInitializer* p) -> int {
-      if(p->typeinfo()->isInstanceOf(info)) {
-        found = p;
-        return 1;
-      }
-      return 0;
-    });
-  if(found) return found;
+  node = initializers.head;
+  while(node) {
+    ParticleSystemInitializer* p = initializers.to_element(node);
+    if(p->typeinfo()->isInstanceOf(info)) {
+      return p;
+    }
+    node = node->next;
+  }
 
-  terminators.foreach([&](ParticleSystemTerminator* p) -> int {
-      if(p->typeinfo()->isInstanceOf(info)) {
-        found = p;
-        return 1;
-      }
-      return 0;
-    });
-  return found;
+  node = terminators.head;
+  while(node) {
+    ParticleSystemTerminator* p = terminators.to_element(node);
+    if(p->typeinfo()->isInstanceOf(info)) {
+      return p;
+    }
+    node = node->next;
+  }
+
+  return NULL;
 }
 OBJECT_METHOD(SystemDefinition, find_component, ParticleSystemComponent*, (TypeInfo*));
 
@@ -120,24 +121,30 @@ ParticleActivator* SystemDefinition::set_activator(TypeInfo* type) {
 }
 
 void SystemDefinition::update(float dt) {
-  initializers.foreach([](ParticleSystemInitializer* p) -> int {
-      p->initialize();
-      return 0;
-    });
+  DLLNode node = initializers.head;
+  while(node) {
+    ParticleSystemInitializer* p = initializers.to_element(node);
+    p->initialize();
+    node = node->next;
+  }
 
   if(activator->enabled) {
     activator->activate(dt);
   }
 
-  updaters.foreach([=](ParticleSystemUpdater* p) -> int {
-      p->update(dt);
-      return 0;
-    });
+  node = updaters.head;
+  while(node) {
+    ParticleSystemUpdater* p = updaters.to_element(node);
+    p->update(dt);
+    node = node->next;
+  }
 
-  terminators.foreach([](ParticleSystemTerminator* p) -> int {
-      p->terminateExpired();
-      return 0;
-    });
+  node = terminators.head;
+  while(node) {
+    ParticleSystemTerminator* p = terminators.to_element(node);
+    p->terminateExpired();
+    node = node->next;
+  }
 }
 
 void SystemDefinition::render(Camera* camera) {
@@ -162,31 +169,31 @@ void SystemDefinition::init() {
 
   features = (char*)malloc(allocation);
 
-  initializers.foreach([this](ParticleSystemInitializer* p) -> int {
-      p->firstInitialize();
-      return 0;
-    });
+  DLLNode node = initializers.head;
+  while(node) {
+    ParticleSystemInitializer* p = initializers.to_element(node);
+    p->firstInitialize();
+    node = node->next;
+  }
 
   activator->activate(0);
 }
 
+struct ReleaseComponent {
+  bool operator()(ParticleSystemComponent* p) {
+    p->release();
+    return 0;
+  }
+};
+
 SystemDefinition::~SystemDefinition() {
   if(activator) activator->release();
 
-  initializers.foreach([this](ParticleSystemComponent* p) -> int {
-      p->release();
-      return 0;
-    });
+  initializers.foreach(ReleaseComponent());
 
-  updaters.foreach([this](ParticleSystemComponent* p) -> int {
-      p->release();
-      return 0;
-    });
+  updaters.foreach(ReleaseComponent());
 
-  terminators.foreach([this](ParticleSystemComponent* p) -> int {
-      p->release();
-      return 0;
-    });
+  terminators.foreach(ReleaseComponent());
 
   free(features);
   if(renderer) {

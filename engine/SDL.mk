@@ -39,11 +39,10 @@ include Common.mk
 
 # force include of SDL header so that it can do it's main redirection
 # magic
-gambitmain.o: gambitmain.cpp
+gambitmain.o: gambitmain.cpp $(SDL_LIBS)
 	$(CXX) -c $< $(CFLAGS) $(SDL_INJECT)
 
-SDLMain.o: SDLMain.m
-	$(CXX) -c $< $(CFLAGS)
+testlib_sdl.cpp: $(SDL_LIBS)
 
 audio_test: audio_test.cpp sampler.cpp
 	gcc -g -o audio_test sampler.cpp audio_test.cpp `sdl-config --libs` `sdl-config --cflags`

@@ -29,7 +29,7 @@
 #define EAT(...)
 
 /*! Raise error */
-#define ERROR(X) (ERROR)##(X)
+#define ERRORO(X) (ERROR)##(X)
 
 /*! Truth Tables */
 #define NOT_0 1

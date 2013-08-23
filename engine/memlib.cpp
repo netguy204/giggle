@@ -46,7 +46,7 @@ FixedAllocator::FixedAllocator(size_t obj_size, unsigned int n,
   max_inflight = 0;
 #endif
 
-  pthread_mutex_init(&mutex, NULL);
+  mutex = mutex_create();
   allocation_size = obj_size;
 
   first_free = NULL;
@@ -61,7 +61,7 @@ void* FixedAllocator::alloc() {
   SAFETY(if(!first_free)
            return fail_exit("fixed_allocator %s failed", name));
 
-  pthread_mutex_lock(&mutex);
+  mutex_lock(mutex);
   void * mem = first_free;
   first_free = *(void**)first_free;
 
@@ -71,20 +71,20 @@ void* FixedAllocator::alloc() {
     max_inflight = inflight;
   }
 #endif
-  pthread_mutex_unlock(&mutex);
+  mutex_unlock(mutex);
 
   return mem;
 }
 
 void FixedAllocator::free(void *obj) {
-  pthread_mutex_lock(&mutex);
+  mutex_lock(mutex);
   *(void**)obj = first_free;
   first_free = obj;
 
 #ifdef DEBUG_MEMORY
   inflight -= 1;
 #endif
-  pthread_mutex_unlock(&mutex);
+  mutex_unlock(mutex);
 }
 
 StackAllocator stack_allocator_make(size_t stack_size, const char* name) {

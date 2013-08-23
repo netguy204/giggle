@@ -62,10 +62,20 @@ PlayList::~PlayList() {
   delete mix_buffer;
 }
 
+struct SamplePreceeds {
+  PlayListSample* sample;
+
+  SamplePreceeds(PlayListSample* sample)
+    : sample(sample) {
+  }
+
+  bool operator()(PlayListSample* other) {
+    return START(sample->sampler) < START(other->sampler);
+  }
+};
+
 void PlayList::insert_sampler(PlayListSample* sample) {
-  this->samples.insert_before_when(sample, [=](PlayListSample* other) {
-      return START(sample->sampler) < START(other->sampler);
-    });
+  this->samples.insert_before_when(sample, SamplePreceeds(sample));
 }
 
 void PlayList::fill_buffer(int16_t* buffer, int nsamples) {
@@ -128,14 +138,16 @@ void PlayList::fill_buffer(int16_t* buffer, int nsamples) {
 
 PlayListSample* PlayList::find_sample(long handle) {
   PlayListSample* result = NULL;
-  samples.foreach([&](PlayListSample* item) -> int {
-      if(item->handle == handle) {
-        result = item;
-        return 1;
-      } else {
-        return 0;
-      }
-    });
+  DLLNode node = samples.head;
+  while(node) {
+    DLLNode next = node->next;
+    PlayListSample* item = samples.to_element(node);
+    if(item->handle == handle) {
+      result = item;
+      break;
+    }
+    node = next;
+  }
   return result;
 }
 
