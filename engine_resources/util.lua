@@ -22,6 +22,31 @@ function M.sign(val)
    end
 end
 
+function M.protect(fn)
+   local err = false
+   local onerr = function(er)
+      err = er
+      print(debug.traceback(coroutine.running(), err, 2))
+   end
+
+   local newfn = function(...)
+      local args = {...}
+      local run = function()
+         fn(table.unpack(args))
+      end
+
+      xpcall(run, onerr)
+
+      if err then
+         -- an error on the following line is actually an err in fn,
+         -- see the provided traceback for more detail.
+         error(err)
+      end
+   end
+
+   return newfn
+end
+
 function M.thread(fn)
    if not fn then
       error('thread called with null function')
@@ -69,15 +94,29 @@ function M.noop_thread()
    return M.thread(noop)
 end
 
+function M.clamp(n, lower, upper)
+   if n < lower then
+      return lower
+   elseif n > upper then
+      return upper
+   else
+      return n
+   end
+end
+
 function M.rand_between(lower, upper)
    local range = upper - lower
    return lower + math.random() * range
 end
 
+function M.rand_direction()
+   local angle = M.rand_between(0, 2*math.pi)
+   return vector.new({math.sin(angle), math.cos(angle)})
+end
+
 function M.rand_vector(minmag, maxmag)
    local mag = M.rand_between(minmag, maxmag)
-   local angle = M.rand_between(0, 2 * math.pi)
-   return vector.new({mag * math.sin(angle), mag * math.cos(angle)})
+   return M.rand_direction() * mag
 end
 
 function M.rand_exponential(rate)
@@ -86,12 +125,17 @@ function M.rand_exponential(rate)
 end
 
 function M.rand_idx(tbl)
-   return math.floor(math.random() * M.count(tbl)) + 1
+   local count = M.count(tbl)
+   if count == 0 then
+      return nil
+   else
+      return math.floor(math.random() * count) + 1
+   end
 end
 
 function M.rand_choice(tbl)
    local idx = M.rand_idx(tbl)
-   return tbl[idx]
+   return idx and tbl[idx]
 end
 
 function M.rand_shuffle(tbl)
@@ -189,7 +233,7 @@ function M.add_antigrav_force(go)
 end
 
 function M.print(o)
-   print(M.serialize(o))
+   print(M.serialize(o, true))
 end
 
 function M.print_table(t)
@@ -240,7 +284,7 @@ function M.names_to_objects(names, objs)
    return result
 end
 
-function M.serialize(o)
+function M.serialize(o, show_unprintables)
    if type(o) == "number" or type(o) == "nil" or type(o) == "boolean" then
       return tostring(o)
    elseif type(o) == "string" then
@@ -248,11 +292,15 @@ function M.serialize(o)
    elseif type(o) == "table" then
       local str = "{"
       for k,v in pairs(o) do
-         str = str .. "  [" .. M.serialize(k) .. "] = " .. M.serialize(v) .. ','
+         str = str .. "  [" .. M.serialize(k, show_unprintables) .. "] = " .. M.serialize(v, show_unprintables) .. ','
       end
       return str .. '}'
    else
-      error("cannot serialize a " .. type(o))
+      if show_unprintables then
+         return '<' .. type(o) .. '>'
+      else
+         error("cannot serialize a " .. type(o))
+      end
    end
 end
 

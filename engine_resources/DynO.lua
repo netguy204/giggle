@@ -20,6 +20,23 @@ function DynO.with_all(fn)
    end
 end
 
+function DynO.with_all_of_type(fn, t)
+   for key, obj in pairs(DynO.reg.db) do
+      if obj:is_a(t) then
+         fn(obj)
+      end
+   end
+end
+
+function DynO.find_all_of_type(t)
+   local result = {}
+   local fn = function(obj)
+      table.insert(result, obj)
+   end
+   DynO.with_all_of_type(fn, t)
+   return result
+end
+
 function DynO:init(pos)
    self._go = world:create_go()
    self.alive = true
@@ -27,10 +44,17 @@ function DynO:init(pos)
 
    self._go:pos(pos)
    self._go:body_type(constant.DYNAMIC)
-   local update = util.fthread(self:bind('update'))
-   local message = util.fthread(self:bind('message'))
-   self.script = self._go:add_component('CScripted', {update_thread=update,
-                                                      message_thread=message})
+   local params = {}
+
+   if self.update then
+      params.update_thread = util.fthread(self:bind('update'))
+   end
+   if self.colliding_with then
+      params.message_thread = util.fthread(self:bind('message'))
+   end
+   if params.update_thread or params.message_thread then
+      self.script = self._go:add_component('CScripted', params)
+   end
 end
 
 function DynO:go()
@@ -54,10 +78,6 @@ function DynO:message()
          end
       end
    end
-end
-
-function DynO:colliding_with(obj)
-   -- pass
 end
 
 function DynO:add_sensor(parms)

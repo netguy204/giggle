@@ -304,6 +304,7 @@ class GOHandle : public Object {
   OBJECT_PROTO(GOHandle);
   GOHandle(void* _go);
 
+  virtual Object* dereference();
   GO* go;
 };
 
@@ -489,6 +490,20 @@ void world_foreach(World* world, Vector pos, float rad, Func func) {
 // lua property accessors
 void LCpush_vector(lua_State* L, Vector v);
 void LCcheck_vector(lua_State* L, int pos, Vector v);
+
+// go always push as handles so that we can check for deallocations
+template<>
+inline void LCpush<GO*>(lua_State* L, GO* go) {
+  LCpush(L, go->handle());
+}
+
+template<>
+inline void LCcheck<GO*>(lua_State* L, GO** go, int pos) {
+  GOHandle* handle;
+  LCcheck(L, &handle, pos);
+  if(!handle->go) luaL_argerror(L, pos, "is a GO that is already freed");
+  *go = handle->go;
+}
 
 template<>
 inline void LCpush<TypeInfo*>(lua_State* L, TypeInfo* type) {
@@ -692,23 +707,6 @@ inline void LCcheck<LString*>(lua_State* L, LString** str, int pos) {
   size_t length;
   const char* value = lua_tolstring(L, pos, &length);
   *str =  malloc_lstring(value, length);
-}
-
-// for now, GOHandles are a detail we hide from Lua.
-template<>
-inline void LCpush<GOHandle*>(lua_State* L, GOHandle* handle) {
-  LCpush(L, handle->go);
-}
-
-template<>
-inline void LCcheck<GOHandle*>(lua_State* L, GOHandle** handle, int pos) {
-  GO* go;
-  LCcheck(L, &go, pos);
-  if(go) {
-    *handle = go->handle();
-  } else {
-    *handle = NULL;
-  }
 }
 
 template<>

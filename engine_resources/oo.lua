@@ -45,7 +45,7 @@ Object = M.class()
 M.Object = Object
 
 function Object:bind(fname)
-   local mem = self[fname]
+   local mem = self[fname] or error(fname .. ' is not bound')
    local fn = function(...)
       mem(self, ...)
    end

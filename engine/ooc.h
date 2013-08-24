@@ -61,6 +61,7 @@ public:
   bool isInstanceOf(const TypeInfo* other) const;
 
   void push_metatable(lua_State* L) const;
+  void print() const;
 
 private:
   NameToProperty name_to_property;
@@ -475,6 +476,7 @@ public:
   }
 
   virtual void destroy();
+  virtual Object* dereference();
 
   int reference_count;
 };

@@ -70,6 +70,19 @@ bool TypeInfo::isInstanceOf(const TypeInfo* other) const {
   return parent()->isInstanceOf(other);
 }
 
+void TypeInfo::print() const {
+  fprintf(stderr, "methods:\n");
+  for(NameToMethod::const_iterator iter = name_to_method.begin();
+      iter != name_to_method.end(); ++iter) {
+    fprintf(stderr, "  %s\n", iter->first);
+  }
+
+  fprintf(stderr, "properties:\n");
+  for(NameToProperty::const_iterator iter = name_to_property.begin();
+      iter != name_to_property.end(); ++iter) {
+    fprintf(stderr, "  %s\n", iter->first);
+  }
+}
 
 Object* LCcheck_object(lua_State *L, int pos) {
   if(lua_isnil(L, pos)) {
@@ -89,6 +102,10 @@ static int Lobject_method(lua_State* L) {
 static int Lobject_property(lua_State* L) {
   const PropertyInfo* prop = (const PropertyInfo*)lua_touserdata(L, lua_upvalueindex(1));
   Object* obj = LCcheck_object(L, 1);
+  if(!obj) luaL_argerror(L, 1, "setting property on null object");
+
+  obj = obj->dereference();
+  if(!obj) luaL_argerror(L, 1, "object is no longer valid");
 
   if(lua_gettop(L) == 1) {
     prop->LCpush_value(obj, L);
@@ -104,9 +121,10 @@ static int Lobject_property(lua_State* L) {
 static int Lobject_mutate(lua_State* L) {
   const char* name = luaL_checkstring(L, lua_upvalueindex(1));
   Object* obj = LCcheck_object(L, 1);
+  Object* robj = obj->dereference();
 
   // try finding a method first
-  const MethodInfo* method = obj->typeinfo()->method(name);
+  const MethodInfo* method = robj->typeinfo()->method(name);
   if(method) {
     // build our cache
     obj->typeinfo()->push_metatable(L);
@@ -119,10 +137,10 @@ static int Lobject_mutate(lua_State* L) {
   }
 
   // now try the property
-  const PropertyInfo* prop = obj->typeinfo()->property(name);
+  const PropertyInfo* prop = robj->typeinfo()->property(name);
   if(prop == NULL) {
     luaL_error(L, "`%s' does not have property `%s'",
-               obj->typeinfo()->name(), name);
+               robj->typeinfo()->name(), name);
   }
 
   // build the cache
@@ -134,10 +152,10 @@ static int Lobject_mutate(lua_State* L) {
   lua_pop(L, 1);
 
   if(lua_gettop(L) == 1) {
-    prop->LCpush_value(obj, L);
+    prop->LCpush_value(robj, L);
     return 1;
   } else {
-    prop->LCset_value(obj, L, 2);
+    prop->LCset_value(robj, L, 2);
     return 0;
   }
 }
@@ -324,6 +342,10 @@ MetaclassObject* Object::metaclass_object(lua_State* L) const {
 
 void Object::destroy() {
   delete this;
+}
+
+Object* Object::dereference() {
+  return this;
 }
 
 OBJECT_BIMPL(MetaclassObject, &Object::Type);

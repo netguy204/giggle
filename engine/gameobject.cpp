@@ -493,6 +493,10 @@ GOHandle::GOHandle(void* _go)
   : go((GO*)_go) {
 }
 
+Object* GOHandle::dereference() {
+  return go;
+}
+
 OBJECT_IMPL(Component, Object);
 OBJECT_PROPERTY(Component, delete_me);
 
@@ -1000,10 +1004,9 @@ void init_lua(World* world) {
     {"create_message", Lgo_create_message},
     {"broadcast_message", Lgo_broadcast_message},
     {"contacts", Lgo_contacts},
-    {"__gc", Lobject_special_gc},
     {NULL, NULL}};
 
-  LClink_metatable(L, go_m, GO::Type);
+  LClink_metatable(L, go_m, GOHandle::Type);
 
   static const luaL_Reg comp_m[] = {
     {"__gc", Lobject_special_gc},
