@@ -1,5 +1,5 @@
 local oo = require 'oo'
-local rect = require 'rect'
+local Rect = require 'Rect'
 local FSM = require 'FSM'
 
 local Selector = oo.class(oo.Object)
@@ -27,7 +27,7 @@ function Selector:init(opts)
 
       selecting = {
          update = function(fsm, input, mouse)
-            self.current_selection = rect.corners(self.select_start, mouse)
+            self.current_selection = Rect.corners(self.select_start, mouse)
 
             if not input.mouse1 then
                if opts.select_callback then
@@ -50,9 +50,9 @@ function Selector:update(input, mouse)
          self.visual = stage:add_component('CTestDisplay', {color=self.color})
       end
 
-      self.visual:offset(rect.center(self.current_selection))
-      self.visual:w(rect.width(self.current_selection))
-      self.visual:h(rect.height(self.current_selection))
+      self.visual:offset(self.current_selection:center())
+      self.visual:w(self.current_selection:width())
+      self.visual:h(self.current_selection:height())
    elseif self.visual then
       self.visual:delete_me(1)
       self.visual = nil

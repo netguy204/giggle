@@ -1,6 +1,6 @@
 local M = {}
 
-M.ATLAS = "resources/images_default"
+M.ATLAS = "resources/default"
 M.TILES = "resources/tiles"
 M.BIG = "resources/big"
 

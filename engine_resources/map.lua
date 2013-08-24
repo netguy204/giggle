@@ -1,6 +1,6 @@
 local M = {}
 local util = require 'util'
-local rect = require 'rect'
+local Rect = require 'Rect'
 local constant = require 'constant'
 local background = require 'background'
 
@@ -172,13 +172,13 @@ function M.query_rect_corners(map, r, kind)
 end
 
 function M.query_rect_top(map, r, kind)
-   local v = map:query(rect.bl(r))
-   v = map:query(rect.tl(r))
+   local v = map:query(r:bl())
+   v = map:query(r:tl())
    if v[kind] then
       return v
    end
 
-   v = map:query(rect.tr(r))
+   v = map:query(r:tr())
    if v[kind] then
       return v
    end
@@ -186,12 +186,12 @@ function M.query_rect_top(map, r, kind)
 end
 
 function M.query_rect_bottom(map, r, kind)
-   local v = map:query(rect.bl(r))
+   local v = map:query(r:bl())
    if v[kind] then
       return v
    end
 
-   v = map:query(rect.br(r))
+   v = map:query(r:br())
    if v[kind] then
       return v
    end
@@ -240,10 +240,10 @@ function M.update_colliders(map)
    -- portion of the map is ever subtracted from then you should
    -- probably rebuild the colliders
    local tile_rect = function(row, col)
-      return { (col - 1) * map.tile_width,
-               (row - 1) * map.tile_height,
-               col * map.tile_width,
-               row * map.tile_height }
+      return Rect((col - 1) * map.tile_width,
+                  (row - 1) * map.tile_height,
+                  col * map.tile_width,
+                  row * map.tile_height)
    end
 
    local is_solid = function(row, col)
@@ -265,7 +265,7 @@ function M.update_colliders(map)
          if is_solid(row, col) then
             local tr = tile_rect(row, col)
             if current_collider then
-               current_collider = rect.union(current_collider, tr)
+               current_collider = current_collider:union(tr)
             else
                current_collider = tr
             end

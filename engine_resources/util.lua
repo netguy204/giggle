@@ -1,7 +1,7 @@
 local M = {}
 
 local constant = require 'constant'
-local rect = require 'rect'
+local Rect = require 'Rect'
 local vector = require 'vector'
 
 function M.printf(...)
@@ -74,6 +74,12 @@ function M.rand_between(lower, upper)
    return lower + math.random() * range
 end
 
+function M.rand_vector(minmag, maxmag)
+   local mag = M.rand_between(minmag, maxmag)
+   local angle = M.rand_between(0, 2 * math.pi)
+   return vector.new({mag * math.sin(angle), mag * math.cos(angle)})
+end
+
 function M.rand_exponential(rate)
    local u = math.random()
    return math.log(1-u)/(-rate)
@@ -135,15 +141,15 @@ end
 
 function M.stage_collidable(r)
    return stage:add_component("CCollidable", {fixture={type="rect",
-                                                       w=rect.width(r),
-                                                       h=rect.height(r),
-                                                       center=rect.center(r)}})
+                                                       w=r:width(),
+                                                       h=r:height(),
+                                                       center=r:center()}})
 end
 
 function M.stage_drawrect(r)
-   return stage:add_component("CTestDisplay", {w=rect.width(r),
-                                               h=rect.height(r),
-                                               offset=rect.center(r),
+   return stage:add_component("CTestDisplay", {w=r:width(),
+                                               h=r:height(),
+                                               offset=r:center(),
                                                color={M.rand_between(0, 1),
                                                       M.rand_between(0, 1),
                                                       M.rand_between(0, 1),

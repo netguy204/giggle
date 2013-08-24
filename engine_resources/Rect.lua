@@ -1,69 +1,81 @@
-local M = {}
+local oo = require 'oo'
+
+local Rect = oo.class(oo.Object)
+local vector = require 'vector'
+
+function Rect:init(minx, miny, maxx, maxy)
+   self.minx = minx
+   self.miny = miny
+   self.maxx = maxx
+   self.maxy = maxy
+end
 
 -- rect is minx, miny, maxx, maxy
-function M.union(a, b)
-   return {
-      math.min(a[1], b[1]),
-      math.min(a[2], b[2]),
-      math.max(a[3], b[3]),
-      math.max(a[4], b[4])
-   }
+function Rect:union(b)
+   return Rect(math.min(self.minx, b.minx),
+               math.min(self.miny, b.miny),
+               math.max(self.maxx, b.maxx),
+               math.max(self.maxy, b.maxy))
 end
 
-function M.shift(r, off)
-   return { r[1] + off[1], r[2] + off[2],
-            r[3] + off[1], r[4] + off[2] }
+function Rect:shift(off)
+   return Rect(self.minx + off[1],
+               self.miny + off[2],
+               self.maxx + off[1],
+               self.maxy + off[2])
 end
 
-function M.center(a)
-   return {(a[1] + a[3]) / 2,
-           (a[2] + a[4]) / 2}
+function Rect:center()
+   return vector.new({(self.minx + self.maxx) / 2,
+                      (self.miny + self.maxy) / 2})
 end
 
-function M.centered(p, w, h)
-   return { p[1] - w/2, p[2] - h/2,
-            p[1] + w/2, p[2] + h/2 }
+function Rect.centered(p, w, h)
+   return Rect(p[1] - w/2, p[2] - h/2,
+               p[1] + w/2, p[2] + h/2)
 end
 
-function M.width(a)
-   return a[3] - a[1]
+function Rect:width()
+   return self.maxx - self.minx
 end
 
-function M.height(a)
-   return a[4] - a[2]
+function Rect:height()
+   return self.maxy - self.miny
 end
 
-function M.bl(r)
-   return { r[1], r[2] }
+function Rect:bl()
+   return vector.new({self.minx, self.miny})
 end
 
-function M.br(r)
-   return { r[3], r[2] }
+function Rect:br()
+   return vector.new({self.maxx, self.miny})
 end
 
-function M.tl(r)
-   return { r[1], r[4] }
+function Rect:tl()
+   return vector.new({self.minx, self.maxy})
 end
 
-function M.tr(r)
-   return { r[3], r[4] }
+function Rect:tr()
+   return vector.new({self.maxx, self.maxy})
 end
 
-function M.intersect(a, b)
-   if (a[3] < b[1]) or (a[1] > b[3]) or (a[4] < b[2]) or (a[2] > b[4]) then
+function Rect:intersect(b)
+   if (self.maxx < b.minx) or (self.minx > b.maxx) or (self.maxy < b.miny) or (self.miny > b.maxy) then
       return false
    else
       return true
    end
 end
 
-function M.corners(a, b)
-   return {
-      math.min(a[1], b[1]),
-      math.min(a[2], b[2]),
-      math.max(a[1], b[1]),
-      math.max(a[2], b[2])
-   }
+function Rect.corners(a, b)
+   return Rect(math.min(a[1], b[1]),
+               math.min(a[2], b[2]),
+               math.max(a[1], b[1]),
+               math.max(a[2], b[2]))
 end
 
-return M
+function Rect:contains(p)
+   return p[1] > self.minx and p[1] < self.maxx and p[2] > self.miny and p[2] < self.maxy
+end
+
+return Rect
