@@ -9,6 +9,7 @@ CFLAGS+=-Ivender -I$(SDL_ROOT)/include
 EXE_OBJS+=glew.o
 
 SDL_LIBS=$(SDL_ROOT)/bin/sdl-config
+#SDL_LIBS_FLAGS=-Wl,-Bstatic `$(SDL_LIBS) --static-libs` -Wl,-Bdynamic
 SDL_LIBS_FLAGS=`$(SDL_LIBS) --static-libs`
 SDL_LIBS_CFLAGS=`$(SDL_LIBS) --cflags`
 
@@ -25,8 +26,8 @@ ifeq ($(PLATFORM), Darwin)
 	PLATFORM=macosx
 else
 ifeq ($(PLATFORM), MINGW32_NT-5.1)
-	LDFLAGS+=-Lvender/pthreads.msys/lib -lglu32 -lopengl32 $(SDL_LIBS_FLAGS)
-	CFLAGS+=-Ivender/pthreads.msys/include -DBUILD_SDL -DWINDOWS -DGLEW_STATIC
+	LDFLAGS+=-lglu32 -lopengl32 -L$(SDL_ROOT)/lib -Wl,-Bstatic -lmingw32 -lSDLmain -lSDL -mwindows -luser32 -lgdi32 -lwinmm -Wl,-Bdynamic
+	CFLAGS+=-DBUILD_SDL -DWINDOWS -DGLEW_STATIC
 	PLATFORM=windows
 else
 	LDFLAGS+= -lGL -lm -lutil $(SDL_LIBS_FLAGS)
