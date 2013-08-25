@@ -52,27 +52,7 @@ function M.thread(fn)
       error('thread called with null function')
    end
 
-   local err = false
-   local onerr = function(er)
-      err = er
-      print(debug.traceback(coroutine.running(), err, 2))
-   end
-
-   local threadfn = function(go, dt)
-      local start = function()
-         fn(go, dt)
-      end
-
-      xpcall(start, onerr)
-
-      if err then
-         -- an error on the following line is actually an err in fn,
-         -- see the provided traceback for more detail.
-         error(err)
-      end
-   end
-
-   return coroutine.create(threadfn)
+   return coroutine.create(M.protect(fn))
 end
 
 function M.fthread(inner_fn)
@@ -366,22 +346,17 @@ function M.loop_music(songs)
    end
 
    local keep_music_playing = function()
-      local CHECK_MUSIC = constant.NEXT_EPHEMERAL_MESSAGE()
-      local message_thread = function(go, comp)
-         go:add_component('CTimer', {time_remaining=0, kind=CHECK_MUSIC})
+      local update_thread = function(go, comp)
          while true do
             coroutine.yield()
-            if go:has_message(CHECK_MUSIC) then
-               local stop_time = stash:get('song_end', 0)
-               if stop_time < world:current_sample() then
-                  play_next_music()
-               end
-               go:add_component('CTimer', {time_remaining=1, kind=CHECK_MUSIC})
+            local stop_time = stash:get('song_end', 0)
+            if stop_time < world:current_sample() then
+               play_next_music()
             end
          end
       end
 
-      stage:add_component('CScripted', {message_thread=M.thread(message_thread)})
+      stage:add_component('CScripted', {update_thread=M.thread(update_thread)})
    end
    keep_music_playing()
 end
