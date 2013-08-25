@@ -23,7 +23,7 @@
 #include "memlib.h"
 #include "threadlib.h"
 
-#define NUM_SAMPLES 2048
+#define NUM_SAMPLES 4096
 
 char * audio_pre_buffer;
 CircularBuffer audio_buffer;
