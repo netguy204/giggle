@@ -23,7 +23,7 @@
 #include "memlib.h"
 #include "threadlib.h"
 
-#define NUM_SAMPLES 4096
+#define NUM_SAMPLES 2048
 
 char * audio_pre_buffer;
 CircularBuffer audio_buffer;
@@ -76,6 +76,7 @@ void* audio_exec(void* udata) {
   }
 }
 
+/*
 void fill_audio(void *udata, Uint8 *stream, int len) {
   int s1, s2;
   char *b1, *b2;
@@ -95,12 +96,11 @@ void fill_audio(void *udata, Uint8 *stream, int len) {
 
   mutex_unlock(audio_mutex);
 }
+*/
 
-/*
 void fill_audio(void *udata, Uint8 *stream, int len) {
   audio_fill_buffer((int16_t*)stream, len / 2);
 }
-*/
 
 void native_audio_init() {
   // twice the number of samples in the sdl buffer (2 bytes per
@@ -110,7 +110,7 @@ void native_audio_init() {
   audio_pre_buffer = (char*)malloc(buffer_size);
 
   audio_mutex = mutex_create();
-  audio_thread = thread_create(audio_exec, NULL);
+  //audio_thread = thread_create(audio_exec, NULL);
 
   SDL_AudioSpec wanted;
 
