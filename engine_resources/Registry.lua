@@ -5,16 +5,20 @@ function Registry:init()
    self.db = {}
 end
 
+function Registry:key(obj)
+   return (obj.key and obj:key()) or obj
+end
+
 function Registry:register(go, obj)
-   self.db[go:key()] = obj
+   self.db[self:key(go)] = obj
 end
 
 function Registry:unregister(go)
-   self.db[go:key()] = nil
+   self.db[self:key(go)] = nil
 end
 
 function Registry:find(go)
-   return self.db[go:key()]
+   return self.db[self:key(go)]
 end
 
 return Registry

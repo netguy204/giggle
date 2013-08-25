@@ -20,6 +20,15 @@ function DynO.with_all(fn)
    end
 end
 
+function DynO.terminate_all(kind)
+   local fn = function(obj)
+      if (not kind) or obj:is_a(kind) then
+         obj:terminate()
+      end
+   end
+   DynO.with_all(fn)
+end
+
 function DynO.with_all_of_type(fn, t)
    for key, obj in pairs(DynO.reg.db) do
       if obj:is_a(t) then
