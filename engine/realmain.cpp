@@ -18,16 +18,13 @@
 #include "testlib.h"
 #include "game.h"
 #include "utils.h"
+#include "config.h"
 
 #define min_time 1
 #define max_time 100
 
 static GameStep game_step_fn;
-static float smoothed_delta_realtime_ms = 17.5;
-static float movaverage_delta_time_ms = smoothed_delta_realtime_ms;
-static long last_time_ms = 0;
-#define movaverage_period 40.0f
-#define smooth_factor 0.1f
+static float last_frame_ms = (1.0 / 60.0) * 1e3;
 
 void set_game_step(GameStep fn) {
   game_step_fn = fn;
@@ -36,8 +33,6 @@ void set_game_step(GameStep fn) {
 Timer_ timer;
 
 int loop_once() {
-  long curr_time_ms;
-
   struct InputState_ state;
   inputstate_latest(&state);
   if(!game_step_fn || state.quit_requested) {
@@ -45,34 +40,18 @@ int loop_once() {
     return 0;
   }
 
+  float start_ms = time_millis();
+
   begin_frame();
 
   PROFILE_START(&timer, "main_update");
-  game_step_fn(roundf(smoothed_delta_realtime_ms));
+  game_step_fn(roundf(last_frame_ms));
   PROFILE_END(&timer);
 
   end_frame();
 
-  /* check the time */
-  curr_time_ms = time_millis();
-
-  /* smooth it out using a moving average */
-  float realtime_elapsed_ms;
-  if(last_time_ms > 0) {
-    realtime_elapsed_ms = curr_time_ms - last_time_ms;
-  } else {
-    realtime_elapsed_ms = smoothed_delta_realtime_ms;
-  }
-  movaverage_delta_time_ms =
-    (realtime_elapsed_ms + movaverage_delta_time_ms * (movaverage_period - 1))
-    / movaverage_period;
-  smoothed_delta_realtime_ms = smoothed_delta_realtime_ms +
-    (movaverage_delta_time_ms - smoothed_delta_realtime_ms) * smooth_factor;
-  last_time_ms = curr_time_ms;
-
-  if(smoothed_delta_realtime_ms > max_time) {
-    smoothed_delta_realtime_ms = max_time;
-  }
+  last_frame_ms = time_millis() - start_ms;
+  last_frame_ms = MAX(min_time, MIN(max_time, last_frame_ms));
 
   return 1;
 }
