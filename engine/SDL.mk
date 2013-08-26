@@ -9,12 +9,12 @@ CFLAGS+=-Ivender -I$(SDL_ROOT)/include
 EXE_OBJS+=glew.o
 
 SDL_LIBS=$(SDL_ROOT)/bin/sdl-config
-#SDL_LIBS_FLAGS=-Wl,-Bstatic `$(SDL_LIBS) --static-libs` -Wl,-Bdynamic
+#SDL_STATIC_LIBS_FLAGS=-Wl,-Bstatic `$(SDL_LIBS) --static-libs` -Wl,-Bdynamic
 SDL_LIBS_FLAGS=`$(SDL_LIBS) --static-libs`
 SDL_LIBS_CFLAGS=`$(SDL_LIBS) --cflags`
 
 $(SDL_LIBS):
-	cd $(SDL_BASE) && ./configure --prefix=$(SDL_ROOT) && make install
+	cd $(SDL_BASE) && ./configure --prefix=$(SDL_ROOT) --disable-video-fbcon --disable-video-directfb --disable-video-svga --disable-video-wscons --disable-video-vgl --disable-video-ps3 --disable-video-ps2gs --disable-video-x11-xme && make install
 
 SDL_INJECT=-include "SDL/SDL.h"
 
