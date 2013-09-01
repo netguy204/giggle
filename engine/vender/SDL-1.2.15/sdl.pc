@@ -1,6 +1,6 @@
 # sdl pkg-config source file
 
-prefix=/home/btaylor/src/ld27/giggle/engine/vender/SDL-root
+prefix=/Users/btaylor/src/hogan/giggle/engine/vender/SDL-root
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
@@ -10,6 +10,6 @@ Description: Simple DirectMedia Layer is a cross-platform multimedia library des
 Version: 1.2.15
 Requires:
 Conflicts:
-Libs: -L${libdir} -Wl,-rpath,${libdir} -lSDL  -lpthread
-Libs.private: -lSDL  -lpthread  -lm -ldl -lpthread
-Cflags: -I${includedir}/SDL -D_GNU_SOURCE=1 -D_REENTRANT
+Libs: -L${libdir}  -lSDLmain -lSDL   -Wl,-framework,Cocoa
+Libs.private: ${libdir}/libSDLmain.a ${libdir}/libSDL.a  -Wl,-framework,OpenGL  -Wl,-framework,Cocoa -Wl,-framework,ApplicationServices -Wl,-framework,Carbon -Wl,-framework,AudioToolbox -Wl,-framework,AudioUnit -Wl,-framework,IOKit
+Cflags: -I${includedir}/SDL -D_GNU_SOURCE=1 -D_THREAD_SAFE

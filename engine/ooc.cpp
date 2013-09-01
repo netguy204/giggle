@@ -280,7 +280,7 @@ static int Lmco_spawn(lua_State* L) {
   LCcheck(L, &mco, 1);
   LCcheck(L, &arg, 2);
 
-  Object* result = mco->spawn(arg);
+  Object* result = mco->spawn(arg->dereference());
   result->reference_count = 0; // disown
   LCpush(L, result);
   return 1;
