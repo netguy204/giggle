@@ -2,7 +2,6 @@ local M = {}
 local util = require 'util'
 local Rect = require 'Rect'
 local constant = require 'constant'
-local background = require 'background'
 
 -- flips the map so that the top row ends up on the top of the screen
 -- like you would expect if you just visualized the map numbers
@@ -205,18 +204,6 @@ function M.update_visuals(map)
    if map.draw_component then
       map.draw_component:map(map)
    else
-      -- add background too
-      local top_str = map.properties.gradient_top or "0 113 181"
-      local bot_str = map.properties.gradient_bottom or "255 255 255"
-      local bgcomps = util.split_names(map.properties.bgcomps or background.defaults)
-
-      local bg = background.new(util.string2rgba(top_str),
-                                util.string2rgba(bot_str))
-
-      for ii, comp in ipairs(bgcomps) do
-         bg[comp](bg, map)
-      end
-
       -- hack. the map caches and doesn't know it needs to refresh
       -- when we manipulate the transform
       local mw = map.width * map.tile_width

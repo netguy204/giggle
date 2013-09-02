@@ -11,11 +11,8 @@ from PIL import Image
 import glob
 import sys
 import os
-import struct
 import util
 from optparse import OptionParser
-
-packing = '>HHHHHH32s'
 
 def find_visible_bounds(image, pad=0):
     data = list(image.getdata())
@@ -158,20 +155,18 @@ def mk_sheet(filenames, outbase, tgt_dims, trim, sort, system):
         # finally, insert the image
         tgt.paste(img, (current_x, current_y))
 
-        u0 = util.normfloat2short(float(current_x) / tgt_w)
-        v1 = util.normfloat2short(float(current_y) / tgt_h)
-        u1 = util.normfloat2short(float(current_x + img_w) / tgt_w)
-        v0 = util.normfloat2short(float(current_y + img_h) / tgt_h)
+        u0 = float(current_x) / tgt_w
+        v1 = float(current_y) / tgt_h
+        u1 = float(current_x + img_w) / tgt_w
+        v0 = float(current_y + img_h) / tgt_h
         pakname, _ = os.path.splitext(basename)
 
         struct_tuple = (img_w, img_h, u0, v0, u1, v1, pakname)
-        packed = struct.pack(packing, *struct_tuple)
-        outdat.write(packed)
+        outdat.write(util.pack_sprite(*struct_tuple))
 
         # flipped in the x direction
         struct_tuple = (img_w, img_h, u1, v0, u0, v1, "/x" + pakname)
-        packed = struct.pack(packing, *struct_tuple)
-        outdat.write(packed)
+        outdat.write(util.pack_sprite(*struct_tuple))
 
         current_x += img_w + pad
 
