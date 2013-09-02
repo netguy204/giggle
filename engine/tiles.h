@@ -37,59 +37,81 @@ enum TileSpecMaskEntries {
   TILESPEC_PASSABLE = 4,
 };
 
-typedef struct TileSpec_ {
+class TileSpec {
+public:
   SpriteAtlasEntry image;
   int bitmask;
-} *TileSpec;
+
+  inline TileSpec()
+    : image(NULL), bitmask(0) {
+  }
+
+  inline TileSpec(SpriteAtlasEntry image, int bitmask)
+    : image(image), bitmask(bitmask) {
+  }
+};
+
+typedef std::vector<TileSpec> TileSpecs;
+
+class TilePosition {
+public:
+  int x, y;
+
+  inline TilePosition() {
+  }
+
+  inline TilePosition(int x, int y)
+    : x(x), y(y) {
+  }
+};
+
+class TileMap;
+
+typedef int(*LineCallback)(TileMap* map, const TilePosition& pos, void* udata);
+
+class TileMap {
+public:
+  TileSpecs tile_specs;
+  int width_IT, height_IT;
+  int tile_width_IP, tile_height_IP;
+  float x_bl, y_bl;
+  int8_t* tiles;
+
+  TileMap(int width, int height, int tw, int th);
+  ~TileMap();
+
+  int index(const TilePosition& pos) const;
+  int validindex(const TilePosition& pos) const;
+  int size() const;
+
+  void tileposition(TilePosition& pos, int index) const;
+  int vector_index(Vector vector) const;
+  void tilecenter(Vector v, int idx) const;
+
+  int trace_line(const TilePosition& start, const TilePosition& end, LineCallback callback, void* udata);
+
+  BaseSprite spritelist(BaseSprite list, float x_bl, float y_bl, float wpx, float hpx);
+};
 
 typedef struct CharImage_ {
   int w, h;
   int8_t* data;
 } *CharImage;
 
-typedef struct TileMap_ {
-  TileSpec tile_specs;
-  int width_IT, height_IT;
-  int tile_width_IP, tile_height_IP;
-  float x_bl, y_bl;
-  int8_t tiles[0];
-} *TileMap;
-
-typedef struct TilePosition_ {
-  int x, y;
-} *TilePosition;
-
-TileMap tilemap_make(int width, int height, int nSpecs,
-                     int tw, int th);
-void tilemap_free(TileMap map);
-
-int tilemap_index(TileMap map, TilePosition pos);
-int tilemap_validindex(TileMap map, TilePosition pos);
-int tilemap_size(TileMap map);
-BaseSprite tilemap_spritelist(BaseSprite list, TileMap map, float x_bl, float y_bl, float wpx, float hpx);
-
-void tileposition_tilemap(TilePosition pos, TileMap map, int index);
-int tilemap_index_vector(TileMap map, Vector vector);
-void vector_tilecenter(Vector v, TileMap map, int idx);
-
-typedef int(*LineCallback)(TileMap map, TilePosition pos, void* udata);
-int tilemap_trace_line(TileMap map, TilePosition start, TilePosition end,
-                       LineCallback callback, void* udata);
-
 #define charimage_index(img, x, y) (((img)->w * (y)) + x)
 #define charimage_set(img, x, y, val) ((img)->data[charimage_index(img, x, y)] = val)
 #define charimage_get(img, x, y) ((img)->data[charimage_index(img, x, y)])
 
-void tileposition_charimage(TilePosition pos, CharImage img, int index);
+void tileposition_charimage(TilePosition& pos, CharImage img, int index);
 
 // return true if the floodfill should include the given index
 typedef int(*FloodfillCallback)(CharImage img, int index, void* udata);
 
-int charimage_floodfill(CharImage out, CharImage input, TilePosition startpos,
+int charimage_floodfill(CharImage out, CharImage input, const TilePosition& startpos,
                         int8_t value, FloodfillCallback callback, void* udata);
 
-void charimage_from_tilemap(CharImage img, TileMap map);
-void charimage_init_sizeof_tilemap(CharImage img, TileMap map);
+void charimage_from_tilemap(CharImage img, TileMap* map);
+void charimage_init_sizeof_tilemap(CharImage img, TileMap* map);
 void charimage_crosscorrelate(CharImage out, CharImage big, CharImage small);
 int charimage_size(CharImage img);
 void charimage_replace_value(CharImage img, int8_t from, int8_t to);
@@ -97,7 +119,7 @@ void charimage_replace_value(CharImage img, int8_t from, int8_t to);
 void charimage_threshold(CharImage img, int8_t min);
 
 typedef struct LabelEntry_ {
-  struct TilePosition_ pos;
+  TilePosition pos;
   int8_t value;
 } *LabelEntry;
 
@@ -110,6 +132,6 @@ void charimage_label(CharImage img, int8_t* working, LabelCallback callback, voi
 void charimage_write(CharImage img, FILE* target);
 void charimage_spit(CharImage img, const char* filename);
 
-void charimage_ambient_occlusion(CharImage occlusion, TileMap map);
+void charimage_ambient_occlusion(CharImage occlusion, TileMap* map);
 
 #endif

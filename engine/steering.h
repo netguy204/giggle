@@ -57,7 +57,7 @@ class Steering : public Object {
                      float offset, float slowing_dist);
   void avoidance(SteeringObstacle* objs, int nobjs, Vector_ src, Vector_ src_vel,
                  float src_radius, float src_range);
-  int followpath(TileMap map, PathInstance path, Vector_ src,
+  int followpath(TileMap* map, PathInstance path, Vector_ src,
                  Vector_ src_vel, float max_offset);
 
   SteeringParams params;

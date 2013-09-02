@@ -273,7 +273,7 @@ void CDrawWallpaper::render(Camera* camera) {
   }
 }
 
-void LCcheck_spec(lua_State* L, int pos, TileSpec spec) {
+void LCcheck_spec(lua_State* L, int pos, TileSpec* spec) {
   if(!lua_istable(L, pos)) {
     luaL_error(L, "position %d does not contain a spec-table", pos);
   }
@@ -314,7 +314,7 @@ int LCtable_count(lua_State* L, int pos) {
   lua_pop(L, 1);
 
 template<>
-void LCcheck<TileMap>(lua_State* L, TileMap* map, int pos) {
+void LCcheck<TileMap*>(lua_State* L, TileMap** map, int pos) {
   if(!lua_istable(L, pos)) {
     luaL_error(L, "position %d does not contain a map-table", pos);
   }
@@ -331,19 +331,21 @@ void LCcheck<TileMap>(lua_State* L, TileMap* map, int pos) {
   }
 
   // we automatically create the nil spec entry
-  nSpecs = LCtable_count(L, -1) + 1;
   if(*map) {
-    tilemap_free(*map);
+    delete *map;
   }
 
-  *map = tilemap_make(width, height, nSpecs, tWidth, tHeight);
-  (*map)->tile_specs[0].image = NULL;
-  (*map)->tile_specs[0].bitmask = 0;
+  *map = new TileMap(width, height, tWidth, tHeight);
+
+  nSpecs = LCtable_count(L, -1) + 1;
+  (*map)->tile_specs.push_back(TileSpec(NULL, 0));
 
   // fill in the user defined specs
   for(int speci = 1; speci < nSpecs; ++speci) {
     lua_rawgeti(L, -1, speci);
-    LCcheck_spec(L, -1, &(*map)->tile_specs[speci]);
+    TileSpec spec;
+    LCcheck_spec(L, -1, &spec);
+    (*map)->tile_specs.push_back(spec);
     lua_pop(L, 1);
   }
   lua_pop(L, 1); // specs
@@ -363,7 +365,7 @@ void LCcheck<TileMap>(lua_State* L, TileMap* map, int pos) {
 }
 
 template<>
-inline void LCpush<TileMap>(lua_State* L, TileMap m) {
+inline void LCpush<TileMap*>(lua_State* L, TileMap* m) {
   luaL_error(L, "Don't know how to push TileMap");
 }
 
@@ -423,16 +425,16 @@ CDrawTilemap::CDrawTilemap(void* _go)
 }
 
 CDrawTilemap::~CDrawTilemap() {
-  if(map) tilemap_free(map);
+  if(map) delete map;
   renderer->destroy();
 }
 
-TileMap CDrawTilemap::get_map() {
+TileMap* CDrawTilemap::get_map() {
   return map;
 }
 
-void CDrawTilemap::set_map(TileMap _map) {
-  if(map) tilemap_free(map);
+void CDrawTilemap::set_map(TileMap* _map) {
+  if(map) delete map;
   map = _map;
   map_dirty = 1;
 }
@@ -447,7 +449,7 @@ void CDrawTilemap::render(Camera* camera) {
     map->x_bl = pos.x;
     map->y_bl = pos.y;
 
-    BaseSprite sprites = tilemap_spritelist(NULL, map, 0, 0, w, h);
+    BaseSprite sprites = map->spritelist(NULL, 0, 0, w, h);
     camera->addRenderable(layer, renderer, sprites);
     map_dirty = 0;
   } else {

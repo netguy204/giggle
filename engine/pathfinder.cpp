@@ -32,7 +32,7 @@ PathElement::PathElement(PathElement* parent, int heuristic, int id)
   }
 }
 
-void vector_path_direction(Vector dir, TileMap map, Path path, int test0, int pathdir) {
+void vector_path_direction(Vector dir, TileMap* map, Path path, int test0, int pathdir) {
   int test1 = path_next_idx(path, test0, pathdir);
   if(test1 == -1) {
     int temp = test0;
@@ -44,8 +44,8 @@ void vector_path_direction(Vector dir, TileMap map, Path path, int test0, int pa
 
   struct Vector_ p0;
   struct Vector_ p1;
-  vector_tilecenter(&p0, map, path->steps[test0]);
-  vector_tilecenter(&p1, map, path->steps[test1]);
+  map->tilecenter(&p0, path->steps[test0]);
+  map->tilecenter(&p1, path->steps[test1]);
   vector_sub(dir, &p1, &p0);
   vector_norm(dir, dir);
 }
@@ -66,14 +66,14 @@ int path_begin_idx(Path path, int pathdir) {
   }
 }
 
-void vector_path_end(Vector end, Path path, TileMap map, int pathdir) {
+void vector_path_end(Vector end, Path path, TileMap* map, int pathdir) {
   int end_idx = path_end_idx(path, pathdir);
-  vector_tilecenter(end, map, path->steps[end_idx]);
+  map->tilecenter(end, path->steps[end_idx]);
 }
 
-void vector_path_begin(Vector begin, Path path, TileMap map, int pathdir) {
+void vector_path_begin(Vector begin, Path path, TileMap* map, int pathdir) {
   int begin_idx = path_begin_idx(path, pathdir);
-  vector_tilecenter(begin, map, path->steps[begin_idx]);
+  map->tilecenter(begin, path->steps[begin_idx]);
 }
 
 int path_next_idx(Path path, int current_idx, int pathdir) {
@@ -88,7 +88,7 @@ int pathinstance_next_idx(PathInstance pi) {
   return path_next_idx(pi->path, pi->pathpos, pi->pathdir);
 }
 
-void vector_pathinstance_direction(Vector dir, TileMap map, PathInstance pi) {
+void vector_pathinstance_direction(Vector dir, TileMap* map, PathInstance pi) {
   vector_path_direction(dir, map, pi->path, pi->pathpos, pi->pathdir);
 }
 
@@ -100,15 +100,15 @@ int pathinstance_begin_idx(PathInstance pi) {
   return path_begin_idx(pi->path, pi->pathdir);
 }
 
-void vector_pathinstance_end(Vector end, PathInstance pi, TileMap map) {
+void vector_pathinstance_end(Vector end, PathInstance pi, TileMap* map) {
   vector_path_end(end, pi->path, map, pi->pathdir);
 }
 
-void vector_pathinstance_begin(Vector begin, PathInstance pi, TileMap map) {
+void vector_pathinstance_begin(Vector begin, PathInstance pi, TileMap* map) {
   vector_path_begin(begin, pi->path, map, pi->pathdir);
 }
 
-int path_next_closest_point(Vector point, TileMap map, PathInstance pi, Vector pos, float* dist) {
+int path_next_closest_point(Vector point, TileMap* map, PathInstance pi, Vector pos, float* dist) {
   float closest_dist2 = INFINITY;
   int origin_idx = -1;
 
@@ -142,8 +142,8 @@ int path_next_closest_point(Vector point, TileMap map, PathInstance pi, Vector p
     float pt0pt1_dist;
     float pathdot;
 
-    vector_tilecenter(&path_center0, map, test0);
-    vector_tilecenter(&path_center1, map, test1);
+    map->tilecenter(&path_center0, test0);
+    map->tilecenter(&path_center1, test1);
     vector_sub(&tangent, &path_center1, &path_center0);
     vector_sub(&p0_to_pos, pos, &path_center0);
     vector_norm(&tangent, &tangent);
@@ -184,10 +184,10 @@ int path_next_closest_point(Vector point, TileMap map, PathInstance pi, Vector p
   return origin_idx;
 }
 
-int pathfinder_heuristic(TileMap map, int p1, int p2) {
-  struct TilePosition_ tp1, tp2;
-  tileposition_tilemap(&tp1, map, p1);
-  tileposition_tilemap(&tp2, map, p2);
+int pathfinder_heuristic(TileMap* map, int p1, int p2) {
+  TilePosition tp1, tp2;
+  map->tileposition(tp1, p1);
+  map->tileposition(tp2, p2);
 
   int dx = tp1.x - tp2.x;
   int dy = tp1.y - tp2.y;
@@ -203,7 +203,7 @@ void TileMapPathfinder::candidatesFrom(Candidates& candidates, PathElement* elem
 
   int start = element->id;
   int row = map->width_IT;
-  int sz = tilemap_size(map);
+  int sz = map->size();
 
   int above = start + row;
   if(IS_CANDIDATE(above)) {
@@ -230,34 +230,34 @@ void TileMapPathfinder::candidatesFrom(Candidates& candidates, PathElement* elem
   }
 }
 
-int pathfinder_visibility_callback(TileMap map, TilePosition pos, void* udata) {
-  int index = tilemap_index(map, pos);
+int pathfinder_visibility_callback(TileMap* map, const TilePosition& pos, void* udata) {
+  int index = map->index(pos);
   int spec = map->tiles[index];
   if(map->tile_specs[spec].bitmask & TILESPEC_COLLIDABLE) return 1;
   return 0;
 }
 
-void pathfinder_simplifypath(TileMap map, int* steps, int *nsteps) {
+void pathfinder_simplifypath(TileMap* map, int* steps, int *nsteps) {
   int read_idx;
   int write_idx = 0;
 
-  struct TilePosition_ last_tp;
+  TilePosition last_tp;
 
   for(read_idx = 0; read_idx < *nsteps; ++read_idx) {
     int step = steps[read_idx];
 
     // always include the first
     if(read_idx == 0) {
-      tileposition_tilemap(&last_tp, map, step);
+      map->tileposition(last_tp, step);
       ++write_idx;
       continue;
     }
 
-    struct TilePosition_ current_tp;
-    tileposition_tilemap(&current_tp, map, step);
+    TilePosition current_tp;
+    map->tileposition(current_tp, step);
 
-    int result = tilemap_trace_line(map, &last_tp, &current_tp,
-                                    pathfinder_visibility_callback, NULL);
+    int result = map->trace_line(last_tp, current_tp,
+                                 pathfinder_visibility_callback, NULL);
 
     // didn't encounter obstruction
     if(!result) {
@@ -278,9 +278,8 @@ void pathfinder_simplifypath(TileMap map, int* steps, int *nsteps) {
   *nsteps = write_idx;
 }
 
-int* pathfinder_findpath(TileMap map, int p1, int p2, int* count) {
-  int sz = tilemap_size(map);
-  StackAllocator allocator = stack_allocator_make(sizeof(struct PathElement) * sz * 2,
+int* pathfinder_findpath(TileMap* map, int p1, int p2, int* count) {
+  int sz = map->size();  StackAllocator allocator = stack_allocator_make(sizeof(struct PathElement) * sz * 2,
                                                   "pathfinder_temp_allocator");
   Candidates candidates(allocator);
 

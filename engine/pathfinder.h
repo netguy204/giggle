@@ -97,9 +97,9 @@ public:
 
 class TileMapPathfinder : public WorldPathfinderIfc {
 public:
-  TileMap map;
+  TileMap* map;
 
-  inline TileMapPathfinder(TileMap map)
+  inline TileMapPathfinder(TileMap* map)
     : map(map) {
   }
 
@@ -110,20 +110,20 @@ public:
 PathElement* pathfinder_findpath2(WorldPathfinderIfc& map, int p1, int p2, Candidates& candidates);
 
 // functions that are specifically dealing with pathfinding over a TileMap
-int* pathfinder_findpath(TileMap map, int p1, int p2, int* count);
+int* pathfinder_findpath(TileMap* map, int p1, int p2, int* count);
 
 typedef struct Path_ {
-  struct TilePosition_ start;
-  struct TilePosition_ end;
+  TilePosition start;
+  TilePosition end;
   int* steps;
   int nsteps;
 } *Path;
 
-void vector_path_direction(Vector dir, TileMap map, Path path, int test0, int pathdir);
+void vector_path_direction(Vector dir, TileMap* map, Path path, int test0, int pathdir);
 int path_end_idx(Path path, int pathdir);
 int path_begin_idx(Path path, int pathdir);
-void vector_path_end(Vector end, Path path, TileMap map, int pathdir);
-void vector_path_begin(Vector begin, Path path, TileMap map, int pathdir);
+void vector_path_end(Vector end, Path path, TileMap* map, int pathdir);
+void vector_path_begin(Vector begin, Path path, TileMap* map, int pathdir);
 
 typedef struct PathInstance_ {
   Path path;
@@ -135,13 +135,13 @@ typedef struct PathInstance_ {
 // -1 on fall off the path
 int path_next_idx(Path path, int current_idx, int pathdir);
 int pathinstance_next_idx(PathInstance pi);
-void vector_pathinstance_direction(Vector dir, TileMap map, PathInstance pi);
+void vector_pathinstance_direction(Vector dir, TileMap* map, PathInstance pi);
 int pathinstance_end_idx(PathInstance pi);
 int pathinstance_begin_idx(PathInstance pi);
-void vector_pathinstance_end(Vector end, PathInstance pi, TileMap map);
-void vector_pathinstance_begin(Vector begin, PathInstance pi, TileMap map);
+void vector_pathinstance_end(Vector end, PathInstance pi, TileMap* map);
+void vector_pathinstance_begin(Vector begin, PathInstance pi, TileMap* map);
 
 // find POINT on PATH closest to POS and return the DIST to it.
-int path_next_closest_point(Vector point, TileMap map, PathInstance pi, Vector pos, float* dist);
+int path_next_closest_point(Vector point, TileMap* map, PathInstance pi, Vector pos, float* dist);
 
 #endif

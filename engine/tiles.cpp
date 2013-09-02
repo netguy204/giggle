@@ -24,74 +24,66 @@
 
 #include <vector>
 
-TileMap tilemap_make(int width, int height, int nSpecs,
-                     int tw, int th) {
+TileMap::TileMap(int width, int height, int tw, int th)
+  : width_IT(width), height_IT(height), tile_width_IP(tw), tile_height_IP(th),
+    x_bl(0), y_bl(0) {
   int num_tiles = width * height;
-  TileMap map = (TileMap)malloc(sizeof(struct TileMap_) + num_tiles);
-  map->tile_specs = (TileSpec)malloc(sizeof(struct TileSpec_) * nSpecs);
-  map->width_IT = width;
-  map->height_IT = height;
-  map->tile_width_IP = tw;
-  map->tile_height_IP = th;
-  map->x_bl = 0;
-  map->y_bl = 0;
-  return map;
+  tiles = (int8_t*)malloc(num_tiles);
 }
 
-void tilemap_free(TileMap map) {
-  free(map->tile_specs);
-  free(map);
+TileMap::~TileMap() {
+  free(tiles);
 }
 
-int tilemap_index(TileMap map, TilePosition pos) {
-  return map->width_IT * pos->y + pos->x;
+int TileMap::index(const TilePosition& pos) const {
+  return width_IT * pos.y + pos.x;
 }
 
-void tileposition_tilemap(TilePosition pos, TileMap map, int index) {
-  pos->x = index % map->width_IT;
-  pos->y = index / map->width_IT;
+int TileMap::validindex(const TilePosition& pos) const {
+  return pos.x >= 0 && pos.x < width_IT
+    && pos.y >= 0 && pos.y < height_IT;
 }
 
-int tilemap_index_vector(TileMap map, Vector vector) {
-  float x = vector->x / map->tile_width_IP;
-  float y = vector->y / map->tile_height_IP;
-
-  return (int)floorf(x) + (int)floorf(y) * map->width_IT;
+int TileMap::size() const {
+  return width_IT * height_IT;
 }
 
-void vector_tilecenter(Vector v, TileMap map, int idx) {
-  struct TilePosition_ pos;
-  tileposition_tilemap(&pos, map, idx);
-
-  v->x = map->tile_width_IP * pos.x + map->tile_width_IP / 2;
-  v->y = map->tile_height_IP * pos.y + map->tile_height_IP / 2;
+void TileMap::tileposition(TilePosition& pos, int index) const {
+  pos.x = index % width_IT;
+  pos.y = index / width_IT;
 }
 
-int tilemap_size(TileMap map) {
-  return map->width_IT * map->height_IT;
+int TileMap::vector_index(Vector vector) const {
+  float x = vector->x / tile_width_IP;
+  float y = vector->y / tile_height_IP;
+
+  return (int)floorf(x) + (int)floorf(y) * width_IT;
 }
 
-int tilemap_validindex(TileMap map, TilePosition pos) {
-  return pos->x >= 0 && pos->x < map->width_IT
-    && pos->y >= 0 && pos->y < map->height_IT;
+void TileMap::tilecenter(Vector v, int idx) const {
+  TilePosition pos;
+  tileposition(pos, idx);
+
+  v->x = tile_width_IP * pos.x + tile_width_IP / 2;
+  v->y = tile_height_IP * pos.y + tile_height_IP / 2;
 }
 
 
-int tilemap_trace_line(TileMap map, TilePosition start, TilePosition end,
+int TileMap::trace_line(const TilePosition& start, const TilePosition& end,
                         LineCallback callback, void* udata) {
   /* Bresenham's algorithm */
-  struct TilePosition_ pos = *start;
-  int dx = abs(start->x - end->x);
-  int dy = abs(start->y - end->y);
+  TilePosition pos = start;
+  int dx = abs(start.x - end.x);
+  int dy = abs(start.y - end.y);
 
   int sx, sy;
-  if(start->x < end->x) {
+  if(start.x < end.x) {
     sx = 1;
   } else {
     sx = -1;
   }
 
-  if(start->y < end->y) {
+  if(start.y < end.y) {
     sy = 1;
   } else {
     sy = -1;
@@ -99,10 +91,10 @@ int tilemap_trace_line(TileMap map, TilePosition start, TilePosition end,
 
   int err = dx - dy;
   while(1) {
-    int result = callback(map, &pos, udata);
+    int result = callback(this, pos, udata);
     if(result) return result;
 
-    if (pos.x == end->x && pos.y == end->y) return 0;
+    if (pos.x == end.x && pos.y == end.y) return 0;
     int e2 = 2 * err;
     if (e2 > -dy) {
       err = err - dy;
@@ -122,31 +114,31 @@ int clamp(int val, int min, int max) {
   return val;
 }
 
-BaseSprite tilemap_spritelist(BaseSprite spritelist, TileMap map, float x_bl, float y_bl, float wpx, float hpx) {
-  float mx_bl = x_bl - map->x_bl;
-  float my_bl = y_bl - map->y_bl;
+BaseSprite TileMap::spritelist(BaseSprite spritelist, float x_bl, float y_bl, float wpx, float hpx) {
+  float mx_bl = x_bl - this->x_bl;
+  float my_bl = y_bl - this->y_bl;
   float mx_tr = mx_bl + wpx;
   float my_tr = my_bl + hpx;
 
-  int tx_bl = clamp(floor(mx_bl / map->tile_width_IP), 0, map->width_IT);
-  int ty_bl = clamp(floor(my_bl / map->tile_height_IP), 0, map->height_IT);
-  int tx_tr = clamp(ceil(mx_tr / map->tile_width_IP), 0, map->width_IT);
-  int ty_tr = clamp(ceil(my_tr / map->tile_height_IP), 0, map->height_IT);
+  int tx_bl = clamp(floor(mx_bl / tile_width_IP), 0, width_IT);
+  int ty_bl = clamp(floor(my_bl / tile_height_IP), 0, height_IT);
+  int tx_tr = clamp(ceil(mx_tr / tile_width_IP), 0, width_IT);
+  int ty_tr = clamp(ceil(my_tr / tile_height_IP), 0, height_IT);
 
-  int ox = (int)floorf((map->x_bl + tx_bl * map->tile_width_IP) - x_bl);
-  int oy = (int)floorf((map->y_bl + ty_bl * map->tile_height_IP) - y_bl);
+  int ox = (int)floorf((this->x_bl + tx_bl * tile_width_IP) - x_bl);
+  int oy = (int)floorf((this->y_bl + ty_bl * tile_height_IP) - y_bl);
 
   int xx, yy;
   for(yy = 0; yy < ty_tr - ty_bl; ++yy) {
-    int yoffset = map->width_IT * (ty_bl + yy);
-    int y = oy + (map->tile_height_IP * yy);
+    int yoffset = width_IT * (ty_bl + yy);
+    int y = oy + (tile_height_IP * yy);
 
     for(xx = 0; xx < tx_tr - tx_bl; ++xx) {
       int offset = yoffset + tx_bl + xx;
-      int x = ox + (map->tile_width_IP * xx);
+      int x = ox + (tile_width_IP * xx);
 
-      int tile = map->tiles[offset];
-      TileSpec spec = &map->tile_specs[tile];
+      int tile = tiles[offset];
+      TileSpec* spec = &tile_specs[tile];
       if((spec->bitmask & TILESPEC_VISIBLE) == 0) continue;
 
       BaseSprite sprite = (BaseSprite)frame_alloc(sizeof(BaseSprite_));
@@ -160,18 +152,18 @@ BaseSprite tilemap_spritelist(BaseSprite spritelist, TileMap map, float x_bl, fl
   return spritelist;
 }
 
-void tileposition_charimage(TilePosition pos, CharImage img, int index) {
-  pos->x = index % img->w;
-  pos->y = index / img->w;
+void tileposition_charimage(TilePosition& pos, CharImage img, int index) {
+  pos.x = index % img->w;
+  pos.y = index / img->w;
 }
 
-int charimage_floodfill(CharImage out, CharImage input, TilePosition startpos,
+int charimage_floodfill(CharImage out, CharImage input, const TilePosition& startpos,
                         int8_t value, FloodfillCallback callback, void* udata) {
   int8_t* memory = out->data;
   assert(charimage_size(input) == charimage_size(out));
 
   int max_index = charimage_size(input);
-  int start = charimage_index(input, startpos->x, startpos->y);
+  int start = charimage_index(input, startpos.x, startpos.y);
   int kind = input->data[start];
   int row = input->w;
   std::vector<int> stack;
@@ -217,13 +209,13 @@ int charimage_floodfill(CharImage out, CharImage input, TilePosition startpos,
   return count;
 }
 
-void charimage_from_tilemap(CharImage img, TileMap map) {
+void charimage_from_tilemap(CharImage img, TileMap* map) {
   img->w = map->width_IT;
   img->h = map->height_IT;
   img->data = map->tiles;
 }
 
-void charimage_init_sizeof_tilemap(CharImage img, TileMap map) {
+void charimage_init_sizeof_tilemap(CharImage img, TileMap* map) {
   img->w = map->width_IT;
   img->h = map->height_IT;
   img->data = (int8_t*)malloc(img->w * img->h);
@@ -283,7 +275,7 @@ int label_floodfill_callback(CharImage img, int index, void* udata) {
   LabelEntries* hv = (LabelEntries*)udata;
 
   struct LabelEntry_ entry;
-  tileposition_charimage(&entry.pos, img, index);
+  tileposition_charimage(entry.pos, img, index);
   entry.value = value;
   hv->push_back(entry);
   return 1;
@@ -302,10 +294,10 @@ void charimage_label(CharImage img, int8_t* working, LabelCallback callback, voi
     if(img->data[ii] != 0 && working[ii] == 0) {
       hv.clear();
 
-      struct TilePosition_ pos;
-      tileposition_charimage(&pos, img, ii);
+      TilePosition pos;
+      tileposition_charimage(pos, img, ii);
 
-      charimage_floodfill(&out, img, &pos, 1, label_floodfill_callback, &hv);
+      charimage_floodfill(&out, img, pos, 1, label_floodfill_callback, &hv);
 
       callback(hv, udata);
     }
@@ -348,7 +340,7 @@ static int region[][3] = {
 static int nregion = sizeof(region) / 3;
 
 // chars are ~dist scaled by 2
-char ambient_occlusion(TileMap map, int xx, int yy) {
+char ambient_occlusion(TileMap* map, int xx, int yy) {
   int zz;
   char result = 0;
   for(zz = 0; zz < nregion; ++zz) {
@@ -356,14 +348,14 @@ char ambient_occlusion(TileMap map, int xx, int yy) {
     int oy = region[zz][1];
     int incr = region[zz][2];
 
-    struct TilePosition_ tpos = {xx + ox, yy + oy};
-    if(!tilemap_validindex(map, &tpos)) {
+    TilePosition tpos(xx + ox, yy + oy);
+    if(!map->validindex(tpos)) {
       // the world edges are occluders
       result += incr;
       continue;
     }
 
-    int8_t kind = map->tiles[tilemap_index(map, &tpos)];
+    int8_t kind = map->tiles[map->index(tpos)];
     if(map->tile_specs[kind].bitmask & TILESPEC_VISIBLE) {
       result += incr;
     }
@@ -371,7 +363,7 @@ char ambient_occlusion(TileMap map, int xx, int yy) {
   return result;
 }
 
-void charimage_ambient_occlusion(CharImage occlusion, TileMap map) {
+void charimage_ambient_occlusion(CharImage occlusion, TileMap* map) {
   int xx, yy;
   for(yy = 0; yy < map->height_IT; ++yy) {
     for(xx = 0; xx < map->width_IT; ++xx) {

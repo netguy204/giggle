@@ -142,7 +142,7 @@ void Steering::offsetarrival(Vector_ tgt, Vector_ src, Vector_ src_vel,
 }
 OBJECT_METHOD(Steering, offsetarrival, void, (Vector_, Vector_, Vector_, float, float))
 
-int Steering::followpath(TileMap map, PathInstance pi, Vector_ src, Vector_ src_vel,
+int Steering::followpath(TileMap* map, PathInstance pi, Vector_ src, Vector_ src_vel,
                          float max_offset) {
   struct Vector_ projobj;
   struct Vector_ src_vel_offset;

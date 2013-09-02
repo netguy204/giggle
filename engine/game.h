@@ -149,12 +149,12 @@ class CDrawTilemap : public Component {
 
   virtual void render(Camera* camera);
 
-  void set_map(TileMap map);
-  TileMap get_map();
+  void set_map(TileMap* map);
+  TileMap* get_map();
 
   TileMapRenderer *renderer;
   Vector_ offset;
-  TileMap map;
+  TileMap* map;
   int w, h;
   int layer;
   int map_dirty;
