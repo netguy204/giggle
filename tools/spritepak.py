@@ -12,6 +12,8 @@ import glob
 import sys
 import os
 import util
+import struct
+
 from optparse import OptionParser
 
 def find_visible_bounds(image, pad=0):
@@ -173,7 +175,6 @@ def mk_sheet(filenames, outbase, tgt_dims, trim, sort, system):
     tgt.save(outimagename)
     outdat.close()
     print "%d entries" % nentries
-    print "size per entry: %d" % struct.calcsize(packing)
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:

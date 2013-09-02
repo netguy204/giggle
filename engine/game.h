@@ -152,6 +152,9 @@ class CDrawTilemap : public Component {
   void set_map(TileMap* map);
   TileMap* get_map();
 
+  void set_map_filename(const char* fname);
+  const char* get_map_filename();
+
   TileMapRenderer *renderer;
   Vector_ offset;
   TileMap* map;

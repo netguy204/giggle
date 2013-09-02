@@ -17,6 +17,8 @@
 #include "tiles.h"
 #include "heapvector.h"
 #include "utils.h"
+#include "filenumbers.h"
+#include "gameobject.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -28,11 +30,53 @@ TileMap::TileMap(int width, int height, int tw, int th)
   : width_IT(width), height_IT(height), tile_width_IP(tw), tile_height_IP(th),
     x_bl(0), y_bl(0) {
   int num_tiles = width * height;
-  tiles = (int8_t*)malloc(num_tiles);
+  tiles = (unsigned short*)malloc(num_tiles * sizeof(unsigned short));
 }
 
 TileMap::~TileMap() {
   free(tiles);
+}
+
+TileMap* TileMap::fromFile(World* world, const char* fname) {
+  FILE* f = fopen(fname, "r");
+  if(!f) fail_exit("couldn't open %s", fname);
+
+  unsigned short w, h, tw, th, nspecs;
+  read_ushort(f, &w);
+  read_ushort(f, &h);
+  read_ushort(f, &tw);
+  read_ushort(f, &th);
+
+  TileMap* map = new TileMap(w, h, tw, th);
+
+  // read and build the specs
+  read_ushort(f, &nspecs);
+  for(unsigned ii = 0; ii < nspecs; ++ii) {
+    char atlas[32];
+    char entry[32];
+
+    read_fstring(f, atlas);
+    read_fstring(f, entry);
+
+    TileSpec spec;
+    if(strlen(atlas) == 0) {
+      // handle the "nothing image" case
+      spec.image = NULL;
+      spec.bitmask = 0; // for now
+    } else {
+      spec.image = world->atlas_entry(atlas, entry);
+      spec.bitmask = TILESPEC_VISIBLE;
+    }
+
+    map->tile_specs.push_back(spec);
+  }
+
+  // read the map data
+  read_ushorts(f, map->tiles, w * h);
+
+  fclose(f);
+
+  return map;
 }
 
 int TileMap::index(const TilePosition& pos) const {
@@ -207,12 +251,6 @@ int charimage_floodfill(CharImage out, CharImage input, const TilePosition& star
   }
 
   return count;
-}
-
-void charimage_from_tilemap(CharImage img, TileMap* map) {
-  img->w = map->width_IT;
-  img->h = map->height_IT;
-  img->data = map->tiles;
 }
 
 void charimage_init_sizeof_tilemap(CharImage img, TileMap* map) {

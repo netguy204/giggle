@@ -21,6 +21,8 @@
 
 void read_ushort(FILE* fh, unsigned short* value);
 
+void read_ushorts(FILE* fh, unsigned short* values, unsigned n);
+
 void read_short(FILE* fh, short* value);
 
 // a normalized fixed number works best for values between 0 and 1
@@ -28,5 +30,8 @@ void read_norm_fixed(FILE* fh, float* value);
 
 // a non-normalized fixed number works for floats that are +/- about 250
 void read_fixed(FILE* fh, float* value);
+
+// read a 32 byte string
+void read_fstring(FILE* f, char* buffer);
 
 #endif

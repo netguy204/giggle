@@ -76,7 +76,7 @@ SpriteAtlas spriteatlas_load(const char* name, const char* imgtype) {
       read_norm_fixed(datafile, &entry->v0);
       read_norm_fixed(datafile, &entry->u1);
       read_norm_fixed(datafile, &entry->v1);
-      fread(entry->name, sizeof(entry->name), 1, datafile);
+      read_fstring(datafile, entry->name);
     }
 
     fclose(datafile);

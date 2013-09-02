@@ -32,15 +32,15 @@ def tmxdata(data):
     n = len(textdata) / 4
     return struct.unpack('<' + 'I'*n, textdata)
 
-def parse_tileset(tileset, basepath, outdir):
+def parse_tileset(tileset, basepath, projroot, outdir):
     source = util.attr(tileset, 'source', None)
     firstgid = int(util.attr(tileset, 'firstgid'))
 
     if source:
         source = os.path.join(basepath, source)
-        return (firstgid, tsx2dat.tsx2resources(source, outdir))
+        return (firstgid, tsx2dat.tsx2resources(source, projroot, outdir))
     else:
-        return (firstgid, tsx2dat.tileset2resources(tileset, basepath, outdir))
+        return (firstgid, tsx2dat.tileset2resources(tileset, basepath, projroot, outdir))
 
 def tileid2tileset(tilesets, tileid):
     # find the greatest global id that is still less than or equal to
@@ -65,7 +65,8 @@ def tileid2tileset(tilesets, tileid):
 
 if __name__ == '__main__':
     fname = sys.argv[1]
-    outdir = sys.argv[2]
+    projroot = sys.argv[2]
+    outdir = sys.argv[3]
 
     basepath, mapname = os.path.split(fname)
     mapname, _ = os.path.splitext(mapname)
@@ -76,7 +77,12 @@ if __name__ == '__main__':
     mapdom = element(dom, 'map')
     tilesets = elements(mapdom, 'tileset')
     for ii in range(len(tilesets)):
-        tilesets[ii] = parse_tileset(tilesets[ii], basepath, outdir)
+        tilesets[ii] = parse_tileset(tilesets[ii], basepath, projroot, outdir)
+
+    width = int(util.attr(mapdom, 'width'))
+    height = int(util.attr(mapdom, 'height'))
+    tile_width = int(util.attr(mapdom, 'tilewidth'))
+    tile_height = int(util.attr(mapdom, 'tileheight'))
 
     layers = elements(mapdom, 'layer')
     tileid2entity = {}
@@ -85,11 +91,19 @@ if __name__ == '__main__':
         layer = layers[ii]
 
         data = element(layer, 'data')
-        tiles = tmxdata(data)
+
+
+        flipped_tiles = tmxdata(data)
+
+        # flip the map vertically to fit the shape that we want to be
+        # loading
+        tiles = []
+        for jj in range(height):
+            row = height - jj - 1
+            start = row * width
+            tiles.extend(flipped_tiles[start:(start + width)])
 
         name = util.attr(layer, 'name', str(ii))
-        width = int(util.attr(layer, 'width'))
-        height = int(util.attr(layer, 'height'))
 
         layers[ii] = (name, width, height, tiles)
 
@@ -105,22 +119,26 @@ if __name__ == '__main__':
         print 'writing %s' % layername
 
         with open(layername, "wb") as f:
-            # first write out the tilespecs, empty strings correspond
-            # to empty tiles since the input data can be sparse but
-            # the output data must be dense
-            nspecs = len(tileid2entity)
+            # first, write out the map dimensions
+            util.write_ushort(f, layer[1])
+            util.write_ushort(f, layer[2])
+            util.write_ushort(f, tile_width)
+            util.write_ushort(f, tile_height)
+
+            # write out the tilespecs, empty strings correspond to
+            # empty tiles since the input data can be sparse but the
+            # output data must be dense
+            nspecs = max(tileid2entity.keys()) + 1
             util.write_ushort(f, nspecs)
             for ii in range(nspecs):
                 if ii in tileid2entity:
                     spec = tileid2entity[ii]
-                    util.write_fstring(f, "%d" % spec[0])
                     util.write_fstring(f, spec[1].encode('ascii'))
+                    util.write_fstring(f, "%d" % spec[0])
                 else:
                     # fill in a sparse gap
                     util.write_fstring(f, '')
                     util.write_fstring(f, '')
 
-            # now write the map dimensions followed by the map data
-            util.write_ushort(f, layer[1])
-            util.write_ushort(f, layer[2])
+            # finally, write out the map data
             util.write_ushorts(f, layer[3])

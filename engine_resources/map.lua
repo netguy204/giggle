@@ -36,7 +36,7 @@ local function slurp_lines(filename)
    return result
 end
 
-function M.from_file(map_file, atlas, order_file)
+function M.from_file(map_file)
    local map = require(map_file)
    local order = slurp_lines(order_file)
 

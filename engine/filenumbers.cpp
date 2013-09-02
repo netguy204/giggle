@@ -45,6 +45,14 @@ void read_ushort(FILE* fh, unsigned short* value) {
   *value = ntohs(*value);
 }
 
+void read_ushorts(FILE* fh, unsigned short* values, unsigned n) {
+  fread(values, sizeof(unsigned short), n, fh);
+
+  for(unsigned ii = 0; ii < n; ++ii) {
+    values[ii] = ntohs(values[ii]);
+  }
+}
+
 void read_short(FILE* fh, short* value) {
   read_ushort(fh, (unsigned short*)value);
 }
@@ -64,4 +72,8 @@ void read_fixed(FILE* fh, float* value) {
   int fixed_value;
   read_int(fh, &fixed_value);
   *value = ((double)fixed_value) / COORD_SCALE;
+}
+
+void read_fstring(FILE* fh, char* buffer) {
+  fread(buffer, 32, 1, fh);
 }

@@ -412,14 +412,13 @@ void TileMapRenderer::render(void* _sprites) {
 
 OBJECT_IMPL(CDrawTilemap, Component);
 OBJECT_ACCESSOR(CDrawTilemap, map, get_map, set_map);
+OBJECT_ACCESSOR(CDrawTilemap, map_filename, get_map_filename, set_map_filename);
 OBJECT_PROPERTY(CDrawTilemap, offset);
-OBJECT_PROPERTY(CDrawTilemap, w);
-OBJECT_PROPERTY(CDrawTilemap, h);
 OBJECT_PROPERTY(CDrawTilemap, layer);
 
 CDrawTilemap::CDrawTilemap(void* _go)
   : Component((GO*)_go, PRIORITY_SHOW), map(NULL),
-    w(300), h(300), layer(LAYER_BACKGROUND), map_dirty(1) {
+    layer(LAYER_BACKGROUND), map_dirty(1) {
   vector_zero(&offset);
   renderer = new TileMapRenderer(NULL);
 }
@@ -439,6 +438,16 @@ void CDrawTilemap::set_map(TileMap* _map) {
   map_dirty = 1;
 }
 
+const char* CDrawTilemap::get_map_filename() {
+  return "<not preserved>";
+}
+
+void CDrawTilemap::set_map_filename(const char* fname) {
+  if(map) delete map;
+  map = TileMap::fromFile(world, fname);
+  map_dirty = 1;
+}
+
 void CDrawTilemap::render(Camera* camera) {
   if(!map) return;
 
@@ -448,6 +457,9 @@ void CDrawTilemap::render(Camera* camera) {
     vector_add(&pos, &pos, &offset);
     map->x_bl = pos.x;
     map->y_bl = pos.y;
+
+    float w = map->width_IT * map->tile_width_IP;
+    float h = map->height_IT * map->tile_height_IP;
 
     BaseSprite sprites = map->spritelist(NULL, 0, 0, w, h);
     camera->addRenderable(layer, renderer, sprites);

@@ -66,6 +66,7 @@ public:
 };
 
 class TileMap;
+class World;
 
 typedef int(*LineCallback)(TileMap* map, const TilePosition& pos, void* udata);
 
@@ -75,10 +76,12 @@ public:
   int width_IT, height_IT;
   int tile_width_IP, tile_height_IP;
   float x_bl, y_bl;
-  int8_t* tiles;
+  unsigned short* tiles;
 
   TileMap(int width, int height, int tw, int th);
   ~TileMap();
+
+  static TileMap* fromFile(World* world, const char* fname);
 
   int index(const TilePosition& pos) const;
   int validindex(const TilePosition& pos) const;
@@ -110,7 +113,6 @@ typedef int(*FloodfillCallback)(CharImage img, int index, void* udata);
 int charimage_floodfill(CharImage out, CharImage input, const TilePosition& startpos,
                         int8_t value, FloodfillCallback callback, void* udata);
 
-void charimage_from_tilemap(CharImage img, TileMap* map);
 void charimage_init_sizeof_tilemap(CharImage img, TileMap* map);
 void charimage_crosscorrelate(CharImage out, CharImage big, CharImage small);
 int charimage_size(CharImage img);

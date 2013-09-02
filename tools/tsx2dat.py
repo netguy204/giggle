@@ -11,7 +11,7 @@ import sys
 import util
 import shutil
 
-def tileset2resources(tileset, basedir, outdir):
+def tileset2resources(tileset, basedir, projroot, outdir):
     tile_width = int(tileset.getAttribute('tilewidth'))
     tile_height = int(tileset.getAttribute('tileheight'))
     tile_spacing = int(util.attr(tileset, 'spacing', 0))
@@ -66,23 +66,28 @@ def tileset2resources(tileset, basedir, outdir):
         for ii in range(nentries):
             outnames.write("%d\n" % ii)
 
+    # revise base_outname such that it's relative to what we hope to
+    # the project root
+    base_outname = os.path.relpath(base_outname, projroot)
+
     return (base_outname, nentries)
 
-def tsx2resources(fname, outdir):
+def tsx2resources(fname, projroot, outdir):
     with open(fname) as f:
         dom = xml.dom.minidom.parse(f)
 
     basedir, _ = os.path.split(fname)
 
     tileset = dom.getElementsByTagName('tileset')[0]
-    return tileset2resources(tileset, basedir, outdir)
+    return tileset2resources(tileset, basedir, projroot, outdir)
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print 'usage: %s input resources_out' % (sys.argv[0])
+    if len(sys.argv) != 4:
+        print 'usage: %s input projroot resources_out' % (sys.argv[0])
         exit(1)
 
     fname = sys.argv[1]
-    outdir = sys.argv[2]
+    projroot = sys.argv[2]
+    outdir = sys.argv[3]
 
-    tsx2resources(fname, outdir)
+    tsx2resources(fname, projroot, outdir)
