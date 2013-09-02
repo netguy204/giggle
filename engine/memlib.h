@@ -23,6 +23,8 @@
 
 #include <stdlib.h>
 
+#include <new>
+
 class FixedAllocator {
  public:
   FixedAllocator(size_t obj_size, unsigned int n, const char* name);
@@ -60,6 +62,52 @@ StackAllocator stack_allocator_make(size_t stack_size,
 void* stack_allocator_alloc(StackAllocator allocator, size_t size);
 void stack_allocator_freeall(StackAllocator allocator);
 void stack_allocator_release(StackAllocator allocator);
+
+/*
+ * Allows a stack allocator to be used to back stl containers
+ */
+template<typename T>
+class StackAllocatorAdapter {
+public:
+  typedef T* pointer;
+  typedef const T* const_pointer;
+  typedef T& reference;
+  typedef const T& const_reference;
+  typedef T value_type;
+  typedef size_t size_type;
+  typedef ptrdiff_t difference_type;
+
+  StackAllocator allocator;
+
+  StackAllocatorAdapter(StackAllocator allocator)
+    : allocator(allocator) {
+  }
+
+  T* allocate(size_t n, const void* hint = 0) {
+    return (T*)stack_allocator_alloc(allocator, sizeof(T) * n);
+  }
+
+  void deallocate(T* p, size_t n) {
+    // deallocation isn't directly supported by stack allocator
+  }
+
+  void destroy(T* p) {
+    p->~T();
+  }
+
+  void construct(T* p, const T& val) {
+    new(p) T(val);
+  }
+
+  size_t max_size() const {
+    return (ptrdiff_t)((char*)allocator->stack_max - (char*)allocator->stack_top) / sizeof(T);
+  }
+
+  template<typename T1>
+  struct rebind {
+    typedef StackAllocatorAdapter<T1> other;
+  };
+};
 
 typedef struct CircularBuffer_ {
   int read_index;

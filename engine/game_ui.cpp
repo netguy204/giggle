@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#include <vector>
+
 OBJECT_IMPL(CDrawText, Component);
 OBJECT_PROPERTY(CDrawText, message);
 OBJECT_ACCESSOR(CDrawText, font, get_font, set_font);
@@ -167,16 +169,14 @@ static int is_whitespace(char ch) {
   return ch == ' ' || ch == '\n' || ch == '\t';
 }
 
-static HeapVector ws_output = NULL;
+static std::vector<char> ws_output;
 
 const char* Font::wrap_string(const char* input, int width) {
   const int max_chars = width / char_width('m');
   const char* ip;
   int xpos;
 
-  if(ws_output == NULL) {
-    ws_output = heapvector_make();
-  }
+  ws_output.clear();
 
   while(*input) {
     // count up next word
@@ -185,19 +185,19 @@ const char* Font::wrap_string(const char* input, int width) {
     // insert newline if needed
     if(xpos + (ip - input) > max_chars) {
       char newline = '\n';
-      HV_PUSH_VALUE(ws_output, char, newline);
+      ws_output.push_back(newline);
       xpos = 0;
     }
 
     // copy the word
     for(;input != ip; ++input) {
-      HV_PUSH_VALUE(ws_output, char, *input);
+      ws_output.push_back(*input);
       ++xpos;
     }
 
     // copy any spaces
     while(is_whitespace(*input)) {
-      HV_PUSH_VALUE(ws_output, char, *input);
+      ws_output.push_back(*input);
       if(*input == '\n') {
         xpos = 0;
       } else {
@@ -209,9 +209,8 @@ const char* Font::wrap_string(const char* input, int width) {
   }
 
   char eos = '\0';
-  HV_PUSH_VALUE(ws_output, char, eos);
-  heapvector_clear(ws_output);
-  return ws_output->data;
+  ws_output.push_back(eos);
+  return &ws_output[0];
 }
 OBJECT_METHOD(Font, wrap_string, const char*, (const char*, int));
 

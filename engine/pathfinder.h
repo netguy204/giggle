@@ -20,18 +20,97 @@
 #include "tiles.h"
 #include "heapvector.h"
 #include "memlib.h"
+#include "listlib.h"
 
-struct PathElement_;
+class PathElement {
+public:
+  PathElement* parent;
 
-typedef struct PathElement_ {
-  struct PathElement_* predecessor;
-  int score;
   int distance;
   int heuristic;
-  int index;
-} *PathElement;
+  int id;
 
-PathElement pathelement_make(StackAllocator allocator);
+  PathElement(PathElement* parent, int heuristic, int id);
+
+  inline int score() const {
+    return distance + heuristic;
+  }
+};
+
+inline int pathelement2_compare(PathElement* const& a, PathElement* const& b) {
+  if(a->score() < b->score()) return -1;
+  if(a->score() > b->score()) return 1;
+
+  if(a->heuristic < b->heuristic) return -1;
+  if(a->heuristic > b->heuristic) return 1;
+
+  return 0;
+}
+
+class Candidates {
+public:
+  BinaryHeap<PathElement*, StackAllocatorAdapter<PathElement*> > candidates;
+  std::vector<char, StackAllocatorAdapter<char> > visited_mask;
+  std::vector<PathElement, StackAllocatorAdapter<PathElement> > store;
+
+  inline Candidates(StackAllocator alloc)
+    : candidates(pathelement2_compare, StackAllocatorAdapter<PathElement*>(alloc)),
+      visited_mask(StackAllocatorAdapter<char>(alloc)),
+      store(StackAllocatorAdapter<PathElement>(alloc)) {
+  }
+
+  inline void add(const PathElement& el) {
+    if(visited_mask.size() <= el.id) {
+      visited_mask.resize(el.id + 1, false);
+    }
+    if(!visited_mask[el.id]) {
+      store.push_back(el);
+      candidates.insert(&store.back());
+    }
+  }
+
+  inline PathElement* top() {
+    return candidates.top();
+  }
+
+  inline void pop() {
+    candidates.pop();
+  }
+
+  inline void mark(PathElement* el) {
+    visited_mask[el->id] = true;
+  }
+
+  inline bool isMarked(PathElement* el) {
+    return visited_mask[el->id];
+  }
+
+  inline bool empty() const {
+    return candidates.empty();
+  }
+};
+
+class WorldPathfinderIfc {
+public:
+  virtual void candidatesFrom(Candidates& candidates, PathElement* element) = 0;
+};
+
+class TileMapPathfinder : public WorldPathfinderIfc {
+public:
+  TileMap map;
+
+  inline TileMapPathfinder(TileMap map)
+    : map(map) {
+  }
+
+  virtual void candidatesFrom(Candidates& candidates, PathElement* element);
+};
+
+
+PathElement* pathfinder_findpath2(WorldPathfinderIfc& map, int p1, int p2, Candidates& candidates);
+
+// functions that are specifically dealing with pathfinding over a TileMap
+int* pathfinder_findpath(TileMap map, int p1, int p2, int* count);
 
 typedef struct Path_ {
   struct TilePosition_ start;
@@ -64,29 +143,5 @@ void vector_pathinstance_begin(Vector begin, PathInstance pi, TileMap map);
 
 // find POINT on PATH closest to POS and return the DIST to it.
 int path_next_closest_point(Vector point, TileMap map, PathInstance pi, Vector pos, float* dist);
-
-/*
- * Distances:
- *      c1   c2   c3   c4   c5
- * c1   x    1    2    3    4
- * c2   x    x    5    6    7
- * c3   x    x    x    8    9
- * c4   x    x    x    x   10
- * c5   x    x    x    x    x
- *
- * 4 -> 6
- * 5 -> 10
- */
-
-typedef struct PairwisePaths_ {
-  int npaths;
-  int* lengths;
-  struct Path_ paths[0];
-} *PairwisePaths;
-
-int* pathfinder_findpath(TileMap map, int p1, int p2, int* count);
-PairwisePaths pathfinder_findpairwise(TileMap map, TilePosition positions, int npositions);
-PathElement pathfinder_findpath2(TileMap map, int p1, int p2, int8_t* visited,
-                                 int8_t key, BinaryHeap candidates, StackAllocator allocator);
 
 #endif

@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include <vector>
+
 TileMap tilemap_make(int width, int height, int nSpecs,
                      int tw, int th) {
   int num_tiles = width * height;
@@ -172,47 +174,46 @@ int charimage_floodfill(CharImage out, CharImage input, TilePosition startpos,
   int start = charimage_index(input, startpos->x, startpos->y);
   int kind = input->data[start];
   int row = input->w;
-  HeapVector stack = heapvector_make();
+  std::vector<int> stack;
 
   if(callback) callback(input, start, udata);
   memory[start] = value;
-  HV_PUSH_VALUE(stack, int, start);
+  stack.push_back(start);
   int count = 0;
 
 #define CAN_VISIT(pos) (((callback && callback(input, pos, udata)) || input->data[pos] == kind) \
                         && memory[pos] != value)
 
-  while(stack->data_bytes > 0) {
+  while(!stack.empty()) {
     count += 1;
 
-    int start = HV_POP_VALUE(stack, int);
+    int start = stack.back(); stack.pop_back();
 
     int above = start + row;
     if(above < max_index && CAN_VISIT(above)) {
       memory[above] = value;
-      HV_PUSH_VALUE(stack, int, above);
+      stack.push_back(above);
     }
 
     int below = start - row;
     if(below >= 0 && CAN_VISIT(below)) {
       memory[below] = value;
-      HV_PUSH_VALUE(stack, int, below);
+      stack.push_back(below);
     }
 
     int left = start - 1;
     if(left >= 0 && CAN_VISIT(left)) {
       memory[left] = value;
-      HV_PUSH_VALUE(stack, int, left);
+      stack.push_back(left);
     }
 
     int right = start + 1;
     if(right < max_index && CAN_VISIT(right)) {
       memory[right] = value;
-      HV_PUSH_VALUE(stack, int, right);
+      stack.push_back(right);
     }
   }
 
-  heapvector_free(stack);
   return count;
 }
 
@@ -274,16 +275,17 @@ void charimage_threshold(CharImage img, int8_t min) {
   }
 }
 
+
 int label_floodfill_callback(CharImage img, int index, void* udata) {
   int8_t value = img->data[index];
   if(value == 0) return 0;
 
-  HeapVector hv = (HeapVector)udata;
+  LabelEntries* hv = (LabelEntries*)udata;
 
   struct LabelEntry_ entry;
   tileposition_charimage(&entry.pos, img, index);
   entry.value = value;
-  HV_PUSH_VALUE(hv, struct LabelEntry_, entry);
+  hv->push_back(entry);
   return 1;
 }
 
@@ -291,25 +293,23 @@ void charimage_label(CharImage img, int8_t* working, LabelCallback callback, voi
   int size = charimage_size(img);
   memset(working, 0, size);
 
-  HeapVector hv = heapvector_make();
+  LabelEntries hv;
   struct CharImage_ out = { img->w, img->h, working };
 
   int ii;
   for(ii = 0; ii < size; ++ii) {
     // if this is a new region
     if(img->data[ii] != 0 && working[ii] == 0) {
-      heapvector_clear(hv);
+      hv.clear();
 
       struct TilePosition_ pos;
       tileposition_charimage(&pos, img, ii);
 
-      charimage_floodfill(&out, img, &pos, 1, label_floodfill_callback, hv);
+      charimage_floodfill(&out, img, &pos, 1, label_floodfill_callback, &hv);
 
-      callback((LabelEntry)hv->data, hv->data_bytes / sizeof(struct LabelEntry_), udata);
+      callback(hv, udata);
     }
   }
-
-  heapvector_free(hv);
 }
 
 void charimage_write(CharImage img, FILE* target) {

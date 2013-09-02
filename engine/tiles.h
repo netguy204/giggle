@@ -24,6 +24,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include <vector>
+
 /*
  * IT = "In Tiles"
  * IP = "In Pixels"
@@ -99,7 +101,9 @@ typedef struct LabelEntry_ {
   int8_t value;
 } *LabelEntry;
 
-typedef void(*LabelCallback)(LabelEntry entries, int nentries, void* udata);
+typedef std::vector<LabelEntry_> LabelEntries;
+
+typedef void(*LabelCallback)(LabelEntries& entries, void* udata);
 
 void charimage_label(CharImage img, int8_t* working, LabelCallback callback, void* udata);
 

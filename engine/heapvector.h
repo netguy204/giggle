@@ -20,37 +20,100 @@
 #include <stdlib.h>
 #include <memory.h>
 
-typedef struct HeapVector_ {
-  size_t data_bytes;
-  size_t alloc_bytes;
-  char *data;
-} *HeapVector;
+#include <vector>
 
-HeapVector heapvector_make();
-void heapvector_free(HeapVector hv);
-void heapvector_clear(HeapVector hv);
-void heapvector_push(HeapVector hv, const void * data, size_t size);
-void * heapvector_pop(HeapVector hv, size_t size);
+template<typename T, typename A = std::allocator<T> >
+class BinaryHeap {
+private:
 
-#define HV_PUSH_VALUE(hv, type, value) (heapvector_push(hv, &value, sizeof(type)))
-#define HV_POP_VALUE(hv, type) (*(type*)(heapvector_pop(hv, sizeof(type))))
-#define HV_SIZE(hv, type) (hv->data_bytes / sizeof(type))
-#define HV_GET(hv, type, index) ((type*)&(hv->data[index * sizeof(type)]))
+  void swap(int posa, int posb) {
+    T elm = heap[posa];
+    heap[posa] = heap[posb];
+    heap[posb] = elm;
+  }
 
-typedef int(*BinaryHeapComparison)(void* a, void* b);
+  int compare(int posa, int posb) {
+    return comparison(heap[posa], heap[posb]);
+  }
 
-typedef struct BinaryHeap_ {
-  struct HeapVector_ vector;
+
+public:
+  typedef int(*BinaryHeapComparison)(const T& a, const T& b);
+
+  std::vector<T, A> heap;
   BinaryHeapComparison comparison;
-  size_t element_size;
-  char* tmp_swap;
-} *BinaryHeap;
 
-BinaryHeap binaryheap_make(size_t elem_size, BinaryHeapComparison comparison);
-void binaryheap_free(BinaryHeap bh);
-int binaryheap_size(BinaryHeap bh);
-void binaryheap_insert(BinaryHeap bh, void* value);
-void* binaryheap_top(BinaryHeap bh);
-void binaryheap_remove_top(BinaryHeap bh);
+  inline BinaryHeap(BinaryHeapComparison comparison)
+    : comparison(comparison) {
+  }
+
+  inline BinaryHeap(BinaryHeapComparison comparison, const A& allocator)
+    : heap(allocator), comparison(comparison) {
+  }
+
+  void insert(const T& value) {
+    // inserts start at the bottom and bubble up
+    heap.push_back(value);
+
+    // positions are index + 1
+    int test_pos = heap.size();
+
+    while(test_pos != 1) {
+      int parent = test_pos / 2;
+      if(compare(test_pos-1, parent-1) <= 0) {
+        swap(test_pos-1, parent-1);
+        test_pos = parent;
+      } else {
+        // we're done!
+        break;
+      }
+    }
+  }
+
+  const T& top() {
+    return heap.front();
+  }
+
+  void pop() {
+    // remove the top by inserting the bottom element at the top and
+    // letting it bubble down
+    heap.front() = heap.back();
+    heap.pop_back();
+
+    size_t sz = size();
+
+    int v = 1;
+    int u;
+    while(1) {
+      u = v;
+
+      int left_child = 2 * u;
+      int right_child = left_child + 1;
+      if(right_child <= sz) {
+        // need to pick the smaller of our two children to swap with
+        if(compare(u-1, left_child-1) >= 0) v = left_child;
+        if(compare(v-1, right_child-1) >= 0) v = right_child;
+      } else if(left_child <= sz) {
+        // only have one child to consider
+        if(compare(u-1, left_child-1) >= 0) v = left_child;
+      }
+
+      if(u != v) {
+        swap(u-1, v-1);
+      } else {
+        break; // done!
+      }
+    }
+  }
+
+
+  size_t size() const {
+    return heap.size();
+  }
+
+  bool empty() const {
+    return heap.empty();
+  }
+};
 
 #endif
