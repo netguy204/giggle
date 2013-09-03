@@ -4,6 +4,7 @@ BIN=sdlmain
 SDL_BASE=$(PWD)/vender/SDL-1.2.15
 SDL_ROOT=$(PWD)/vender/SDL-root
 
+PLATFORM:=$(shell uname)
 CFLAGS+=-Ivender -I$(SDL_ROOT)/include
 
 EXE_OBJS+=glew.o
@@ -13,12 +14,17 @@ SDL_LIBS=$(SDL_ROOT)/bin/sdl-config
 SDL_LIBS_FLAGS=`$(SDL_LIBS) --static-libs`
 SDL_LIBS_CFLAGS=`$(SDL_LIBS) --cflags`
 
+SDL_DISABLES= --disable-video-fbcon --disable-video-directfb --disable-video-svga --disable-video-wscons --disable-video-vgl --disable-video-ps3 --disable-video-ps2gs --disable-video-x11-xme
+
+ifeq ($(PLATFORM), Darwin)
+	SDL_DISABLES+= --disable-video-x11
+endif
+
 $(SDL_LIBS):
-	cd $(SDL_BASE) && ./configure --prefix=$(SDL_ROOT) --disable-video-fbcon --disable-video-directfb --disable-video-svga --disable-video-wscons --disable-video-vgl --disable-video-ps3 --disable-video-ps2gs --disable-video-x11-xme && make install
+	cd $(SDL_BASE) && ./configure --prefix=$(SDL_ROOT) $(SDL_DISABLES) && make install
 
 SDL_INJECT=-include "SDL/SDL.h"
 
-PLATFORM:=$(shell uname)
 ifeq ($(PLATFORM), Darwin)
 	LDFLAGS+= -Fvender/ $(SDL_LIBS_FLAGS)
 	CFLAGS+= -DBUILD_SDL -mmacosx-version-min=10.5
