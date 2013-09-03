@@ -54,17 +54,33 @@ public:
 
 typedef std::vector<TileSpec> TileSpecs;
 
-class TilePosition {
-public:
+struct TilePosition {
   int x, y;
-
-  inline TilePosition() {
-  }
-
-  inline TilePosition(int x, int y)
-    : x(x), y(y) {
-  }
 };
+
+template<>
+inline void LCpush<TilePosition>(lua_State* L, TilePosition tp) {
+  lua_createtable(L, 4, 0);
+
+  lua_pushnumber(L, tp.x);
+  lua_rawseti(L, -2, 1);
+
+  lua_pushnumber(L, tp.y);
+  lua_rawseti(L, -2, 2);
+}
+
+template<>
+inline void LCcheck<TilePosition>(lua_State* L, TilePosition* tp, int pos) {
+  if(!lua_istable(L, pos)) luaL_argerror(L, pos, "expected TilePosition table");
+
+  lua_rawgeti(L, pos, 1);
+  tp->x = luaL_checknumber(L, -1);
+  lua_pop(L, 1);
+
+  lua_rawgeti(L, pos, 2);
+  tp->y = luaL_checknumber(L, -1);
+  lua_pop(L, 1);
+}
 
 class TileMap;
 class World;
@@ -95,6 +111,8 @@ public:
   void tileposition(TilePosition& pos, int index) const;
   int vector_index(Vector vector) const;
   void tilecenter(Vector v, int idx) const;
+  int tile_bitmask(TilePosition pos) const;
+  Rect_ tile_rect(TilePosition pos) const;
 
   int trace_line(const TilePosition& start, const TilePosition& end, LineCallback callback, void* udata);
 

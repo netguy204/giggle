@@ -187,7 +187,7 @@ Path* TileMapPathfinder::findpath(TileMap* map, Vector_ v1, Vector_ v2) {
   if(!path) return NULL;
 
   // otherwise, simplify the solution and build a path
-  pathfinder_simplifypath(map, path, &nelems);
+  //pathfinder_simplifypath(map, path, &nelems);
 
   Path* result_path = new Path(map);
   result_path->steps = path;

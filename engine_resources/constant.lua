@@ -59,4 +59,9 @@ M.DYNAMIC = 2
 M.GL_NEAREST = 0x2600
 M.GL_LINEAR = 0x2601
 
+-- tile bitmasks, keep in sync with tiles.h
+M.COLLIDABLE = 1
+M.VISIBLE = 2
+M.PASSABLE = 3
+
 return M

@@ -592,10 +592,18 @@ inline void LCcheck<Sound*>(lua_State* L, Sound** sound, int pos) {
 template<>
 inline void LCpush<Rect_>(lua_State* L, Rect_ rect) {
   lua_createtable(L, 4, 0);
-  lua_rawseti(L, 1, rect.minx);
-  lua_rawseti(L, 2, rect.miny);
-  lua_rawseti(L, 3, rect.maxx);
-  lua_rawseti(L, 4, rect.maxy);
+
+  lua_pushnumber(L, rect.minx);
+  lua_rawseti(L, -2, 1);
+
+  lua_pushnumber(L, rect.miny);
+  lua_rawseti(L, -2, 2);
+
+  lua_pushnumber(L, rect.maxx);
+  lua_rawseti(L, -2, 3);
+
+  lua_pushnumber(L, rect.maxy);
+  lua_rawseti(L, -2, 4);
 }
 
 template<>

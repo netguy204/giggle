@@ -27,6 +27,10 @@
 #include <vector>
 
 OBJECT_IMPL(TileMap, Object);
+OBJECT_PROPERTY(TileMap, width_IT);
+OBJECT_PROPERTY(TileMap, height_IT);
+OBJECT_PROPERTY(TileMap, tile_width_IP);
+OBJECT_PROPERTY(TileMap, tile_height_IP);
 
 TileMap::TileMap(void* empty) {
   fail_exit("invalid constructor");
@@ -116,6 +120,23 @@ void TileMap::tilecenter(Vector v, int idx) const {
   v->y = tile_height_IP * pos.y + tile_height_IP / 2;
 }
 
+int TileMap::tile_bitmask(TilePosition pos) const {
+  int idx = index(pos);
+  unsigned short tile = tiles[idx];
+  const TileSpec* spec = &tile_specs[tile];
+  return spec->bitmask;
+}
+OBJECT_METHOD(TileMap, tile_bitmask, int, (TilePosition));
+
+Rect_ TileMap::tile_rect(TilePosition pos) const {
+  Vector_ center;
+  Rect_ result;
+
+  tilecenter(&center, index(pos));
+  rect_centered(&result, &center, tile_width_IP, tile_height_IP);
+  return result;
+}
+OBJECT_METHOD(TileMap, tile_rect, Rect_, (TilePosition));
 
 int TileMap::trace_line(const TilePosition& start, const TilePosition& end,
                         LineCallback callback, void* udata) {
@@ -404,7 +425,7 @@ char ambient_occlusion(TileMap* map, int xx, int yy) {
     int oy = region[zz][1];
     int incr = region[zz][2];
 
-    TilePosition tpos(xx + ox, yy + oy);
+    TilePosition tpos = {xx + ox, yy + oy};
     if(!map->validindex(tpos)) {
       // the world edges are occluders
       result += incr;

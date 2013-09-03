@@ -4,10 +4,17 @@ local Rect = oo.class(oo.Object)
 local vector = require 'vector'
 
 function Rect:init(minx, miny, maxx, maxy)
-   self.minx = minx
-   self.miny = miny
-   self.maxx = maxx
-   self.maxy = maxy
+   if type(minx) == 'number' then
+      self.minx = minx
+      self.miny = miny
+      self.maxx = maxx
+      self.maxy = maxy
+   else
+      self.minx = minx[1]
+      self.miny = minx[2]
+      self.maxx = minx[3]
+      self.maxy = minx[4]
+   end
 end
 
 -- rect is minx, miny, maxx, maxy

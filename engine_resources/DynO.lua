@@ -110,7 +110,9 @@ function DynO:add_collider(parms)
    if not self.colliders then
       self.colliders = {}
    end
-   table.insert(self.colliders, go:add_component('CCollidable', parms))
+   local c = go:add_component('CCollidable', parms)
+   table.insert(self.colliders, c)
+   return c
 end
 
 function DynO:terminate()
