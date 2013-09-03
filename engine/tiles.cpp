@@ -26,9 +26,14 @@
 
 #include <vector>
 
+OBJECT_IMPL(TileMap, Object);
+
+TileMap::TileMap(void* empty) {
+  fail_exit("invalid constructor");
+}
+
 TileMap::TileMap(int width, int height, int tw, int th)
-  : width_IT(width), height_IT(height), tile_width_IP(tw), tile_height_IP(th),
-    x_bl(0), y_bl(0) {
+  : width_IT(width), height_IT(height), tile_width_IP(tw), tile_height_IP(th) {
   int num_tiles = width * height;
   tiles = (unsigned short*)malloc(num_tiles * sizeof(unsigned short));
 }
@@ -37,7 +42,7 @@ TileMap::~TileMap() {
   free(tiles);
 }
 
-TileMap* TileMap::fromFile(World* world, const char* fname) {
+TileMap* TileMap::from_file(World* world, const char* fname) {
   FILE* f = fopen(fname, "r");
   if(!f) fail_exit("couldn't open %s", fname);
 
@@ -52,20 +57,19 @@ TileMap* TileMap::fromFile(World* world, const char* fname) {
   // read and build the specs
   read_ushort(f, &nspecs);
   for(unsigned ii = 0; ii < nspecs; ++ii) {
+    TileSpec spec;
     char atlas[32];
     char entry[32];
 
     read_fstring(f, atlas);
     read_fstring(f, entry);
+    read_ushort(f, &spec.bitmask);
 
-    TileSpec spec;
     if(strlen(atlas) == 0) {
       // handle the "nothing image" case
       spec.image = NULL;
-      spec.bitmask = 0; // for now
     } else {
       spec.image = world->atlas_entry(atlas, entry);
-      spec.bitmask = TILESPEC_VISIBLE;
     }
 
     map->tile_specs.push_back(spec);
@@ -158,9 +162,10 @@ int clamp(int val, int min, int max) {
   return val;
 }
 
-BaseSprite TileMap::spritelist(BaseSprite spritelist, float x_bl, float y_bl, float wpx, float hpx) {
-  float mx_bl = x_bl - this->x_bl;
-  float my_bl = y_bl - this->y_bl;
+BaseSprite TileMap::spritelist(BaseSprite spritelist, float x_bl, float y_bl,
+                               float wpx, float hpx, Vector pos) {
+  float mx_bl = x_bl - pos->x;
+  float my_bl = y_bl - pos->y;
   float mx_tr = mx_bl + wpx;
   float my_tr = my_bl + hpx;
 
@@ -169,8 +174,8 @@ BaseSprite TileMap::spritelist(BaseSprite spritelist, float x_bl, float y_bl, fl
   int tx_tr = clamp(ceil(mx_tr / tile_width_IP), 0, width_IT);
   int ty_tr = clamp(ceil(my_tr / tile_height_IP), 0, height_IT);
 
-  int ox = (int)floorf((this->x_bl + tx_bl * tile_width_IP) - x_bl);
-  int oy = (int)floorf((this->y_bl + ty_bl * tile_height_IP) - y_bl);
+  int ox = (int)floorf((pos->x + tx_bl * tile_width_IP) - x_bl);
+  int oy = (int)floorf((pos->y + ty_bl * tile_height_IP) - y_bl);
 
   int xx, yy;
   for(yy = 0; yy < ty_tr - ty_bl; ++yy) {
@@ -195,6 +200,19 @@ BaseSprite TileMap::spritelist(BaseSprite spritelist, float x_bl, float y_bl, fl
 
   return spritelist;
 }
+
+OBJECT_IMPL(TileMapFactory, Object);
+
+TileMapFactory::TileMapFactory(void* _world)
+  : world((World*)_world) {
+}
+
+TileMap* TileMapFactory::from_file(const char* fname) {
+  TileMap* tm = TileMap::from_file(world, fname);
+  tm->reference_count = 0; // disown
+  return tm;
+}
+OBJECT_METHOD(TileMapFactory, from_file, TileMap*, (const char*));
 
 void tileposition_charimage(TilePosition& pos, CharImage img, int index) {
   pos.x = index % img->w;

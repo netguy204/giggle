@@ -273,102 +273,6 @@ void CDrawWallpaper::render(Camera* camera) {
   }
 }
 
-void LCcheck_spec(lua_State* L, int pos, TileSpec* spec) {
-  if(!lua_istable(L, pos)) {
-    luaL_error(L, "position %d does not contain a spec-table", pos);
-  }
-
-  lua_getfield(L, pos, "image");
-  LCcheck(L, &spec->image, -1);
-  lua_pop(L, 1);
-
-  lua_getfield(L, pos, "bitmask");
-  if(lua_isnil(L, -1)) {
-    spec->bitmask = TILESPEC_VISIBLE;
-  } else {
-    spec->bitmask = lua_tointeger(L, -1);
-  }
-  lua_pop(L, 1);
-}
-
-int LCtable_count(lua_State* L, int pos) {
-  // no reliable way to get the size of an array table so we just keep
-  // checking indicies till we get null
-  int index = 1;
-  lua_rawgeti(L, pos, index);
-  while(!lua_isnil(L, -1)) {
-    lua_pop(L, 1);
-    index++;
-    lua_rawgeti(L, pos, index);
-  }
-  lua_pop(L, 1);
-  return index - 1;
-}
-
-#define TM_GET_NUMBER(var, field)                                       \
-  lua_getfield(L, pos, field);                                          \
-  if(!lua_isnumber(L, -1)) {                                            \
-    luaL_error(L, "map-table must contain a `%s' field", field);        \
-  }                                                                     \
-  var = lua_tointeger(L, -1);                                           \
-  lua_pop(L, 1);
-
-template<>
-void LCcheck<TileMap*>(lua_State* L, TileMap** map, int pos) {
-  if(!lua_istable(L, pos)) {
-    luaL_error(L, "position %d does not contain a map-table", pos);
-  }
-
-  int width, height, nSpecs, tWidth, tHeight;
-  TM_GET_NUMBER(width, "width");
-  TM_GET_NUMBER(height, "height");
-  TM_GET_NUMBER(tWidth, "tile_width");
-  TM_GET_NUMBER(tHeight, "tile_height");
-
-  lua_getfield(L, pos, "specs");
-  if(!lua_istable(L, -1)) {
-    luaL_error(L, "map-table must contain a `specs' key (pos %d)", pos);
-  }
-
-  // we automatically create the nil spec entry
-  if(*map) {
-    delete *map;
-  }
-
-  *map = new TileMap(width, height, tWidth, tHeight);
-
-  nSpecs = LCtable_count(L, -1) + 1;
-  (*map)->tile_specs.push_back(TileSpec(NULL, 0));
-
-  // fill in the user defined specs
-  for(int speci = 1; speci < nSpecs; ++speci) {
-    lua_rawgeti(L, -1, speci);
-    TileSpec spec;
-    LCcheck_spec(L, -1, &spec);
-    (*map)->tile_specs.push_back(spec);
-    lua_pop(L, 1);
-  }
-  lua_pop(L, 1); // specs
-
-  // fill in the tiles
-  lua_getfield(L, pos, "tiles");
-  const int nTiles = width * height;
-  for(int ii = 1; ii <= nTiles; ++ii) {
-    lua_rawgeti(L, -1, ii);
-    if(!lua_isnumber(L, -1)) {
-      luaL_error(L, "all values in `tiles' array must be integers");
-    }
-    (*map)->tiles[ii - 1] = lua_tointeger(L, -1);
-    lua_pop(L, 1);
-  }
-  lua_pop(L, 1); // tiles
-}
-
-template<>
-inline void LCpush<TileMap*>(lua_State* L, TileMap* m) {
-  luaL_error(L, "Don't know how to push TileMap");
-}
-
 OBJECT_IMPL(TileMapRenderer, Renderable);
 
 TileMapRenderer::TileMapRenderer(void *empty)
@@ -424,7 +328,7 @@ CDrawTilemap::CDrawTilemap(void* _go)
 }
 
 CDrawTilemap::~CDrawTilemap() {
-  if(map) delete map;
+  if(map) map->release();
   renderer->destroy();
 }
 
@@ -433,8 +337,9 @@ TileMap* CDrawTilemap::get_map() {
 }
 
 void CDrawTilemap::set_map(TileMap* _map) {
-  if(map) delete map;
+  if(map) map->release();
   map = _map;
+  map->retain();
   map_dirty = 1;
 }
 
@@ -443,8 +348,8 @@ const char* CDrawTilemap::get_map_filename() {
 }
 
 void CDrawTilemap::set_map_filename(const char* fname) {
-  if(map) delete map;
-  map = TileMap::fromFile(world, fname);
+  if(map) map->release();
+  map = TileMap::from_file(world, fname);
   map_dirty = 1;
 }
 
@@ -455,13 +360,11 @@ void CDrawTilemap::render(Camera* camera) {
     Vector_ pos;
     go->pos(&pos);
     vector_add(&pos, &pos, &offset);
-    map->x_bl = pos.x;
-    map->y_bl = pos.y;
 
     float w = map->width_IT * map->tile_width_IP;
     float h = map->height_IT * map->tile_height_IP;
 
-    BaseSprite sprites = map->spritelist(NULL, 0, 0, w, h);
+    BaseSprite sprites = map->spritelist(NULL, 0, 0, w, h, &pos);
     camera->addRenderable(layer, renderer, sprites);
     map_dirty = 0;
   } else {

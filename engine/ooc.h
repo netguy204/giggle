@@ -434,6 +434,13 @@ class MethodInfo {
             RETURNS(RTYPE, ARGS, METHOD))                               \
   }
 
+#define OBJECT_LUA_METHOD(CLASS, METHOD)          \
+  OBJECT_BASE_METHOD(CLASS, METHOD, void, ()) {   \
+    CLASS* obj;                                   \
+    LCcheck(L, &obj, pos);                        \
+    return obj->METHOD(L, pos);                   \
+  }
+
 #define DEFERRED_OBJECT_METHOD(TARGET, CLASS, METHOD, RTYPE, ARGS)      \
   OBJECT_BASE_METHOD(CLASS, METHOD, RTYPE, ARGS) {                      \
     TARGET(LCframebind(L, pos));                                        \

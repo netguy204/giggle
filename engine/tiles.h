@@ -20,6 +20,7 @@
 #include "spriteatlas.h"
 #include "testlib.h"
 #include "vector.h"
+#include "ooc.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -40,7 +41,7 @@ enum TileSpecMaskEntries {
 class TileSpec {
 public:
   SpriteAtlasEntry image;
-  int bitmask;
+  unsigned short bitmask;
 
   inline TileSpec()
     : image(NULL), bitmask(0) {
@@ -70,18 +71,22 @@ class World;
 
 typedef int(*LineCallback)(TileMap* map, const TilePosition& pos, void* udata);
 
-class TileMap {
+class TileMap : public Object {
 public:
+  OBJECT_PROTO(TileMap);
+
   TileSpecs tile_specs;
   int width_IT, height_IT;
   int tile_width_IP, tile_height_IP;
-  float x_bl, y_bl;
   unsigned short* tiles;
+
+  // fake mandatory constructor
+  TileMap(void* obj);
 
   TileMap(int width, int height, int tw, int th);
   ~TileMap();
 
-  static TileMap* fromFile(World* world, const char* fname);
+  static TileMap* from_file(World* world, const char* fname);
 
   int index(const TilePosition& pos) const;
   int validindex(const TilePosition& pos) const;
@@ -93,7 +98,18 @@ public:
 
   int trace_line(const TilePosition& start, const TilePosition& end, LineCallback callback, void* udata);
 
-  BaseSprite spritelist(BaseSprite list, float x_bl, float y_bl, float wpx, float hpx);
+  BaseSprite spritelist(BaseSprite list, float x_bl, float y_bl, float wpx, float hpx, Vector pos);
+};
+
+class TileMapFactory : public Object {
+public:
+  OBJECT_PROTO(TileMapFactory);
+
+  TileMapFactory(void* _world);
+
+  TileMap* from_file(const char* fname);
+
+  World* world;
 };
 
 typedef struct CharImage_ {

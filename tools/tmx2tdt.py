@@ -8,6 +8,15 @@ import util
 import struct
 import tsx2dat
 
+# bitmask properties. This must be kept in sync with the enum in
+# tiles.h. This is a bitmask so the values must always be powers of
+# two
+bitmask_properties = {
+    'collidable': 1,
+    'visible': 2,
+    'passable': 4
+}
+
 def elements(dom, name):
     return dom.getElementsByTagName(name)
 
@@ -53,7 +62,10 @@ def tileid2tileset(tilesets, tileid):
                 match = tileset
 
     if match:
-        return (tileid - match[0], match[1][0])
+        tid = tileid - match[0]
+        name = match[1][0]
+        props = match[1][2][tid]
+        return (tid, name, props)
 
     if tileid == 0:
         # zero is the 'nothing' case and we'll generate a spec for it
@@ -127,18 +139,47 @@ if __name__ == '__main__':
 
             # write out the tilespecs, empty strings correspond to
             # empty tiles since the input data can be sparse but the
-            # output data must be dense
+            # output data must be dense. Also we generate the bitmask
+            # for the spec here based on the properties encoded in the
+            # tilemap
+            def get_properties(idx):
+                if idx in tileid2entity:
+                    return tileid2entity[idx][2]
+
+            def get_property(idx, name):
+                props = get_properties(idx)
+                if props and (name in props): return props[name]
+                return None
+
+            def is_property_set(idx, name):
+                prop = get_property(idx, name)
+                return prop and prop == 'true'
+
             nspecs = max(tileid2entity.keys()) + 1
             util.write_ushort(f, nspecs)
+
             for ii in range(nspecs):
+                #print ii, get_properties(ii)
+
+                bitmask = 0
                 if ii in tileid2entity:
                     spec = tileid2entity[ii]
                     util.write_fstring(f, spec[1].encode('ascii'))
                     util.write_fstring(f, "%d" % spec[0])
+
+                    # seems like an obvious default
+                    bitmask = bitmask_properties['visible']
+                    for k,v in bitmask_properties.items():
+                        if is_property_set(ii, k):
+                            #print 'setting %s on tile %d' % (k, ii)
+                            bitmask |= v
                 else:
                     # fill in a sparse gap
                     util.write_fstring(f, '')
                     util.write_fstring(f, '')
+
+                # write the bitmask last
+                util.write_ushort(f, bitmask)
 
             # finally, write out the map data
             util.write_ushorts(f, layer[3])

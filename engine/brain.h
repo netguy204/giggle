@@ -9,6 +9,7 @@ class Brain : public Object {
  public:
   OBJECT_PROTO(Brain);
   Brain(void *_world);
+  virtual ~Brain();
 
   virtual void update(GO* go, float dt);
   SteeringParams params;
@@ -55,6 +56,22 @@ DEF_STEERING_BRAIN(PursuitBrain)
 DEF_STEERING_BRAIN(ArrivalBrain)
   Vector_ tgt;
   float slowing_distance;
+};
+
+class FollowPathBrain : public Brain {
+public:
+  OBJECT_PROTO(FollowPathBrain);
+
+  FollowPathBrain(void* _world);
+  virtual ~FollowPathBrain();
+
+  virtual void update(GO* go, float dt);
+
+  Path* get_path();
+  void set_path(Path* path);
+
+  PathInstance* pi;
+  float max_offset;
 };
 
 #endif

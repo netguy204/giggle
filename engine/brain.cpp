@@ -8,6 +8,9 @@ Steering Brain::steering(NULL);
 Brain::Brain(void* _world) {
 }
 
+Brain::~Brain() {
+}
+
 void Brain::update(GO* go, float dt) {
 }
 
@@ -115,3 +118,36 @@ IMPL_STEERING_BRAIN(ArrivalBrain) {
 }
 OBJECT_PROPERTY(ArrivalBrain, tgt);
 OBJECT_PROPERTY(ArrivalBrain, slowing_distance);
+
+OBJECT_IMPL(FollowPathBrain, Brain);
+OBJECT_ACCESSOR(FollowPathBrain, path, get_path, set_path);
+OBJECT_PROPERTY(FollowPathBrain, max_offset);
+
+FollowPathBrain::FollowPathBrain(void* _world)
+  : Brain(_world), pi(NULL), max_offset(5) {
+}
+
+FollowPathBrain::~FollowPathBrain() {
+  if(pi) pi->release();
+}
+
+Path* FollowPathBrain::get_path() {
+  if(pi) return pi->path;
+  return NULL;
+}
+
+void FollowPathBrain::set_path(Path* path) {
+  if(pi) pi->release();
+  pi = new PathInstance(path);
+}
+
+void FollowPathBrain::update(GO* go, float dt) {
+  Vector_ pos, vel;
+  go->pos(&pos);
+  go->vel(&vel);
+
+  steering.begin(params);
+  steering.followpath(pi, pos, vel, max_offset);
+  steering.complete();
+  go->apply_force(steering.force);
+}

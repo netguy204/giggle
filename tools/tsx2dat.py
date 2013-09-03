@@ -35,8 +35,42 @@ def tileset2resources(tileset, basedir, projroot, outdir):
     width_in_tiles = int(round((img_width - 2*margin) / (tile_width)))
     height_in_tiles = int(round((img_height - 2*margin) / (tile_height)))
 
-    nentries = width_in_tiles * height_in_tiles
+    # grab terrain properties. these will be the defaults for tile
+    # properties
+    terrain_properties = {}
+    terraintypes = tileset.getElementsByTagName('terraintypes')
+    if terraintypes:
+        terrains = terraintypes[0].getElementsByTagName('terrain')
+        for ii in range(len(terrains)):
+            tprops = {}
+            terrain_properties[ii] = tprops
 
+            terrain = terrains[ii]
+            properties = terrain.getElementsByTagName('properties')
+            if properties:
+                for prop in properties[0].getElementsByTagName('property'):
+                    tprops[prop.getAttribute('name')] = prop.getAttribute('value')
+
+    # grab any tile properties that exist
+    tile_properties = {}
+    for tile in tileset.getElementsByTagName('tile'):
+        tid = int(tile.getAttribute('id'))
+        props = {}
+        tile_properties[tid] = props
+
+        # first grab the inherited terrain properties
+        terrain = tile.getAttribute('terrain') or ''
+        for terrain_id in terrain.split(','):
+            props.update(terrain_properties[int(terrain_id)])
+
+        # now merge in the tile specific properties
+        properties = tile.getElementsByTagName('properties')
+        if not properties: continue
+
+        for prop in properties[0].getElementsByTagName('property'):
+            props[prop.getAttribute('name')] = prop.getAttribute('value')
+
+    nentries = width_in_tiles * height_in_tiles
     with open(dat_outname, "wb") as outdat:
         util.write_short(outdat, nentries)
 
@@ -70,7 +104,7 @@ def tileset2resources(tileset, basedir, projroot, outdir):
     # the project root
     base_outname = os.path.relpath(base_outname, projroot)
 
-    return (base_outname, nentries)
+    return (base_outname, nentries, tile_properties)
 
 def tsx2resources(fname, projroot, outdir):
     with open(fname) as f:

@@ -95,11 +95,11 @@ public:
   virtual void candidatesFrom(Candidates& candidates, PathElement* element) = 0;
 };
 
-class TileMapPathfinder : public WorldPathfinderIfc {
+class TileMapPathfinderIfc : public WorldPathfinderIfc {
 public:
   TileMap* map;
 
-  inline TileMapPathfinder(TileMap* map)
+  inline TileMapPathfinderIfc(TileMap* map)
     : map(map) {
   }
 
@@ -109,39 +109,61 @@ public:
 
 PathElement* pathfinder_findpath2(WorldPathfinderIfc& map, int p1, int p2, Candidates& candidates);
 
-// functions that are specifically dealing with pathfinding over a TileMap
-int* pathfinder_findpath(TileMap* map, int p1, int p2, int* count);
+class Path : public Object {
+public:
+  OBJECT_PROTO(Path);
 
-typedef struct Path_ {
+  Path(void* _map);
+  ~Path();
+
+  TileMap* map;
   TilePosition start;
   TilePosition end;
   int* steps;
   int nsteps;
-} *Path;
 
-void vector_path_direction(Vector dir, TileMap* map, Path path, int test0, int pathdir);
-int path_end_idx(Path path, int pathdir);
-int path_begin_idx(Path path, int pathdir);
-void vector_path_end(Vector end, Path path, TileMap* map, int pathdir);
-void vector_path_begin(Vector begin, Path path, TileMap* map, int pathdir);
+  Vector_ step(int idx);
+};
 
-typedef struct PathInstance_ {
-  Path path;
+// functions that are specifically dealing with pathfinding over a TileMap
+class TileMapPathfinder : public Object {
+public:
+  OBJECT_PROTO(TileMapPathfinder);
+
+  TileMapPathfinder(void* empty);
+
+  Path* findpath(TileMap* map, Vector_ v1, Vector_ v2);
+};
+
+void vector_path_direction(Vector dir, Path* path, int test0, int pathdir);
+int path_end_idx(Path* path, int pathdir);
+int path_begin_idx(Path* path, int pathdir);
+void vector_path_end(Vector end, Path* path, int pathdir);
+void vector_path_begin(Vector begin, Path* path, int pathdir);
+
+class PathInstance : public Object {
+public:
+  OBJECT_PROTO(PathInstance);
+
+  PathInstance(void* _path);
+  ~PathInstance();
+
+  Path* path;
   int pathdir;
   int pathpos;
   int max_skip_range;
-} *PathInstance;
+};
 
 // -1 on fall off the path
-int path_next_idx(Path path, int current_idx, int pathdir);
-int pathinstance_next_idx(PathInstance pi);
-void vector_pathinstance_direction(Vector dir, TileMap* map, PathInstance pi);
-int pathinstance_end_idx(PathInstance pi);
-int pathinstance_begin_idx(PathInstance pi);
-void vector_pathinstance_end(Vector end, PathInstance pi, TileMap* map);
-void vector_pathinstance_begin(Vector begin, PathInstance pi, TileMap* map);
+int path_next_idx(Path* path, int current_idx, int pathdir);
+int pathinstance_next_idx(PathInstance* pi);
+void vector_pathinstance_direction(Vector dir, PathInstance* pi);
+int pathinstance_end_idx(PathInstance* pi);
+int pathinstance_begin_idx(PathInstance* pi);
+void vector_pathinstance_end(Vector end, PathInstance* pi);
+void vector_pathinstance_begin(Vector begin, PathInstance* pi);
 
 // find POINT on PATH closest to POS and return the DIST to it.
-int path_next_closest_point(Vector point, TileMap* map, PathInstance pi, Vector pos, float* dist);
+int path_next_closest_point(Vector point, PathInstance* pi, Vector pos, float* dist);
 
 #endif

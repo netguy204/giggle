@@ -142,26 +142,29 @@ void Steering::offsetarrival(Vector_ tgt, Vector_ src, Vector_ src_vel,
 }
 OBJECT_METHOD(Steering, offsetarrival, void, (Vector_, Vector_, Vector_, float, float))
 
-int Steering::followpath(TileMap* map, PathInstance pi, Vector_ src, Vector_ src_vel,
-                         float max_offset) {
+void Steering::followpath(PathInstance* pi, Vector_ src, Vector_ src_vel, float max_offset) {
   struct Vector_ projobj;
   struct Vector_ src_vel_offset;
   vector_scale(&src_vel_offset, &src_vel, params.application_time);
   vector_add(&projobj, &src, &src_vel_offset);
 
-  // find the closest point on the path
-  struct Vector_ tgt;
-  float dist;
-  int step = path_next_closest_point(&tgt, map, pi, &projobj, &dist);
+  // are we within max_offset of our destination point?
+  TileMap* map = pi->path->map;
+  Vector_ tgt;
+  map->tilecenter(&tgt, pi->path->steps[pi->pathpos]);
 
-  // close enough?
-  if(dist <= max_offset) {
-    return step;
+  if(vector_dist(&tgt, &src) < max_offset) {
+    // increment our destination unless we're already at the end of
+    // the path
+    int next_idx = pi->pathpos + pi->pathdir;
+    if(next_idx < 0) next_idx = 0;
+    if(next_idx >= pi->path->nsteps) next_idx = pi->path->nsteps - 1;
+    pi->pathpos = next_idx;
+    map->tilecenter(&tgt, pi->path->steps[pi->pathpos]);
   }
 
-  // steer towards the point
-  seek(tgt, src, src_vel);
-  return step;
+  // now use arrival to get to the next target
+  arrival(tgt, src, src_vel, max_offset);
 }
 
 void Steering::avoidance(SteeringObstacle* objs, int nobjs, Vector_ src, Vector_ src_vel,
