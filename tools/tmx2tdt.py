@@ -75,6 +75,17 @@ def tileid2tileset(tilesets, tileid):
     print 'couldnt file tileid %d in tilesets' % tileid
     print tilesets
 
+def tolua(obj):
+    if isinstance(obj, dict):
+        return '{' + ", ".join([ '[%s] = %s' % (tolua(k), tolua(v)) for k, v in obj.items() ]) + '}'
+    if isinstance(obj, basestring):
+        try:
+            return int(obj)
+        except:
+            return repr(obj.encode('ascii'))
+
+    else: return repr(obj)
+
 if __name__ == '__main__':
     fname = sys.argv[1]
     projroot = sys.argv[2]
@@ -101,9 +112,7 @@ if __name__ == '__main__':
 
     for ii in range(len(layers)):
         layer = layers[ii]
-
         data = element(layer, 'data')
-
 
         flipped_tiles = tmxdata(data)
 
@@ -125,8 +134,7 @@ if __name__ == '__main__':
                 if tileset: tileid2entity[tileid] = tileset
 
 
-    for ii in range(len(layers)):
-        layer = layers[ii]
+    for layer in layers:
         layername = os.path.join(outdir, "%s_%s.tdt" % (mapname, layer[0]))
         print 'writing %s' % layername
 
@@ -183,3 +191,14 @@ if __name__ == '__main__':
 
             # finally, write out the map data
             util.write_ushorts(f, layer[3])
+
+    for group in elements(mapdom, 'objectgroup'):
+        name = util.attr(group, 'name')
+        groupname = os.path.join(outdir, "%s_%s.lua" % (mapname, name))
+
+        data = {}
+        for obj in elements(group, 'object'):
+            data[util.attr(obj, 'name')] = dict(obj.attributes.items())
+
+        with open(groupname, 'w') as f:
+            f.write('return ' + tolua(data) + "\n")

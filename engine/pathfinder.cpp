@@ -137,6 +137,7 @@ Path::Path(void* _map)
 
 Path::~Path() {
   map->release();
+  free(steps);
 }
 
 Vector_ Path::step(int idx) {
