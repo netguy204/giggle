@@ -53,4 +53,17 @@ function M.angle(a)
    return math.atan2(a[2], a[1])
 end
 
+-- util depends on us so we can't pull this in from there like we'd
+-- prefer
+local function round(x)
+   if x%2 ~= 0.5 then
+      return math.floor(x+0.5)
+   end
+   return x-0.5
+end
+
+function M.round(v)
+   return M.new({round(v[1]), round(v[2])})
+end
+
 return M
