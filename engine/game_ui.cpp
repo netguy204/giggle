@@ -157,13 +157,31 @@ int Font::line_height() {
 OBJECT_METHOD(Font, line_height, int, ());
 
 int Font::string_width(const char* string) {
+  int max_width = 0;
   int width = 0;
   for(; *string; ++string) {
-    width += char_lead(*string) + char_width(*string);
+    if(*string == '\n') {
+      max_width = MAX(max_width, width);
+      width = 0;
+    } else {
+      width += char_lead(*string) + char_width(*string);
+    }
   }
-  return width;
+
+  return MAX(max_width, width);
 }
 OBJECT_METHOD(Font, string_width, int, (const char*));
+
+int Font::string_height(const char* string) {
+  int height = line_height();
+  for(; *string; ++string) {
+    if(*string == '\n') {
+      height += line_height();
+    }
+  }
+  return height;
+}
+OBJECT_METHOD(Font, string_height, int, (const char*));
 
 static int is_whitespace(char ch) {
   return ch == ' ' || ch == '\n' || ch == '\t';

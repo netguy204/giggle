@@ -37,6 +37,8 @@ class Font : public Object {
 
   int line_height();
   int string_width(const char* string);
+  int string_height(const char* string);
+
   SpriteAtlasEntry entry(char ch);
 
   int character_separation;

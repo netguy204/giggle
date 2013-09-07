@@ -32,6 +32,13 @@ function Rect:shift(off)
                self.maxy + off[2])
 end
 
+function Rect:expand(dims)
+   return Rect(self.minx - dims[1]/2,
+               self.miny - dims[2]/2,
+               self.maxx + dims[1]/2,
+               self.maxy + dims[2]/2)
+end
+
 function Rect:center()
    return vector.new({(self.minx + self.maxx) / 2,
                       (self.miny + self.maxy) / 2})
