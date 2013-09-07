@@ -22,24 +22,6 @@
 
 void listlib_init();
 
-typedef struct LLNode_* LLNode;
-
-struct LLNode_ {
-  LLNode next;
-};
-
-int ll_count(LLNode node);
-
-typedef struct LLEntry_ {
-  struct LLNode_ node;
-  void* data;
-} *LLEntry;
-
-void llentry_add(LLNode* head, void* value);
-void* llentry_nextvalue(LLNode* current);
-void llentry_remove(LLNode* head, void* value);
-void llentry_free(LLEntry entry);
-
 typedef struct DLLNode_ *DLLNode;
 
 struct DLLNode_ {

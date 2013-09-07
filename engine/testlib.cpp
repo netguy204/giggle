@@ -59,7 +59,6 @@ void renderer_await_startup(void* empty) {
 
 void testlib_init() {
   random_init(&rgen, 1234);
-  listlib_init();
   input_init();
   clock_allocator = new FixedAllocator(sizeof(struct Clock_), MAX_NUM_CLOCKS, "clock_allocator");
   image_resource_allocator = new FixedAllocator(sizeof(struct ImageResource_), MAX_NUM_IMAGES, "image_resource_allocator");
