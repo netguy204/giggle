@@ -52,6 +52,7 @@ enum MessageKind {
   MESSAGE_TIMER_EXPIRED,  // args (payload)
   MESSAGE_EXPLOSION_NEARBY,
   MESSAGE_PARENT_CHANGE,
+  MESSAGE_BRAIN_COMPLETE
 };
 
 struct LString {

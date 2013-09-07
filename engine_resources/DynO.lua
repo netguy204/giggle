@@ -58,7 +58,7 @@ function DynO:init(pos)
    if self.update then
       params.update_thread = util.fthread(self:bind('update'))
    end
-   if self.started_colliding_with or self.stopped_colliding_with then
+   if self.started_colliding_with or self.stopped_colliding_with or self.message ~= DynO.message then
       params.message_thread = util.fthread(self:bind('message'))
    end
    if params.update_thread or params.message_thread then
@@ -83,10 +83,14 @@ function DynO:message()
       for ii, msg in ipairs(msgs) do
          local obj = DynO.find(msg.source)
          if obj then
-            if msg.content == 'BEGIN' and self.started_colliding_with then
-               self:started_colliding_with(obj)
-            elseif msg.content == 'END' and self.stopped_colliding_with then
-               self:stopped_colliding_with(obj)
+            if msg.content == 'BEGIN' then
+               if self.started_colliding_with then
+                  self:started_colliding_with(obj)
+               end
+            elseif msg.content == 'END' then
+               if self.stopped_colliding_with then
+                  self:stopped_colliding_with(obj)
+               end
             else
                print('unexpected message contents: ' .. msg.content)
             end

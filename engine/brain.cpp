@@ -32,7 +32,7 @@ void CBrain::update(float dt) {
 void CBrain::set_brain(Brain* _brain) {
   if(brain) brain->release();
   brain = _brain;
-  brain->retain();
+  if(brain) brain->retain();
 }
 
 Brain* CBrain::get_brain() {
@@ -150,4 +150,8 @@ void FollowPathBrain::update(GO* go, float dt) {
   steering.followpath(pi, pos, vel, max_offset);
   steering.complete();
   go->apply_force(steering.force);
+
+  if(pi->pathpos == (pi->path->nsteps - 1) && vector_mag(&vel) < 1) {
+    go->send_message(go->create_message(MESSAGE_BRAIN_COMPLETE, NULL, 0));
+  }
 }
