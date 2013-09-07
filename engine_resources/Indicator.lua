@@ -17,10 +17,11 @@ function Indicator.terminate_all()
    Indicator.with_all(fn)
 end
 
-function Indicator:init(font, pos, color)
+function Indicator:init(font, pos, color, go)
    self.font = font
    self.pos = pos
-   self.text = stage:add_component('CDrawText', {font=font, color=color})
+   go = go or stage
+   self.text = go:add_component('CDrawText', {font=font, color=color})
    Indicator.reg:register(self, self)
 end
 

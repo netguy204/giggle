@@ -58,7 +58,7 @@ function DynO:init(pos)
    if self.update then
       params.update_thread = util.fthread(self:bind('update'))
    end
-   if self.colliding_with then
+   if self.started_colliding_with or self.stopped_colliding_with then
       params.message_thread = util.fthread(self:bind('message'))
    end
    if params.update_thread or params.message_thread then
@@ -83,22 +83,16 @@ function DynO:message()
       for ii, msg in ipairs(msgs) do
          local obj = DynO.find(msg.source)
          if obj then
-            self:colliding_with(obj)
+            if msg.content == 'BEGIN' and self.started_colliding_with then
+               self:started_colliding_with(obj)
+            elseif msg.content == 'END' and self.stopped_colliding_with then
+               self:stopped_colliding_with(obj)
+            else
+               print('unexpected message contents: ' .. msg.content)
+            end
          end
       end
    end
-end
-
-function DynO:add_sensor(parms)
-   local go = self:go()
-   if not go then
-      return
-   end
-
-   if not self.sensors then
-      self.sensors = {}
-   end
-   table.insert(self.sensors, go:add_component('CSensor', parms))
 end
 
 function DynO:add_collider(parms)
@@ -110,7 +104,7 @@ function DynO:add_collider(parms)
    if not self.colliders then
       self.colliders = {}
    end
-   local c = go:add_component('CCollidable', parms)
+   local c = go:add_component('CSensor', parms)
    table.insert(self.colliders, c)
    return c
 end

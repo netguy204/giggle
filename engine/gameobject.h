@@ -174,16 +174,6 @@ class Fixture {
   b2Fixture* fixture;
 };
 
-class CCollidable : public Component {
- public:
-  OBJECT_PROTO(CCollidable);
-
-  CCollidable(void* go);
-  virtual ~CCollidable();
-
-  Fixture fixture;
-};
-
 class CSensor : public Component {
  public:
   OBJECT_PROTO(CSensor);
@@ -191,6 +181,9 @@ class CSensor : public Component {
   CSensor(void* go);
   virtual ~CSensor();
   virtual void update(float dt);
+
+  void beginContact(GO* other);
+  void endContact(GO* other);
 
   Fixture fixture;
   int kind;
@@ -367,6 +360,7 @@ public:
 };
 
 class Compositor;
+class GlobalContactListener;
 
 class World : public Object {
  public:
@@ -410,6 +404,10 @@ class World : public Object {
 
   lua_State* L;
   b2World bWorld;
+
+  GlobalContactListener* contact_listener;
+  void register_fixture(b2Fixture* fixture, CSensor* sensor);
+  void unregister_fixture(b2Fixture* fixture);
 
   void enqueue_command(CommandFunction fn, void* data);
   void evaluate_commands();
@@ -776,6 +774,7 @@ inline void LCpush<Fixture>(lua_State* L, Fixture fixture) {
 template<>
 inline void LCcheck<Fixture>(lua_State* L, Fixture* fixture, int pos) {
   if(fixture->fixture) {
+    fixture->comp->go->world->unregister_fixture(fixture->fixture);
     fixture->fixture->GetBody()->DestroyFixture(fixture->fixture);
   }
 
@@ -906,6 +905,7 @@ inline void LCcheck<Fixture>(lua_State* L, Fixture* fixture, int pos) {
   // build the fixture
   fixture->fixture = fixture->comp->go->body->CreateFixture(&fixtureDef);
   fixture->fixture->SetUserData(fixture->comp);
+  fixture->comp->go->world->register_fixture(fixture->fixture, (CSensor*)fixture->comp);
 }
 
 #endif

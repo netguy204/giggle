@@ -543,19 +543,6 @@ Fixture::Fixture(Component* comp)
   : comp(comp), fixture(NULL) {
 }
 
-OBJECT_IMPL(CCollidable, Component);
-OBJECT_PROPERTY(CCollidable, fixture);
-
-CCollidable::CCollidable(void* go)
-  : Component((GO*)go, PRIORITY_LEAST), fixture(this) {
-}
-
-CCollidable::~CCollidable() {
-  if(fixture.fixture) {
-    go->body->DestroyFixture(fixture.fixture);
-  }
-}
-
 OBJECT_IMPL(CSensor, Component);
 OBJECT_PROPERTY(CSensor, fixture);
 OBJECT_PROPERTY(CSensor, kind);
@@ -572,23 +559,16 @@ CSensor::~CSensor() {
 }
 
 void CSensor::update(float dt) {
-  b2ContactEdge* node = go->body->GetContactList();
+}
 
-  while(node) {
-    if(node->contact->IsTouching()) {
-      GO* other = NULL;
-      if(node->contact->GetFixtureA() == fixture.fixture) {
-        other = (GO*)node->contact->GetFixtureB()->GetBody()->GetUserData();
-      } else if(node->contact->GetFixtureB() == fixture.fixture) {
-        other = (GO*)node->contact->GetFixtureA()->GetBody()->GetUserData();
-      }
+void CSensor::beginContact(GO* other) {
+  const char* msg = "BEGIN";
+  go->send_message(other->create_message(kind, msg, strlen(msg)));
+}
 
-      if(other) {
-        go->send_message(other->create_message(kind, NULL, 0));
-      }
-    }
-    node = node->next;
-  }
+void CSensor::endContact(GO* other) {
+  const char* msg = "END";
+  go->send_message(other->create_message(kind, msg, strlen(msg)));
 }
 
 LuaThread::LuaThread()
@@ -1028,12 +1008,46 @@ void init_lua(World* world) {
   lua_pop(L, lua_gettop(L));
 }
 
+typedef std::map<b2Fixture*, CSensor*> FixtureToSensor;
+
+class GlobalContactListener : public b2ContactListener {
+ public:
+  FixtureToSensor sensors;
+
+  virtual void BeginContact(b2Contact* contact) {
+    FixtureToSensor::iterator iter = sensors.find(contact->GetFixtureA());
+    if(iter != sensors.end()) {
+      iter->second->beginContact((GO*)contact->GetFixtureB()->GetBody()->GetUserData());
+    }
+
+    iter = sensors.find(contact->GetFixtureB());
+    if(iter != sensors.end()) {
+      iter->second->beginContact((GO*)contact->GetFixtureA()->GetBody()->GetUserData());
+    }
+  }
+
+  virtual void EndContact(b2Contact* contact) {
+    FixtureToSensor::iterator iter = sensors.find(contact->GetFixtureA());
+    if(iter != sensors.end()) {
+      iter->second->endContact((GO*)contact->GetFixtureB()->GetBody()->GetUserData());
+    }
+
+    iter = sensors.find(contact->GetFixtureB());
+    if(iter != sensors.end()) {
+      iter->second->endContact((GO*)contact->GetFixtureA()->GetBody()->GetUserData());
+    }
+  }
+};
+
+
 World::World(void* _universe)
   : universe((Universe*)_universe),
     L(NULL), bWorld(b2Vec2(0, -50)),
+    contact_listener(new GlobalContactListener()),
     lk_alloc(MAX(sizeof(LuaKeyData), sizeof(LuaSIData)),
              MAX_INFLIGHT_INPUTS, "lk_alloc"),
     cmd_alloc(sizeof(Command), MAX_INFLIGHT_INPUTS*2, "cmd_alloc") {
+  bWorld.SetContactListener(contact_listener);
   init_lua(this);
 }
 
@@ -1081,6 +1095,8 @@ World::~World() {
   lua_close(L);
   clock_free(clock);
   clock_free(camera_clock);
+
+  delete contact_listener;
 }
 
 void World::update(long delta) {
@@ -1300,6 +1316,14 @@ void World::broadcast_message(GO* sender, float radius, int kind, const char* co
 
   world_foreach(this, &pos, radius,
                 SendMessage(sender, kind, content, nbytes));
+}
+
+void World::register_fixture(b2Fixture* fixture, CSensor* sensor) {
+  contact_listener->sensors.insert(std::make_pair(fixture, sensor));
+}
+
+void World::unregister_fixture(b2Fixture* fixture) {
+  contact_listener->sensors.erase(fixture);
 }
 
 void World::enqueue_command(CommandFunction fn, void* data) {
