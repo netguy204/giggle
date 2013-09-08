@@ -189,37 +189,39 @@ static int is_whitespace(char ch) {
 
 static std::vector<char> ws_output;
 
-const char* Font::wrap_string(const char* input, int width) {
-  const int max_chars = width / char_width('m');
+const char* Font::wrap_string(const char* input, int max_width) {
+  int width = 0;
   const char* ip;
-  int xpos;
 
   ws_output.clear();
 
   while(*input) {
     // count up next word
-    for(ip=input; *ip && !is_whitespace(*ip); ++ip);
+    int word_width = 0;
+    for(ip=input; *ip && !is_whitespace(*ip); ++ip) {
+      word_width += (char_width(*ip) + char_lead(*ip));
+    }
 
     // insert newline if needed
-    if(xpos + (ip - input) > max_chars) {
+    if(width + word_width > max_width) {
       char newline = '\n';
       ws_output.push_back(newline);
-      xpos = 0;
+      width = 0;
     }
 
     // copy the word
     for(;input != ip; ++input) {
       ws_output.push_back(*input);
-      ++xpos;
     }
+    width += word_width;
 
     // copy any spaces
     while(is_whitespace(*input)) {
       ws_output.push_back(*input);
       if(*input == '\n') {
-        xpos = 0;
+        width = 0;
       } else {
-        ++xpos;
+        width += (char_width(*ip) + char_lead(*ip));
       }
 
       ++input;

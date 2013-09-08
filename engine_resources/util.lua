@@ -293,11 +293,7 @@ function M.deserialize(str)
 end
 
 function M.count(tbl)
-   local count = 0
-   for ii, v in ipairs(tbl) do
-      count = ii
-   end
-   return count
+   return #tbl
 end
 
 function M.top(tbl)
