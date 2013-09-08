@@ -78,6 +78,8 @@ def tileid2tileset(tilesets, tileid):
 def tolua(obj):
     if isinstance(obj, dict):
         return '{' + ", ".join([ '[%s] = %s' % (tolua(k), tolua(v)) for k, v in obj.items() ]) + '}'
+    if isinstance(obj, list):
+        return '{' + ", ".join([ tolua(v) for v in obj ]) + '}'
     if isinstance(obj, basestring):
         try:
             return int(obj)
@@ -198,7 +200,17 @@ if __name__ == '__main__':
 
         data = {}
         for obj in elements(group, 'object'):
-            data[util.attr(obj, 'name')] = dict(obj.attributes.items())
+            attribs = dict(obj.attributes.items())
+            pline = elements(obj, 'polyline')
+            if pline:
+                pline = pline[0]
+                pointstrs = util.attr(pline, 'points').split(' ')
+                attribs['polyline'] = []
+                for pstr in pointstrs:
+                    xy = pstr.split(',')
+                    attribs['polyline'].append([float(xy[0]), float(xy[1])])
+
+            data[util.attr(obj, 'name')] = attribs
 
         with open(groupname, 'w') as f:
             f.write('return ' + tolua(data) + "\n")
