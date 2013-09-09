@@ -28,7 +28,7 @@ function FSM:update(...)
    end
 
    -- perform update
-   self.states[self.state].update(self, ...)
+   return self.states[self.state].update(self, ...)
 end
 
 return FSM

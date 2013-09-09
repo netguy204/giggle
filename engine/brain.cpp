@@ -51,7 +51,7 @@ IMPL_STEERING_BRAIN(SeekBrain) {
   go->pos(&pos);
   go->vel(&vel);
 
-  steering.begin(params);
+  steering.begin(params, dt);
   steering.seek(tgt, pos, vel);
   steering.complete();
   go->apply_force(steering.force);
@@ -62,7 +62,7 @@ IMPL_STEERING_BRAIN(VelocityBrain) {
   Vector_ vel;
   go->vel(&vel);
 
-  steering.begin(params);
+  steering.begin(params, dt);
   steering.apply_desired_velocity(tgt_vel, vel);
   steering.complete();
   go->apply_force(steering.force);
@@ -89,7 +89,7 @@ void PursuitBrain::update(GO* go, float dt) {
     vector_zero(&tvel);
   }
 
-  steering.begin(params);
+  steering.begin(params, dt);
   steering.pursuit(tpos, tvel, pos, vel);
   steering.complete();
   go->apply_force(steering.force);
@@ -111,7 +111,7 @@ IMPL_STEERING_BRAIN(ArrivalBrain) {
   go->pos(&pos);
   go->vel(&vel);
 
-  steering.begin(params);
+  steering.begin(params, dt);
   steering.arrival(tgt, pos, vel, slowing_distance);
   steering.complete();
   go->apply_force(steering.force);
@@ -146,7 +146,7 @@ void FollowPathBrain::update(GO* go, float dt) {
   go->pos(&pos);
   go->vel(&vel);
 
-  steering.begin(params);
+  steering.begin(params, dt);
   steering.followpath(pi, pos, vel, max_offset);
   steering.complete();
   go->apply_force(steering.force);

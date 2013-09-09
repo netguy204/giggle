@@ -151,10 +151,9 @@ local function expand(str, ...)
       else  -- expression
         var = 'return '.. var
       end
-      local f = assert(load(var))
+      local f = assert(load(var, nil, nil, setmetatable({}, {__index=get, __newindex=t})))
       local t = searchlist[1]
       assert(type(t)=='table' or type(t)=='userdata', 'expecting table')
-      setfenv(f, setmetatable({}, {__index=get, __newindex=t}))
       return estring(tostring(f()))
     end
   end

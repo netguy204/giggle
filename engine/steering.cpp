@@ -26,12 +26,13 @@ OBJECT_PROPERTY(Steering, computed);
 
 Steering::Steering(void* empty) {}
 
-void Steering::begin(SteeringParams p) {
+void Steering::begin(SteeringParams p, float app_time) {
   params = p;
+  application_time = app_time;
   vector_zero(&force);
   computed = 0;
 }
-OBJECT_METHOD(Steering, begin, void, (SteeringParams));
+OBJECT_METHOD(Steering, begin, void, (SteeringParams, float));
 
 void Steering::complete() {
   // clamp the force
@@ -145,7 +146,7 @@ OBJECT_METHOD(Steering, offsetarrival, void, (Vector_, Vector_, Vector_, float, 
 void Steering::followpath(PathInstance* pi, Vector_ src, Vector_ src_vel, float max_offset) {
   struct Vector_ projobj;
   struct Vector_ src_vel_offset;
-  vector_scale(&src_vel_offset, &src_vel, params.application_time);
+  vector_scale(&src_vel_offset, &src_vel, application_time);
   vector_add(&projobj, &src, &src_vel_offset);
 
   // are we within max_offset of our destination point?

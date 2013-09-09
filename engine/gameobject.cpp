@@ -1042,6 +1042,7 @@ class GlobalContactListener : public b2ContactListener {
 
 World::World(void* _universe)
   : universe((Universe*)_universe),
+    saved_time_delta(0), max_delta(5),
     L(NULL), bWorld(b2Vec2(0, -50)),
     contact_listener(new GlobalContactListener()),
     lk_alloc(MAX(sizeof(LuaKeyData), sizeof(LuaSIData)),
@@ -1101,8 +1102,36 @@ World::~World() {
 
 void World::update(long delta) {
   // process waiting commands
-  evaluate_commands();
+  saved_time_delta += delta;
 
+  while(saved_time_delta > 0) {
+    long step_delta = MIN(saved_time_delta, max_delta);
+    saved_time_delta -= step_delta;
+    update_step(step_delta);
+  }
+
+  // issue render requests
+  step_thread(&pre_render, NULL, NULL);
+  DLLNode node = cameras.head;
+  while(node) {
+    DLLNode next = node->next;
+    Camera* camera = cameras.to_element(node);
+
+    DLLNode cnode = components.head;
+    while(cnode) {
+      DLLNode cnext = cnode->next;
+      Component* comp = components.to_element(cnode);
+      comp->render(camera);
+      cnode = cnext;
+    }
+    camera->enqueue();
+    node = next;
+  }
+  step_thread(&post_render, NULL, NULL);
+}
+
+void World::update_step(long delta) {
+  evaluate_commands();
   this->dt = clock_update(clock, delta / 1000.0);;
 
   // do an integration step
@@ -1151,24 +1180,6 @@ void World::update(long delta) {
       node = next;
     }
   }
-
-  step_thread(&pre_render, NULL, NULL);
-  node = cameras.head;
-  while(node) {
-    DLLNode next = node->next;
-    Camera* camera = cameras.to_element(node);
-
-    DLLNode cnode = components.head;
-    while(cnode) {
-      DLLNode cnext = cnode->next;
-      Component* comp = components.to_element(cnode);
-      comp->render(camera);
-      cnode = cnext;
-    }
-    camera->enqueue();
-    node = next;
-  }
-  step_thread(&post_render, NULL, NULL);
 }
 
 void World::load_level(const char* level) {

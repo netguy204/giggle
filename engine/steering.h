@@ -26,7 +26,6 @@ struct SteeringParams {
   float force_max;
   float speed_max;
   float old_angle;
-  float application_time;
 };
 
 struct SteeringObstacle {
@@ -42,7 +41,7 @@ class Steering : public Object {
 
   Steering(void* empty);
 
-  void begin(SteeringParams params);
+  void begin(SteeringParams params, float application_time);
   void complete();
 
   void apply_desired_velocity(Vector_ desired_vel, Vector_ src_vel);
@@ -60,6 +59,7 @@ class Steering : public Object {
   void followpath(PathInstance* pi, Vector_ src, Vector_ src_vel, float max_offset);
 
   SteeringParams params;
+  float application_time;
   Vector_ force;
   int computed;
 };
@@ -76,9 +76,6 @@ inline void LCpush<SteeringParams>(lua_State* L, SteeringParams params) {
 
   lua_pushnumber(L, params.old_angle);
   lua_setfield(L, -2, "old_angle");
-
-  lua_pushnumber(L, params.application_time);
-  lua_setfield(L, -2, "application_time");
 }
 
 template<>
@@ -94,10 +91,6 @@ inline void LCcheck<SteeringParams>(lua_State* L, SteeringParams* params, int po
 
   lua_getfield(L, pos, "old_angle");
   params->old_angle = lua_tonumber(L, -1);
-  lua_pop(L, 1);
-
-  lua_getfield(L, pos, "application_time");
-  params->application_time = lua_tonumber(L, -1);
   lua_pop(L, 1);
 }
 

@@ -371,6 +371,7 @@ class World : public Object {
   virtual ~World();
 
   virtual void update(long delta);
+  virtual void update_step(long delta);
 
   void load_level(const char* level);
 
@@ -399,6 +400,8 @@ class World : public Object {
   GO* stage;
 
   Universe* universe;
+  long saved_time_delta;
+  long max_delta;
 
   Clock clock;
   Clock camera_clock;
