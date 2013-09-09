@@ -95,7 +95,6 @@ const char* eight_patch_names[EP_MAX] = {
 };
 
 OBJECT_IMPL(Font, Object);
-OBJECT_PROPERTY(Font, character_separation);
 OBJECT_PROPERTY(Font, word_separation);
 OBJECT_PROPERTY(Font, line_separation);
 OBJECT_PROPERTY(Font, scale);
@@ -103,53 +102,77 @@ OBJECT_PROPERTY(Font, scale);
 Font::Font(void* _world)
   : scale(1.0) {
   world = (World*)_world;
-  memset(table, 0, sizeof(table));
-  memset(widths, 0, sizeof(widths));
-  memset(leads, 0, sizeof(leads));
 }
 
 void Font::load(SpriteAtlas atlas, const char* prefix, const char* character_map) {
   memset(table, 0, sizeof(table));
-  memset(widths, 0, sizeof(widths));
+  memset(xadvance, 0, sizeof(xadvance));
+  memset(yadvance, 0, sizeof(yadvance));
+  memset(xleads, 0, sizeof(xleads));
+  memset(yleads, 0, sizeof(yleads));
 
   char tempname[128];
   int idx = 1;
   for(const char* ch = character_map; *ch != '\0'; ++ch) {
     snprintf(tempname, sizeof(tempname), "%s%d", prefix, idx++);
     table[(unsigned)*ch] = world->atlas_entry(atlas, tempname);
-    widths[(unsigned)*ch] = table[(unsigned)*ch]->w;
+    xadvance[(unsigned)*ch] = table[(unsigned)*ch]->w;
   }
 
   word_separation = MAX(2, table[(unsigned)'m']->w/2);
-  character_separation = MAX(1, word_separation/2);
-  line_separation = table[(unsigned)'Q']->h + character_separation;
+  line_separation = table[(unsigned)'Q']->h;
 }
 OBJECT_METHOD(Font, load, void, (SpriteAtlas, const char*, const char*));
 
-int Font::char_width(char ch) {
+int Font::char_xadvance(char ch) {
   SpriteAtlasEntry entry = table[(unsigned)ch];
   if(entry == NULL) {
     return word_separation * scale;
   } else {
-    return (widths[(unsigned)ch] + character_separation) * scale;
+    return xadvance[(unsigned)ch] * scale;
   }
 }
-OBJECT_METHOD(Font, char_width, int, (char));
+OBJECT_METHOD(Font, char_xadvance, int, (char));
 
-int Font::char_lead(char ch) {
-  return leads[(unsigned)ch] * scale;
+int Font::char_yadvance(char ch) {
+  SpriteAtlasEntry entry = table[(unsigned)ch];
+  if(entry == NULL) {
+    return 0;
+  } else {
+    return (yadvance[(unsigned)ch]) * scale;
+  }
 }
-OBJECT_METHOD(Font, char_lead, int, (char));
+OBJECT_METHOD(Font, char_yadvance, int, (char));
 
-void Font::set_char_width(char ch, int w) {
-  widths[(unsigned)ch] = w;
+int Font::char_xlead(char ch) {
+  return xleads[(unsigned)ch] * scale;
 }
-OBJECT_METHOD(Font, set_char_width, void, (char, int));
+OBJECT_METHOD(Font, char_xlead, int, (char));
 
-void Font::set_char_lead(char ch, int l) {
-  leads[(unsigned)ch] = l;
+int Font::char_ylead(char ch) {
+  return yleads[(unsigned)ch] * scale;
 }
-OBJECT_METHOD(Font, set_char_lead, void, (char, int));
+OBJECT_METHOD(Font, char_ylead, int, (char));
+
+void Font::set_char_xadvance(char ch, int w) {
+  xadvance[(unsigned)ch] = w;
+}
+OBJECT_METHOD(Font, set_char_xadvance, void, (char, int));
+
+void Font::set_char_yadvance(char ch, int w) {
+  yadvance[(unsigned)ch] = w;
+}
+OBJECT_METHOD(Font, set_char_yadvance, void, (char, int));
+
+void Font::set_char_xlead(char ch, int l) {
+  xleads[(unsigned)ch] = l;
+}
+OBJECT_METHOD(Font, set_char_xlead, void, (char, int));
+
+void Font::set_char_ylead(char ch, int l) {
+  yleads[(unsigned)ch] = l;
+}
+OBJECT_METHOD(Font, set_char_ylead, void, (char, int));
 
 int Font::line_height() {
   return line_separation * scale;
@@ -164,7 +187,7 @@ int Font::string_width(const char* string) {
       max_width = MAX(max_width, width);
       width = 0;
     } else {
-      width += char_lead(*string) + char_width(*string);
+      width += char_xadvance(*string);
     }
   }
 
@@ -199,7 +222,7 @@ const char* Font::wrap_string(const char* input, int max_width) {
     // count up next word
     int word_width = 0;
     for(ip=input; *ip && !is_whitespace(*ip); ++ip) {
-      word_width += (char_width(*ip) + char_lead(*ip));
+      word_width += char_xadvance(*ip);
     }
 
     // insert newline if needed
@@ -221,7 +244,7 @@ const char* Font::wrap_string(const char* input, int max_width) {
       if(*input == '\n') {
         width = 0;
       } else {
-        width += (char_width(*ip) + char_lead(*ip));
+        width += char_xadvance(*ip);
       }
 
       ++input;
@@ -342,14 +365,15 @@ BaseSprite spritelist_from_string(BaseSprite list, Font* font, const char* strin
 
     SpriteAtlasEntry entry = font->table[(unsigned)*string];
     if(entry) {
-      bl_x += font->char_lead(*string);
-      Sprite sprite = ui_make_sprite(entry, bl_x, bl_y, &c);
+      Sprite sprite = ui_make_sprite(entry, bl_x + font->char_xlead(*string),
+                                     bl_y + font->char_ylead(*string), &c);
       sprite->w *= font->scale;
       sprite->h *= font->scale;
       sprite_append(list, sprite);
     }
 
-    bl_x += font->char_width(*string);
+    bl_x += font->char_xadvance(*string);
+    bl_y += font->char_yadvance(*string);
   }
 
   return list;

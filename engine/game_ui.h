@@ -30,10 +30,15 @@ class Font : public Object {
   void load(SpriteAtlas atlas, const char* prefix, const char* character_map);
   const char* wrap_string(const char* string, int width);
 
-  int char_width(char ch);
-  int char_lead(char ch);
-  void set_char_width(char ch, int w);
-  void set_char_lead(char ch, int w);
+  int char_xadvance(char ch);
+  int char_yadvance(char ch);
+  int char_xlead(char ch);
+  int char_ylead(char ch);
+
+  void set_char_xadvance(char ch, int w);
+  void set_char_yadvance(char ch, int w);
+  void set_char_xlead(char ch, int w);
+  void set_char_ylead(char ch, int w);
 
   int line_height();
   int string_width(const char* string);
@@ -41,14 +46,16 @@ class Font : public Object {
 
   SpriteAtlasEntry entry(char ch);
 
-  int character_separation;
   int word_separation;
   int line_separation;
   float scale;
 
   SpriteAtlasEntry table[256];
-  int widths[256];
-  int leads[256];
+  int xadvance[256];
+  int yadvance[256];
+
+  int xleads[256];
+  int yleads[256];
 
   World* world;
 };
