@@ -40,6 +40,9 @@ class Font : public Object {
   void set_char_xlead(char ch, int w);
   void set_char_ylead(char ch, int w);
 
+  int get_kerning(char prev, char next);
+  void set_kerning(char prev, char next, int value);
+
   int line_height();
   int string_width(const char* string);
   int string_height(const char* string);
@@ -56,6 +59,8 @@ class Font : public Object {
 
   int xleads[256];
   int yleads[256];
+
+  int kerning[256][256];
 
   World* world;
 };

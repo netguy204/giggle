@@ -110,6 +110,7 @@ void Font::load(SpriteAtlas atlas, const char* prefix, const char* character_map
   memset(yadvance, 0, sizeof(yadvance));
   memset(xleads, 0, sizeof(xleads));
   memset(yleads, 0, sizeof(yleads));
+  memset(kerning, 0, sizeof(kerning));
 
   char tempname[128];
   int idx = 1;
@@ -173,6 +174,16 @@ void Font::set_char_ylead(char ch, int l) {
   yleads[(unsigned)ch] = l;
 }
 OBJECT_METHOD(Font, set_char_ylead, void, (char, int));
+
+int Font::get_kerning(char prev, char next) {
+  return kerning[(unsigned)prev][(unsigned)next];
+}
+OBJECT_METHOD(Font, get_kerning, int, (char, char));
+
+void Font::set_kerning(char prev, char next, int value) {
+  kerning[(unsigned)prev][(unsigned)next] = value;
+}
+OBJECT_METHOD(Font, set_kerning, void, (char, char, int));
 
 int Font::line_height() {
   return line_separation * scale;
@@ -337,8 +348,9 @@ BaseSprite spritelist_from_string(BaseSprite list, Font* font, const char* strin
   char shade_buffer[12];
 
   int xstart = bl_x;
+  const char* prev = NULL;
 
-  for(; *string; ++string) {
+  for(; *string; prev = string++) {
     if(*string == '\n') {
       bl_y -= font->line_height();
       bl_x = xstart;
@@ -365,6 +377,11 @@ BaseSprite spritelist_from_string(BaseSprite list, Font* font, const char* strin
 
     SpriteAtlasEntry entry = font->table[(unsigned)*string];
     if(entry) {
+      // apply kerning first
+      if(prev) {
+        bl_x += font->get_kerning(*prev, *string);
+      }
+
       Sprite sprite = ui_make_sprite(entry, bl_x + font->char_xlead(*string),
                                      bl_y + font->char_ylead(*string), &c);
       sprite->w *= font->scale;

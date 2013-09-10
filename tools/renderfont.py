@@ -67,6 +67,13 @@ local function %s_font(scale)
 """ % (repr(ch), data['xadvance'], repr(ch), data['yadvance'],
        repr(ch), data['xlead'], repr(ch), data['ylead']))
 
+        for jj, ch2 in enumerate(chars):
+            kerning = face.get_kerning(ch, ch2).x / 64
+            if kerning == 0: continue
+            f.write("""
+   font:set_kerning(%s, %s, %d)
+""" % (repr(ch), repr(ch2), kerning))
+
     f.write("""
    return font
 end
