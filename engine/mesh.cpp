@@ -139,3 +139,48 @@ void CMesh::render(Camera* camera) {
 
   camera->addRenderable(layer, renderer, marg);
 }
+
+
+
+OBJECT_IMPL(Walls, Object);
+
+Walls::Walls(void* _world) {
+}
+
+void Walls::add_wall(const Vector_& start, const Vector_& end) {
+  Wall wall = {.start = start, .end = end};
+  walls.push_back(wall);
+}
+OBJECT_METHOD(Walls, add_wall, void, (Vector_, Vector_));
+
+void Walls::clear() {
+  walls.clear();
+}
+OBJECT_METHOD(Walls, clear, void, ());
+
+long Walls::nwalls() const {
+  return walls.size();
+}
+OBJECT_METHOD(Walls, nwalls, long, ());
+
+void Walls::get_wall(Vector_& start, Vector_& end, long idx) const {
+  start = walls[idx].start;
+  end = walls[idx].end;
+}
+
+int Walls::get_wall(lua_State* L, int pos) {
+  int idx = luaL_checknumber(L, pos + 1);
+  Vector_ start, end;
+  get_wall(start, end, idx);
+
+  lua_createtable(L, 2, 0);
+
+  LCpush(L, start);
+  lua_rawseti(L, -2, 1);
+
+  LCpush(L, end);
+  lua_rawseti(L, -2, 2);
+
+  return 1;
+}
+OBJECT_LUA_METHOD(Walls, get_wall);

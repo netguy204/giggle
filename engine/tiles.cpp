@@ -27,50 +27,6 @@
 #include <vector>
 
 
-OBJECT_IMPL(Walls, Object);
-
-Walls::Walls(void* _world) {
-}
-
-void Walls::add_wall(const Vector_& start, const Vector_& end) {
-  Wall wall = {.start = start, .end = end};
-  walls.push_back(wall);
-}
-OBJECT_METHOD(Walls, add_wall, void, (Vector_, Vector_));
-
-void Walls::clear() {
-  walls.clear();
-}
-OBJECT_METHOD(Walls, clear, void, ());
-
-long Walls::nwalls() const {
-  return walls.size();
-}
-OBJECT_METHOD(Walls, nwalls, long, ());
-
-void Walls::get_wall(Vector_& start, Vector_& end, long idx) const {
-  start = walls[idx].start;
-  end = walls[idx].end;
-}
-
-int Walls::get_wall(lua_State* L, int pos) {
-  int idx = luaL_checknumber(L, pos + 1);
-  Vector_ start, end;
-  get_wall(start, end, idx);
-
-  lua_createtable(L, 2, 0);
-
-  LCpush(L, start);
-  lua_rawseti(L, -2, 1);
-
-  LCpush(L, end);
-  lua_rawseti(L, -2, 2);
-
-  return 1;
-}
-OBJECT_LUA_METHOD(Walls, get_wall);
-
-
 OBJECT_IMPL(TileMap, Object);
 OBJECT_PROPERTY(TileMap, width_IT);
 OBJECT_PROPERTY(TileMap, height_IT);
@@ -203,7 +159,7 @@ void TileMap::get_walls(Walls* walls) const {
       TilePosition pos2 = {.x = jj, .y = nii};
       if((tile_bitmask(pos1) & TILESPEC_COLLIDABLE) !=
          (tile_bitmask(pos2) & TILESPEC_COLLIDABLE)) {
-        // there is a boundary between our row and th enext
+        // there is a boundary between our row and the next
         if(start_idx == -1) {
           // and this is the start of a new wall
           start_idx = jj;
@@ -212,11 +168,45 @@ void TileMap::get_walls(Walls* walls) const {
         // there is not a boundary
         if(start_idx != -1) {
           // and that was the end of a wall
-          float x1 = (start_idx + 1) * tile_width_IP;
-          float x2 = (jj - 1) * tile_width_IP;
+          float x1 = start_idx * tile_width_IP;
+          float x2 = jj * tile_width_IP;
           float y = nii * tile_height_IP;
           Vector_ v1 = {x1, y};
           Vector_ v2 = {x2, y};
+          walls->add_wall(v1, v2);
+          start_idx = -1;
+        }
+      }
+    }
+  }
+
+  // now add all the vertical walls, starting with the map bounds
+  walls->add_wall(bl, tl);
+  walls->add_wall(br, tr);
+
+  for(int jj = 0; jj < (width_IT-1); ++jj) {
+    int start_idx = -1;
+    int njj = jj + 1;
+
+    for(int ii = 0; ii < height_IT; ++ii) {
+      TilePosition pos1 = {.x = jj, .y = ii};
+      TilePosition pos2 = {.x = njj, .y = ii};
+      if((tile_bitmask(pos1) & TILESPEC_COLLIDABLE) !=
+         (tile_bitmask(pos2) & TILESPEC_COLLIDABLE)) {
+        // there is a boundary between our column and the next
+        if(start_idx == -1) {
+          // and this is the start of a new wall
+          start_idx = ii;
+        }
+      } else {
+        // there is not a boundary
+        if(start_idx != -1) {
+          // and that was the end of a wall
+          float x = njj * tile_width_IP;
+          float y1 = start_idx * tile_height_IP;
+          float y2 = ii * tile_height_IP;
+          Vector_ v1 = {x, y1};
+          Vector_ v2 = {x, y2};
           walls->add_wall(v1, v2);
           start_idx = -1;
         }

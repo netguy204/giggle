@@ -59,4 +59,27 @@ public:
   int layer;
 };
 
+
+struct Wall {
+  Vector_ start;
+  Vector_ end;
+};
+typedef std::vector<Wall> WallList;
+
+class Walls : public Object {
+public:
+  OBJECT_PROTO(Walls);
+  Walls(void* _world);
+
+  void add_wall(const Vector_& start, const Vector_& end);
+  void clear();
+  long nwalls() const;
+
+  void get_wall(Vector_& start, Vector_& end, long idx) const;
+  int get_wall(lua_State* L, int pos);
+
+  WallList walls;
+};
+
+
 #endif
