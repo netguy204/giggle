@@ -1,8 +1,10 @@
 #include "mesh.h"
 
 OBJECT_IMPL(Mesh, Object);
+OBJECT_PROPERTY(Mesh, type);
 
-Mesh::Mesh(void* _world) {
+Mesh::Mesh(void* _world)
+  : type(MESH_TRIS) {
 }
 
 void Mesh::add_point(const Vector_& point, const Color& color) {
@@ -48,6 +50,7 @@ struct MeshRendererArgs {
   Vector_* verts;
   Color* colors;
   long nverts;
+  int type;
 };
 
 OBJECT_IMPL(MeshRenderer, Renderable);
@@ -86,7 +89,12 @@ void MeshRenderer::render(void* args) {
 
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
                               1, GL_FALSE, orthographic_projection.data));
-  gl_check(glDrawArrays(GL_TRIANGLES, 0, mesh->nverts));
+
+  if(mesh->type == MESH_TRIS) {
+    gl_check(glDrawArrays(GL_TRIANGLES, 0, mesh->nverts));
+  } else {
+    gl_check(glDrawArrays(GL_LINES, 0, mesh->nverts));
+  }
 }
 
 
@@ -123,9 +131,11 @@ void CMesh::render(Camera* camera) {
   MeshRendererArgs* marg = (MeshRendererArgs*)mem;
   marg->verts = (Vector_*)&mem[sizeof(MeshRendererArgs)];
   marg->colors = (Color*)&mem[sizeof(MeshRendererArgs) + vsize];
-  marg->nverts = nverts;
 
   memcpy(marg->verts, &mesh->points[0], vsize);
   memcpy(marg->colors, &mesh->colors[0], csize);
+  marg->nverts = nverts;
+  marg->type = mesh->type;
+
   camera->addRenderable(layer, renderer, marg);
 }

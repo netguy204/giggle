@@ -26,6 +26,51 @@
 
 #include <vector>
 
+
+OBJECT_IMPL(Walls, Object);
+
+Walls::Walls(void* _world) {
+}
+
+void Walls::add_wall(const Vector_& start, const Vector_& end) {
+  Wall wall = {.start = start, .end = end};
+  walls.push_back(wall);
+}
+OBJECT_METHOD(Walls, add_wall, void, (Vector_, Vector_));
+
+void Walls::clear() {
+  walls.clear();
+}
+OBJECT_METHOD(Walls, clear, void, ());
+
+long Walls::nwalls() const {
+  return walls.size();
+}
+OBJECT_METHOD(Walls, nwalls, long, ());
+
+void Walls::get_wall(Vector_& start, Vector_& end, long idx) const {
+  start = walls[idx].start;
+  end = walls[idx].end;
+}
+
+int Walls::get_wall(lua_State* L, int pos) {
+  int idx = luaL_checknumber(L, pos + 1);
+  Vector_ start, end;
+  get_wall(start, end, idx);
+
+  lua_createtable(L, 2, 0);
+
+  LCpush(L, start);
+  lua_rawseti(L, -2, 1);
+
+  LCpush(L, end);
+  lua_rawseti(L, -2, 2);
+
+  return 1;
+}
+OBJECT_LUA_METHOD(Walls, get_wall);
+
+
 OBJECT_IMPL(TileMap, Object);
 OBJECT_PROPERTY(TileMap, width_IT);
 OBJECT_PROPERTY(TileMap, height_IT);
@@ -137,6 +182,49 @@ Rect_ TileMap::tile_rect(TilePosition pos) const {
   return result;
 }
 OBJECT_METHOD(TileMap, tile_rect, Rect_, (TilePosition));
+
+void TileMap::get_walls(Walls* walls) const {
+  Vector_ bl = {0, 0};
+  Vector_ br = {(float)(width_IT * tile_width_IP), 0};
+  Vector_ tl = {0, (float)(height_IT * tile_height_IP)};
+  Vector_ tr = {(float)(width_IT * tile_width_IP),
+                (float)(height_IT * tile_height_IP)};
+
+  // find all of the horizontal walls, starting with the map bounds
+  walls->add_wall(tl, tr);
+  walls->add_wall(bl, br);
+
+  for(int ii = 0; ii < (height_IT-1); ++ii) {
+    int start_idx = -1;
+    int nii = ii + 1;
+
+    for(int jj = 0; jj < width_IT; ++jj) {
+      TilePosition pos1 = {.x = jj, .y = ii};
+      TilePosition pos2 = {.x = jj, .y = nii};
+      if((tile_bitmask(pos1) & TILESPEC_COLLIDABLE) !=
+         (tile_bitmask(pos2) & TILESPEC_COLLIDABLE)) {
+        // there is a boundary between our row and th enext
+        if(start_idx == -1) {
+          // and this is the start of a new wall
+          start_idx = jj;
+        }
+      } else {
+        // there is not a boundary
+        if(start_idx != -1) {
+          // and that was the end of a wall
+          float x1 = (start_idx + 1) * tile_width_IP;
+          float x2 = (jj - 1) * tile_width_IP;
+          float y = nii * tile_height_IP;
+          Vector_ v1 = {x1, y};
+          Vector_ v2 = {x2, y};
+          walls->add_wall(v1, v2);
+          start_idx = -1;
+        }
+      }
+    }
+  }
+}
+OBJECT_METHOD(TileMap, get_walls, void, (Walls*));
 
 int TileMap::trace_line(const TilePosition& start, const TilePosition& end,
                         LineCallback callback, void* udata) {

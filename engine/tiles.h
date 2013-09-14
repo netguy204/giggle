@@ -85,6 +85,27 @@ inline void LCcheck<TilePosition>(lua_State* L, TilePosition* tp, int pos) {
 class TileMap;
 class World;
 
+struct Wall {
+  Vector_ start;
+  Vector_ end;
+};
+typedef std::vector<Wall> WallList;
+
+class Walls : public Object {
+public:
+  OBJECT_PROTO(Walls);
+  Walls(void* _world);
+
+  void add_wall(const Vector_& start, const Vector_& end);
+  void clear();
+  long nwalls() const;
+
+  void get_wall(Vector_& start, Vector_& end, long idx) const;
+  int get_wall(lua_State* L, int pos);
+
+  WallList walls;
+};
+
 typedef int(*LineCallback)(TileMap* map, const TilePosition& pos, void* udata);
 
 class TileMap : public Object {
@@ -113,6 +134,8 @@ public:
   void tilecenter(Vector v, int idx) const;
   int tile_bitmask(TilePosition pos) const;
   Rect_ tile_rect(TilePosition pos) const;
+
+  void get_walls(Walls* walls) const;
 
   int trace_line(const TilePosition& start, const TilePosition& end,
                  LineCallback callback, void* udata);

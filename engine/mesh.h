@@ -13,6 +13,11 @@
 typedef std::vector<Vector_> Points;
 typedef std::vector<Color> Colors;
 
+enum MeshType {
+  MESH_LINES,
+  MESH_TRIS
+};
+
 class Mesh : public Object {
 public:
   OBJECT_PROTO(Mesh);
@@ -28,6 +33,7 @@ public:
 
   Points points;
   Colors colors;
+  int type;
 };
 
 class MeshRenderer : public Renderable {

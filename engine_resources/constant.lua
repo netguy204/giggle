@@ -70,4 +70,8 @@ M.CLOSEST = 0
 M.EVERYTHING = 1
 M.RANGE = 2
 
+-- mesh types, mesh.h
+M.LINES = 0
+M.TRIS = 1
+
 return M
