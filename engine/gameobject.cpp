@@ -673,28 +673,6 @@ void LuaKeyBinding::activate(float value) {
   world->enqueue_command(handle_lua_key, kd);
 }
 
-static int Lworld_set_keybinding(lua_State *L) {
-  World* world;
-  LCcheck(L, &world, 1);
-  const char* keyname = luaL_checkstring(L, 2);
-  int keyn = find_keynumber(keyname);
-  if(keyn < 0) {
-    lua_pushnil(L);
-    return 1;
-  }
-
-  LuaKeyBinding* kb = new LuaKeyBinding((KeyNumber)keyn, world);
-
-  // store the provided closure, using the kb as the registry key
-  lua_pushlightuserdata(L, kb);
-  lua_pushvalue(L, 3); // the closure
-  lua_settable(L, LUA_REGISTRYINDEX);
-  set_key_binding((KeyNumber)keyn, kb);
-
-  lua_pushboolean(L, true);
-  return 1;
-}
-
 LuaSIBinding::LuaSIBinding(SpatialInputNumber keyn, World* world)
   : world(world), keyn(keyn) {
   world->sibindings.add_head(this);
@@ -726,28 +704,6 @@ void LuaSIBinding::activate(SpatialInput* value) {
   kd->value = *value;
   kd->world = world;
   world->enqueue_command(handle_si_key, kd);
-}
-
-static int Lworld_set_sibinding(lua_State *L) {
-  World* world;
-  LCcheck(L, &world, 1);
-  const char* keyname = luaL_checkstring(L, 2);
-  int keyn = find_sinumber(keyname);
-  if(keyn < 0) {
-    lua_pushnil(L);
-    return 1;
-  }
-
-  LuaSIBinding* kb = new LuaSIBinding((SpatialInputNumber)keyn, world);
-
-  // store the provided closure, using the kb as the registry key
-  lua_pushlightuserdata(L, kb);
-  lua_pushvalue(L, 3); // the closure
-  lua_settable(L, LUA_REGISTRYINDEX);
-  set_si_binding((SpatialInputNumber)keyn, kb);
-
-  lua_pushboolean(L, true);
-  return 1;
 }
 
 OBJECT_IMPL(RevJoint, Object);
@@ -803,70 +759,51 @@ void LCconfigure_object(lua_State *L, Object* obj, int pos) {
   }
 }
 
-static int Lgo_add_component(lua_State *L) {
-  GO* go;
-  LCcheck(L, &go, 1);
+int GO::add_component(lua_State* L, int pos) {
   TypeInfo* type;
-  LCcheck(L, &type, 2);
-  Component* comp = go->add_component(type);
+  LCcheck(L, &type, pos + 1);
+  Component* comp = add_component(type);
 
   // argument 3 should be an optional table
-  if(lua_gettop(L) != 3) {
+  if(lua_gettop(L) != pos + 2) {
     LCpush(L, (Component*)comp);
     return 1;
   }
 
-  if(!lua_istable(L, 3)) {
+  if(!lua_istable(L, pos + 2)) {
     luaL_error(L, "argument 3 should be a table");
     return 0;
   }
 
-  LCconfigure_object(L, comp, 3);
+  LCconfigure_object(L, comp, pos + 2);
 
   LCpush(L, (Component*)comp);
   return 1;
 }
+OBJECT_LUA_METHOD(GO, add_component);
 
-static int Lgo_create_message(lua_State *L) {
-  GO* go;
-  LCcheck(L, &go, 1);
-  int kind = luaL_checkinteger(L, 2);
+int GO::create_message(lua_State* L, int pos) {
+  int kind = luaL_checkinteger(L, pos + 1);
   const char* content = NULL;
   size_t nbytes = 0;
-  if(lua_isstring(L, 3)) {
-    content = lua_tolstring(L, 3, &nbytes);
+  if(lua_isstring(L, pos + 2)) {
+    content = lua_tolstring(L, pos + 2, &nbytes);
   }
 
-  Message* message = go->create_message(kind, content, nbytes);
+  Message* message = create_message(kind, content, nbytes);
   LCpush(L, message);
   return 1;
 }
+OBJECT_LUA_METHOD(GO, create_message);
 
-static int Lgo_broadcast_message(lua_State *L) {
-  GO* go;
-  LCcheck(L, &go, 1);
-  float range = luaL_checknumber(L, 2);
-  int kind = luaL_checkinteger(L, 3);
-  const char* content = NULL;
-  size_t nbytes = 0;
-  if(lua_isstring(L, 4)) {
-    content = lua_tolstring(L, 4, &nbytes);
-  }
-
-  go->world->broadcast_message(go, range, kind, content, nbytes);
-  return 0;
-}
-
-static int Lgo_has_message(lua_State *L) {
-  GO* go;
-  LCcheck(L, &go, 1);
-  int type = luaL_checkinteger(L, 2);
+int GO::has_message(lua_State* L, int pos) {
+  int type = luaL_checkinteger(L, pos + 1);
   int rvalues = 0;
 
-  DLLNode node = go->inbox.head;
+  DLLNode node = inbox.head;
   while(node) {
     DLLNode next = node->next;
-    Message* msg = go->inbox.to_element(node);
+    Message* msg = inbox.to_element(node);
 
     if(msg->kind == type) {
       if(rvalues == 0) {
@@ -887,62 +824,7 @@ static int Lgo_has_message(lua_State *L) {
     return 0;
   }
 }
-
-static int Lgo_contacts(lua_State* L) {
-  GO* go;
-  LCcheck(L, &go, 1);
-
-  // contact list
-  lua_newtable(L);
-  int ii = 1;
-
-  b2ContactEdge* node = go->body->GetContactList();
-  while(node) {
-    b2Fixture* fa = node->contact->GetFixtureA();
-    b2Fixture* fb = node->contact->GetFixtureB();
-    if(node->contact->IsTouching() &&
-       (!fa->IsSensor() && !fb->IsSensor())) {
-
-      b2WorldManifold manifold;
-      node->contact->GetWorldManifold(&manifold);
-
-      b2Vec2 norm = manifold.normal;
-      GO* other;
-
-      // normal goes from A to B so we need to be careful
-      if(node->contact->GetFixtureA()->GetBody() != go->body) {
-        other = (GO*)node->contact->GetFixtureA()->GetBody()->GetUserData();
-        norm = -norm;
-      } else {
-        other = (GO*)node->contact->GetFixtureB()->GetBody()->GetUserData();
-      }
-
-      Vector_ normv;
-      normv.x = norm.x;
-      normv.y = norm.y;
-
-      Vector_ pos;
-      pos.x = manifold.points[0].x * BSCALE;
-      pos.y = manifold.points[0].y * BSCALE;
-
-      // contact
-      lua_newtable(L);
-      LCpush(L, other);
-      lua_setfield(L, -2, "other");
-
-      LCpush_vector(L, &normv);
-      lua_setfield(L, -2, "normal");
-
-      LCpush_vector(L, &pos);
-      lua_setfield(L, -2, "position");
-
-      lua_rawseti(L, -2, ii++);
-    }
-    node = node->next;
-  }
-
-  return 1;
-}
+OBJECT_LUA_METHOD(GO, has_message);
 
 OBJECT_IMPL(World, Object);
 OBJECT_PROPERTY(World, dt);
@@ -971,22 +853,9 @@ void init_lua(World* world) {
   }
 
   static const luaL_Reg world_m[] = {
-    {"set_keybinding", Lworld_set_keybinding},
-    {"set_sibinding", Lworld_set_sibinding},
     {"__gc", Lobject_special_gc},
     {NULL, NULL}};
-
   LClink_metatable(L, world_m, World::Type);
-
-  static const luaL_Reg go_m[] = {
-    {"add_component", Lgo_add_component},
-    {"has_message", Lgo_has_message},
-    {"create_message", Lgo_create_message},
-    {"broadcast_message", Lgo_broadcast_message},
-    {"contacts", Lgo_contacts},
-    {NULL, NULL}};
-
-  LClink_metatable(L, go_m, GOHandle::Type);
 
   static const luaL_Reg comp_m[] = {
     {"__gc", Lobject_special_gc},
@@ -1250,6 +1119,48 @@ Animation* World::animation(const char* filename, const char* atlas_name, const 
 }
 OBJECT_METHOD(World, animation, Animation*, (const char*, const char*, const char*));
 
+int World::set_keybinding(lua_State* L, int pos) {
+  const char* keyname = luaL_checkstring(L, pos + 1);
+  int keyn = find_keynumber(keyname);
+  if(keyn < 0) {
+    lua_pushnil(L);
+    return 1;
+  }
+
+  LuaKeyBinding* kb = new LuaKeyBinding((KeyNumber)keyn, this);
+
+  // store the provided closure, using the kb as the registry key
+  lua_pushlightuserdata(L, kb);
+  lua_pushvalue(L, pos + 2); // the closure
+  lua_settable(L, LUA_REGISTRYINDEX);
+  set_key_binding((KeyNumber)keyn, kb);
+
+  lua_pushboolean(L, true);
+  return 1;
+}
+OBJECT_LUA_METHOD(World, set_keybinding);
+
+int World::set_sibinding(lua_State* L, int pos) {
+  const char* keyname = luaL_checkstring(L, pos + 1);
+  int keyn = find_sinumber(keyname);
+  if(keyn < 0) {
+    lua_pushnil(L);
+    return 1;
+  }
+
+  LuaSIBinding* kb = new LuaSIBinding((SpatialInputNumber)keyn, this);
+
+  // store the provided closure, using the kb as the registry key
+  lua_pushlightuserdata(L, kb);
+  lua_pushvalue(L, pos + 2); // the closure
+  lua_settable(L, LUA_REGISTRYINDEX);
+  set_si_binding((SpatialInputNumber)keyn, kb);
+
+  lua_pushboolean(L, true);
+  return 1;
+}
+OBJECT_LUA_METHOD(World, set_sibinding);
+
 Sound* World::get_sound(const char* name, float scale) {
   return universe->sound.get_sync(name, scale);
 }
@@ -1314,20 +1225,6 @@ struct SendMessage {
     return 0;
   }
 };
-
-void World::broadcast_message(GO* sender, float radius, int kind, const char* content, size_t nbytes) {
-  if(radius <= 0) {
-    // assume global broadcast
-    game_objects.foreach(SendMessage(sender, kind, content, nbytes));
-    return;
-  }
-
-  Vector_ pos;
-  sender->pos(&pos);
-
-  world_foreach(this, &pos, radius,
-                SendMessage(sender, kind, content, nbytes));
-}
 
 void World::register_fixture(b2Fixture* fixture, CSensor* sensor) {
   contact_listener->sensors.insert(std::make_pair(fixture, sensor));

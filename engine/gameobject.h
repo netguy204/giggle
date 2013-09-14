@@ -224,12 +224,16 @@ class GO : public Object {
   virtual ~GO();
 
   Component* add_component(TypeInfo* type);
+  int add_component(lua_State* L, int pos);
 
   virtual void update(float dt);
   void messages_received();
 
   Message* create_message(int kind, const char* content, size_t nbytes);
+  int create_message(lua_State* L, int pos);
+
   void send_message(Message* message);
+  int has_message(lua_State* L, int pos);
 
   float get_gravity_scale();
   void set_gravity_scale(float scale);
@@ -380,13 +384,14 @@ class World : public Object {
   SpriteAtlasEntry atlas_entry(SpriteAtlas atlas, const char* entry);
   Animation* animation(const char* scml, const char* atlas, const char* anim);
 
+  int set_keybinding(lua_State* L, int pos);
+  int set_sibinding(lua_State* L, int pos);
+
   Sound* get_sound(const char* name, float scale);
   AudioHandle* play_sound(Sound* sound, int channel);
   AudioHandle* stream_sound(const char* name, long start_time);
   AudioHandle* sound_handle(long handle_name);
   long current_sample() const;
-
-  void broadcast_message(GO* go, float radius, int kind, const char* content, size_t nbytes);
 
   void set_time_scale(float scale);
   float get_time_scale();

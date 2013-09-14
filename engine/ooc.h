@@ -393,8 +393,6 @@ class MethodInfo {
       uintptr_t idx = (uintptr_t)ptr / sizeof(void*);                   \
       if(idx < 100) {                                                   \
         m_voffset = idx;                                                \
-        const char* name = STRINGIFY(CLASS) "::" STRINGIFY(METHOD);     \
-        printf("%lu offset: %s\n", idx, name);                          \
       }                                                                 \
     }                                                                   \
                                                                         \
@@ -434,11 +432,35 @@ class MethodInfo {
             RETURNS(RTYPE, ARGS, METHOD))                               \
   }
 
-#define OBJECT_LUA_METHOD(CLASS, METHOD)          \
-  OBJECT_BASE_METHOD(CLASS, METHOD, void, ()) {   \
-    CLASS* obj;                                   \
-    LCcheck(L, &obj, pos);                        \
-    return obj->METHOD(L, pos);                   \
+#define OBJECT_LUA_METHOD(CLASS, METHOD)                                \
+  class LOPC(CLASS, METHOD) : public MethodInfo {                       \
+  public:                                                               \
+                                                                        \
+  LOPC(CLASS, METHOD)()                                                 \
+    : MethodInfo(&CLASS::Type, STRINGIFY(METHOD)) {                     \
+    }                                                                   \
+                                                                        \
+    virtual int LCinvoke(lua_State* L, int pos) const;                  \
+                                                                        \
+    virtual VoidFunction* LCframebind(lua_State* L, int pos) const {    \
+      fail_exit("LCframebind not supported");                           \
+      return NULL;                                                      \
+    }                                                                   \
+    virtual VoidFunction* framebind(Object* obj, ...) const {           \
+      fail_exit("LCframebind not supported");                           \
+      return NULL;                                                      \
+    }                                                                   \
+    virtual void* vtable_lua_override() const {                         \
+      fail_exit("vtable_lua_override not supported");                   \
+      return NULL;                                                      \
+    }                                                                   \
+  };                                                                    \
+  static LOPC(CLASS, METHOD) LOP(CLASS, METHOD);                        \
+                                                                        \
+  int LOPC(CLASS, METHOD)::LCinvoke(lua_State* L, int pos) const {      \
+    CLASS* obj;                                                         \
+    LCcheck(L, &obj, pos);                                              \
+    return obj->METHOD(L, pos);                                         \
   }
 
 #define DEFERRED_OBJECT_METHOD(TARGET, CLASS, METHOD, RTYPE, ARGS)      \
