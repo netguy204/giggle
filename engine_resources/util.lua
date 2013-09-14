@@ -148,6 +148,9 @@ function M.table_remove(tbl, obj)
    end
    if found then
       table.remove(tbl, found)
+      return true
+   else
+      return false
    end
 end
 
