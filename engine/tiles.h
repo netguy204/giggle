@@ -114,9 +114,11 @@ public:
   int tile_bitmask(TilePosition pos) const;
   Rect_ tile_rect(TilePosition pos) const;
 
-  int trace_line(const TilePosition& start, const TilePosition& end, LineCallback callback, void* udata);
+  int trace_line(const TilePosition& start, const TilePosition& end,
+                 LineCallback callback, void* udata);
 
-  BaseSprite spritelist(BaseSprite list, float x_bl, float y_bl, float wpx, float hpx, Vector pos);
+  BaseSprite spritelist(BaseSprite list, float x_bl, float y_bl,
+                        float wpx, float hpx, Vector pos);
 };
 
 class TileMapFactory : public Object {
