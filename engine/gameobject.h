@@ -55,6 +55,12 @@ enum MessageKind {
   MESSAGE_BRAIN_COMPLETE
 };
 
+enum RayCastKind {
+  RAYCAST_CLOSEST,
+  RAYCAST_EVERYTHING,
+  RAYCAST_RANGE
+};
+
 struct LString {
   size_t length;
   char str[0];
@@ -383,6 +389,8 @@ class World : public Object {
   virtual SpriteAtlasEntry atlas_entry(const char* atlas, const char* entry);
   SpriteAtlasEntry atlas_entry(SpriteAtlas atlas, const char* entry);
   Animation* animation(const char* scml, const char* atlas, const char* anim);
+
+  int raycast(lua_State* L, int pos);
 
   int set_keybinding(lua_State* L, int pos);
   int set_sibinding(lua_State* L, int pos);

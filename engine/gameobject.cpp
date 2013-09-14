@@ -311,29 +311,35 @@ void GO::set_gravity_scale(float scale) {
   body->SetGravityScale(scale);
 }
 
+inline void b2ToVector(Vector v, const b2Vec2* b2) {
+  v->x = b2->x * BSCALE;
+  v->y = b2->y * BSCALE;
+}
+
+inline void vectorToB2(b2Vec2* b2, const Vector v) {
+  b2->x = v->x / BSCALE;
+  b2->y = v->y / BSCALE;
+}
+
 void GO::pos(Vector pos) {
   const b2Vec2& bPos = body->GetPosition();
-  pos->x = bPos.x * BSCALE;
-  pos->y = bPos.y * BSCALE;
+  b2ToVector(pos, &bPos);
 }
 
 void GO::vel(Vector vel) {
   const b2Vec2& bVel = body->GetLinearVelocity();
-  vel->x = bVel.x * BSCALE;
-  vel->y = bVel.y * BSCALE;
+  b2ToVector(vel, &bVel);
 }
 
 void GO::set_pos(Vector pos) {
   b2Vec2 bPos;
-  bPos.x = pos->x / BSCALE;
-  bPos.y = pos->y / BSCALE;
+  vectorToB2(&bPos, pos);
   body->SetTransform(bPos, body->GetAngle());
 }
 
 void GO::set_vel(Vector vel) {
   b2Vec2 bVel;
-  bVel.x = vel->x / BSCALE;
-  bVel.y = vel->y / BSCALE;
+  vectorToB2(&bVel, vel);
   body->SetLinearVelocity(bVel);
 }
 
@@ -908,7 +914,6 @@ class GlobalContactListener : public b2ContactListener {
   }
 };
 
-
 World::World(void* _universe)
   : universe((Universe*)_universe),
     saved_time_delta(0), max_delta(5),
@@ -1113,6 +1118,100 @@ OBJECT_METHOD(World, atlas_entry, SpriteAtlasEntry, (const char*, const char*));
 SpriteAtlasEntry World::atlas_entry(SpriteAtlas atlas, const char* entry) {
   return universe->atlas_entry(atlas, entry);
 }
+
+class RayCallbackListener : public b2RayCastCallback {
+public:
+  lua_State* L;
+  RayCastKind kind;
+  int next_idx;
+
+  b2Fixture* closest_fixture;
+  b2Vec2 closest_point;
+  b2Vec2 closest_normal;
+  float32 closest_fraction;
+
+  RayCallbackListener(lua_State* L, RayCastKind kind)
+    : L(L), kind(kind), next_idx(1), closest_fraction(-1) {
+  }
+
+  void push_result(b2Fixture* fixture, const b2Vec2& point,
+                   const b2Vec2& normal, float32 fraction) {
+    lua_createtable(L, 4, 0);
+
+    GO* go = (GO*)fixture->GetBody()->GetUserData();
+    LCpush(L, go);
+    lua_rawseti(L, -2, 1);
+
+    Vector_ p;
+    b2ToVector(&p, &point);
+    LCpush(L, p);
+    lua_rawseti(L, -2, 2);
+
+    Vector_ n;
+    b2ToVector(&n, &normal);
+    LCpush(L, n);
+    lua_rawseti(L, -2, 3);
+
+    lua_pushnumber(L, fraction);
+    lua_rawseti(L, -2, 4);
+  }
+
+  virtual float32 ReportFixture(b2Fixture* fixture, const b2Vec2& point,
+                                const b2Vec2& normal, float32 fraction) {
+    if(kind == RAYCAST_CLOSEST) {
+      if(closest_fraction < 0 || fraction < closest_fraction) {
+        closest_fixture = fixture;
+        closest_point = point;
+        closest_normal = normal;
+        closest_fraction = fraction;
+      }
+      return fraction;
+    } else {
+      push_result(fixture, point, normal, fraction);
+
+      // add it to our result table
+      lua_rawseti(L, -2, next_idx++);
+      if(kind == RAYCAST_EVERYTHING) {
+        return 1;
+      } else {
+        return fraction;
+      }
+    }
+  }
+};
+
+int World::raycast(lua_State* L, int pos) {
+  Vector_ origin, dest;
+  int kind;
+
+  LCcheck(L, &origin, pos + 1);
+  LCcheck(L, &dest, pos + 2);
+  LCcheck(L, &kind, pos + 3);
+
+  b2Vec2 origin2, dest2;
+  vectorToB2(&origin2, &origin);
+  vectorToB2(&dest2, &dest);
+
+
+  if(kind == RAYCAST_CLOSEST) {
+    RayCallbackListener listener(L, (RayCastKind)kind);
+    bWorld.RayCast(&listener, origin2, dest2);
+    if(listener.closest_fraction > 0) {
+      listener.push_result(listener.closest_fixture, listener.closest_point,
+                           listener.closest_normal, listener.closest_fraction);
+    } else {
+      lua_pushnil(L);
+    }
+    return 1;
+  } else {
+    // result is in the table that the listener left on the stack
+    lua_newtable(L);
+    RayCallbackListener listener(L, (RayCastKind)kind);
+    bWorld.RayCast(&listener, origin2, dest2);
+    return 1;
+  }
+}
+OBJECT_LUA_METHOD(World, raycast);
 
 Animation* World::animation(const char* filename, const char* atlas_name, const char* anim) {
   return universe->animation(filename, atlas(atlas_name), anim);

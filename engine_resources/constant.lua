@@ -65,4 +65,9 @@ M.COLLIDABLE = 1
 M.VISIBLE = 2
 M.PASSABLE = 3
 
+-- raycast types, gameobject.h
+M.CLOSEST = 0
+M.EVERYTHING = 1
+M.RANGE = 2
+
 return M
