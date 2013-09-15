@@ -113,23 +113,41 @@ void add_wall(Wall** open, long* nwalls, Wall* needle, const Vector_* ref) {
     return;
   }
 
-  for(long ii = 0; ii < *nwalls; ++ii) {
-    if(!_segment_in_front_of(needle, open[ii], ref)) {
-      // insert and shift everything up
-      Wall* temp = open[ii];
-      open[ii] = needle;
-      for(long jj = ii + 1; jj < *nwalls; ++jj) {
-        Wall* next_temp = open[jj];
-        open[jj] = temp;
-        temp = next_temp;
+  long lower = 0;
+  long upper = *nwalls - 1;
+  long found_idx = -1;
+
+  if(!_segment_in_front_of(needle, open[lower], ref)) {
+    found_idx = lower;
+  } else if(_segment_in_front_of(needle, open[upper], ref)) {
+    // must go at the end
+    open[(*nwalls)++] = needle;
+    return;
+  } else {
+    // bisect for it
+    while(upper - lower > 1) {
+      long idx = (lower + upper) / 2;
+      if(!_segment_in_front_of(needle, open[idx], ref)) {
+        upper = idx;
+      } else {
+        lower = idx;
       }
-      open[(*nwalls)++] = temp;
-      return;
     }
+    found_idx = upper;
   }
 
-  // must go at the end
-  open[(*nwalls)++] = needle;
+  // FIXME
+  if(found_idx == -1) fail_exit("something bad happened");
+
+  // insert and shift everything up
+  Wall* temp = open[found_idx];
+  open[found_idx] = needle;
+  for(long jj = found_idx + 1; jj < *nwalls; ++jj) {
+    Wall* next_temp = open[jj];
+    open[jj] = temp;
+    temp = next_temp;
+  }
+  open[(*nwalls)++] = temp;
 }
 
 bool remove_wall(Wall** open, long* nwalls, Wall* needle) {
