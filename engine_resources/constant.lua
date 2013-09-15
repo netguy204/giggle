@@ -73,5 +73,7 @@ M.RANGE = 2
 -- mesh types, mesh.h
 M.LINES = 0
 M.TRIS = 1
+M.LINE_STRIP = 2
+M.LINE_LOOP = 3
 
 return M

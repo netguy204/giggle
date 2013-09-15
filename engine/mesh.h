@@ -15,7 +15,9 @@ typedef std::vector<Color> Colors;
 
 enum MeshType {
   MESH_LINES,
-  MESH_TRIS
+  MESH_TRIS,
+  MESH_LINE_STRIP,
+  MESH_LINE_LOOP
 };
 
 class Mesh : public Object {

@@ -170,6 +170,7 @@ void TileMap::get_walls(Walls* walls) const {
           // and that was the end of a wall
           float x1 = start_idx * tile_width_IP;
           float x2 = jj * tile_width_IP;
+          float nudge = 0.5;
           float y = nii * tile_height_IP;
           Vector_ v1 = {x1, y};
           Vector_ v2 = {x2, y};

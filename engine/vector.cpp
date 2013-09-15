@@ -61,7 +61,7 @@ void vector_for_angle(Vector v, float angle) {
   v->y = sinf(angle);
 }
 
-int vector_direction_scaled(Vector dst, Vector a, Vector b, float s) {
+int vector_direction_scaled(Vector dst, const Vector_* a, const Vector_* b, float s) {
   struct Vector_ ba;
   vector_sub(&ba, a, b);
 
@@ -99,12 +99,12 @@ float vector_project2(Vector dst, Vector src, Vector normonto) {
   return scalarproj;
 }
 
-float vector_dist2(Vector a, Vector b) {
+float vector_dist2(const Vector_* a, const Vector_* b) {
   float dx = a->x - b->x;
   float dy = a->y - b->y;
   return dx * dx + dy * dy;
 }
 
-float vector_dist(Vector a, Vector b) {
+float vector_dist(const Vector_* a, const Vector_* b) {
   return sqrtf(vector_dist2(a, b));
 }

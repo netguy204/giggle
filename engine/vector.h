@@ -31,12 +31,12 @@ void vector_zero(Vector a);
 void vector_norm(Vector dst, const Vector_* src);
 float vector_angle(const Vector_* v);
 void vector_for_angle(Vector v, float angle);
-int vector_direction_scaled(Vector dst, Vector a, Vector b, float s);
+int vector_direction_scaled(Vector dst, const Vector_* a, const Vector_* b, float s);
 void vector_integrate(Vector dst, Vector r, Vector dr, float dt);
 void vector_clamp(Vector dst, Vector src, float max);
 float vector_scalarproject(Vector src, Vector onto);
 float vector_project2(Vector dst, Vector src, Vector normonto);
-float vector_dist2(Vector a, Vector b);
-float vector_dist(Vector a, Vector b);
+float vector_dist2(const Vector_* a, const Vector_* b);
+float vector_dist(const Vector_* a, const Vector_* b);
 
 #endif

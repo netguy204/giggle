@@ -92,8 +92,12 @@ void MeshRenderer::render(void* args) {
 
   if(mesh->type == MESH_TRIS) {
     gl_check(glDrawArrays(GL_TRIANGLES, 0, mesh->nverts));
-  } else {
+  } else if(mesh->type == MESH_LINES) {
     gl_check(glDrawArrays(GL_LINES, 0, mesh->nverts));
+  } else if(mesh->type == MESH_LINE_STRIP) {
+    gl_check(glDrawArrays(GL_LINE_STRIP, 0, mesh->nverts));
+  } else {
+    gl_check(glDrawArrays(GL_LINE_LOOP, 0, mesh->nverts));
   }
 }
 

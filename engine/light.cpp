@@ -4,8 +4,14 @@
 #include <algorithm>
 
 OBJECT_IMPL(LightCaster, Object);
+OBJECT_PROPERTY(LightCaster, min_color);
+OBJECT_PROPERTY(LightCaster, max_color);
+OBJECT_PROPERTY(LightCaster, max_range);
+OBJECT_PROPERTY(LightCaster, angle);
+OBJECT_PROPERTY(LightCaster, halfwidth);
 
-LightCaster::LightCaster(void* _world) {
+LightCaster::LightCaster(void* _world)
+  : max_range(1e7), angle(0), halfwidth(M_PI) {
 }
 
 struct WallPoint {
@@ -95,18 +101,6 @@ bool _segment_in_front_of(const Wall* a, const Wall* b, const Vector_* relativeT
   // using distance will be a simpler and faster implementation.
 }
 
-
-struct WallClosestCompare {
-  Vector_ pos;
-  WallClosestCompare(const Vector_& pos)
-    : pos(pos) {
-  }
-
-  bool operator()(const Wall* a, const Wall* b) {
-    return _segment_in_front_of(b, a, &pos);
-  }
-};
-
 void add_wall(Wall** open, long* nwalls, Wall* needle, const Vector_* ref) {
   if(*nwalls == 0) {
     open[(*nwalls)++] = needle;
@@ -135,9 +129,6 @@ void add_wall(Wall** open, long* nwalls, Wall* needle, const Vector_* ref) {
     }
     found_idx = upper;
   }
-
-  // FIXME
-  if(found_idx == -1) fail_exit("something bad happened");
 
   // insert and shift everything up
   Wall* temp = open[found_idx];
@@ -173,8 +164,14 @@ void line_intersection(Vector result, const Vector_* p1, const Vector_* p2,
   result->y = p1->y + s * (p2->y - p1->y);
 }
 
-void LightCaster::compute_light_mesh(Mesh* result, Walls* walls,
-                                     const Vector_& light, const Color& color) {
+// restrict angle to lie between -PI and PI
+static float restrict_angle(float angle) {
+  while(angle <= -M_PI) angle += (2 * M_PI);
+  while(angle > M_PI) angle -= (2 * M_PI);
+  return angle;
+}
+
+void LightCaster::compute_light_mesh(Mesh* result, Walls* walls, const Vector_& light) {
   long nwalls = walls->nwalls();
 
   WallPoint* wall_points = (WallPoint*)frame_alloc(sizeof(WallPoint) * nwalls * 2);
@@ -186,9 +183,7 @@ void LightCaster::compute_light_mesh(Mesh* result, Walls* walls,
     float angle_start = atan2f(wall->start.y - light.y, wall->start.x - light.x);
     float angle_end = atan2f(wall->end.y - light.y, wall->end.x - light.x);
 
-    float dangle = angle_end - angle_start;
-    if(dangle <= -M_PI) dangle += (2*M_PI);
-    if(dangle > M_PI) dangle -= (2*M_PI);
+    float dangle = restrict_angle(angle_end - angle_start);
 
     long idx1 = 2*ii;
     long idx2 = idx1 + 1;
@@ -205,7 +200,6 @@ void LightCaster::compute_light_mesh(Mesh* result, Walls* walls,
 
   std::sort(wall_points, wall_points + (nwalls*2), WallPointCompare());
 
-  WallClosestCompare closest_compare(light);
   float beginAngle = 0;
 
   for(int kk = 0; kk < 2; ++kk) {
@@ -224,20 +218,7 @@ void LightCaster::compute_light_mesh(Mesh* result, Walls* walls,
 
         if(last_closest) {
           if(kk == 1) {
-            // interset the discovered angle range with the previously
-            // closest wall segment
-            Vector_ a1 = {.x = light.x + cosf(beginAngle),
-                          .y = light.y + sinf(beginAngle)};
-            Vector_ a2 = {.x = light.x + cosf(nextAngle),
-                          .y = light.y + sinf(nextAngle)};
-            Vector_ i1, i2;
-            line_intersection(&i1, &last_closest->start, &last_closest->end, &light, &a1);
-            line_intersection(&i2, &last_closest->start, &last_closest->end, &light, &a2);
-
-            // add a triangle to the mesh
-            result->add_point(light, color);
-            result->add_point(i1, color);
-            result->add_point(i2, color);
+            add_triangle(result, light, last_closest, beginAngle, nextAngle);
           }
           beginAngle = nextAngle;
         }
@@ -245,4 +226,83 @@ void LightCaster::compute_light_mesh(Mesh* result, Walls* walls,
     }
   }
 }
-OBJECT_METHOD(LightCaster, compute_light_mesh, void, (Mesh*, Walls*, Vector_, Color));
+OBJECT_METHOD(LightCaster, compute_light_mesh, void, (Mesh*, Walls*, Vector_));
+
+void color_lerp(Color* out, const Color* a, const Color* b, float s) {
+  float s1 = 1 - s;
+  out->r = a->r * s1 + b->r * s;
+  out->g = a->g * s1 + b->g * s;
+  out->b = a->b * s1 + b->b * s;
+  out->a = a->a * s1 + b->a * s;
+}
+
+// answer is positive if the shortest distance from a to b is
+// counterclockwise
+static float signed_angular_distance(float a, float b) {
+  float diff = b - a;
+  if(diff >= M_PI) return -(2*M_PI - diff);
+  if(diff < -M_PI) return 2*M_PI + diff;
+  return diff;
+}
+
+static int sign(float v) {
+  if(v >= 0) {
+    return 1;
+  } else {
+    return -1;
+  }
+}
+
+// returns true if further calls could possibly result in a mesh
+void LightCaster::add_triangle(Mesh* result, const Vector_& light,
+                               Wall* last_closest, float beginAngle, float nextAngle) {
+  // within our angle bounds?
+  float da1 = signed_angular_distance(angle, beginAngle);
+  if(da1 > halfwidth) return; // swath begins after our cutoff
+  float da2 = signed_angular_distance(angle, nextAngle);
+  if(da2 < -halfwidth) return; // swath ends before our cutoff
+
+  // clamp the values we did get
+  float ada1 = ABS(da1);
+  if(ada1 > halfwidth) {
+    float fixup = halfwidth - ada1;
+    beginAngle += fixup * sign(da1);
+  }
+
+  float ada2 = ABS(da2);
+  if(ada2 > halfwidth) {
+    float fixup = halfwidth - ada2;
+    nextAngle += fixup * sign(da2);
+  }
+
+  // interset the discovered angle range with the previously
+  // closest wall segment
+  Vector_ a1 = {.x = light.x + cosf(beginAngle),
+                .y = light.y + sinf(beginAngle)};
+  Vector_ a2 = {.x = light.x + cosf(nextAngle),
+                .y = light.y + sinf(nextAngle)};
+  Vector_ i1, i2;
+  line_intersection(&i1, &last_closest->start, &last_closest->end, &light, &a1);
+  line_intersection(&i2, &last_closest->start, &last_closest->end, &light, &a2);
+
+  Color c1, c2;
+  float d1 = vector_dist(&i1, &light);
+  float d2 = vector_dist(&i2, &light);
+  color_lerp(&c1, &min_color, &max_color, MIN(1.0f, d1 / max_range));
+  color_lerp(&c2, &min_color, &max_color, MIN(1.0f, d2 / max_range));
+
+  if(d1 > max_range) {
+    vector_direction_scaled(&i1, &i1, &light, max_range);
+    vector_add(&i1, &i1, &light);
+  }
+
+  if(d2 > max_range) {
+    vector_direction_scaled(&i2, &i2, &light, max_range);
+    vector_add(&i2, &i2, &light);
+  }
+
+  // add a triangle to the mesh
+  result->add_point(light, min_color);
+  result->add_point(i1, c1);
+  result->add_point(i2, c2);
+}
