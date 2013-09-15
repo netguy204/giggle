@@ -22,14 +22,14 @@ typedef struct Vector_ {
   float y;
 } *Vector;
 
-void vector_add(Vector dst, Vector a, Vector b);
-void vector_sub(Vector dst, Vector a, Vector b);
-void vector_scale(Vector dst, Vector a, float s);
-float vector_dot(Vector a, Vector b);
-float vector_mag(Vector a);
+void vector_add(Vector dst, const Vector_* a, const Vector_* b);
+void vector_sub(Vector dst, const Vector_* a, const Vector_* b);
+void vector_scale(Vector dst, const Vector_* a, float s);
+float vector_dot(const Vector_* a, const Vector_* b);
+float vector_mag(const Vector_* a);
 void vector_zero(Vector a);
-void vector_norm(Vector dst, Vector src);
-float vector_angle(Vector v);
+void vector_norm(Vector dst, const Vector_* src);
+float vector_angle(const Vector_* v);
 void vector_for_angle(Vector v, float angle);
 int vector_direction_scaled(Vector dst, Vector a, Vector b, float s);
 void vector_integrate(Vector dst, Vector r, Vector dr, float dt);

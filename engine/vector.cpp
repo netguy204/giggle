@@ -17,28 +17,28 @@
 #include "vector.h"
 #include <math.h>
 
-void vector_add(Vector dst, Vector a, Vector b) {
+void vector_add(Vector dst, const Vector_* a, const Vector_* b) {
   dst->x = a->x + b->x;
   dst->y = a->y + b->y;
 }
 
-void vector_sub(Vector dst, Vector a, Vector b) {
+void vector_sub(Vector dst, const Vector_* a, const Vector_* b) {
   dst->x = a->x - b->x;
   dst->y = a->y - b->y;
 }
 
-void vector_scale(Vector dst, Vector a, float s) {
+void vector_scale(Vector dst, const Vector_* a, float s) {
   dst->x = a->x * s;
   dst->y = a->y * s;
 }
 
-float vector_dot(Vector a, Vector b) {
+float vector_dot(const Vector_* a, const Vector_* b) {
   float x = a->x * b->x;
   float y = a->y * b->y;
   return x + y;
 }
 
-float vector_mag(Vector a) {
+float vector_mag(const Vector_* a) {
   return sqrtf(vector_dot(a, a));
 }
 
@@ -47,11 +47,11 @@ void vector_zero(Vector a) {
   a->y = 0.0f;
 }
 
-void vector_norm(Vector dst, Vector src) {
+void vector_norm(Vector dst, const Vector_* src) {
   vector_scale(dst, src, 1.0f / vector_mag(src));
 }
 
-float vector_angle(Vector v) {
+float vector_angle(const Vector_* v) {
   float angle = atan2(v->y, v->x);
   return angle;
 }
