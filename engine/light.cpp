@@ -203,27 +203,26 @@ void LightCaster::compute_light_mesh(Mesh* result, Walls* walls,
       Wall* next_closest = (nopen_set == 0) ? NULL : open_set[0];
       if(last_closest != next_closest) {
         float nextAngle = wp->angle;
-        if(!last_closest) last_closest = next_closest;
 
-        // interset the discovered angle range with the previously
-        // closest wall segment
-        Vector_ a1 = {.x = light.x + cosf(beginAngle),
-                      .y = light.y + sinf(beginAngle)};
-        Vector_ a2 = {.x = light.x + cosf(nextAngle),
-                      .y = light.y + sinf(nextAngle)};
-        Vector_ i1, i2;
-        line_intersection(&i1, &last_closest->start, &last_closest->end, &light, &a1);
-        line_intersection(&i2, &last_closest->start, &last_closest->end, &light, &a2);
+        if(last_closest) {
+          if(kk == 1) {
+            // interset the discovered angle range with the previously
+            // closest wall segment
+            Vector_ a1 = {.x = light.x + cosf(beginAngle),
+                          .y = light.y + sinf(beginAngle)};
+            Vector_ a2 = {.x = light.x + cosf(nextAngle),
+                          .y = light.y + sinf(nextAngle)};
+            Vector_ i1, i2;
+            line_intersection(&i1, &last_closest->start, &last_closest->end, &light, &a1);
+            line_intersection(&i2, &last_closest->start, &last_closest->end, &light, &a2);
 
-        // add a triangle to the mesh
-        result->add_point(light, color);
-        result->add_point(i1, color);
-        result->add_point(i2, color);
-
-        beginAngle = nextAngle;
-
-        // we're on the second pass and we just completed the missing mesh
-        if(kk == 1) break;
+            // add a triangle to the mesh
+            result->add_point(light, color);
+            result->add_point(i1, color);
+            result->add_point(i2, color);
+          }
+          beginAngle = nextAngle;
+        }
       }
     }
   }
