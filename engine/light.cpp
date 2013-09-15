@@ -155,7 +155,8 @@ void line_intersection(Vector result, const Vector_* p1, const Vector_* p2,
   result->y = p1->y + s * (p2->y - p1->y);
 }
 
-void LightCaster::compute_light_mesh(Mesh* result, Walls* walls, const Vector_& light) {
+void LightCaster::compute_light_mesh(Mesh* result, Walls* walls,
+                                     const Vector_& light, const Color& color) {
   long nwalls = walls->nwalls();
 
   WallPoint* wall_points = (WallPoint*)frame_alloc(sizeof(WallPoint) * nwalls * 2);
@@ -187,21 +188,23 @@ void LightCaster::compute_light_mesh(Mesh* result, Walls* walls, const Vector_& 
   std::sort(wall_points, wall_points + (nwalls*2), WallPointCompare());
 
   WallClosestCompare closest_compare(light);
-  float beginAngle = wall_points[0].angle;
+  float beginAngle = 0;
 
-  for(long ii = 0; ii < nwalls * 2; ++ii) {
-    WallPoint* wp = &wall_points[ii];
-    Wall* last_closest = (nopen_set == 0) ? NULL : open_set[0];
-    if(wp->begin) {
-      add_wall(open_set, &nopen_set, wp->wall, &light);
-    } else {
-      remove_wall(open_set, &nopen_set, wp->wall);
-    }
+  for(int kk = 0; kk < 2; ++kk) {
+    for(long ii = 0; ii < nwalls * 2; ++ii) {
+      WallPoint* wp = &wall_points[ii];
+      Wall* last_closest = (nopen_set == 0) ? NULL : open_set[0];
+      if(wp->begin) {
+        add_wall(open_set, &nopen_set, wp->wall, &light);
+      } else {
+        remove_wall(open_set, &nopen_set, wp->wall);
+      }
 
-    Wall* next_closest = (nopen_set == 0) ? NULL : open_set[0];
-    if(last_closest != next_closest) {
-      float nextAngle = wp->angle;
-      if(last_closest) {
+      Wall* next_closest = (nopen_set == 0) ? NULL : open_set[0];
+      if(last_closest != next_closest) {
+        float nextAngle = wp->angle;
+        if(!last_closest) last_closest = next_closest;
+
         // interset the discovered angle range with the previously
         // closest wall segment
         Vector_ a1 = {.x = light.x + cosf(beginAngle),
@@ -213,13 +216,16 @@ void LightCaster::compute_light_mesh(Mesh* result, Walls* walls, const Vector_& 
         line_intersection(&i2, &last_closest->start, &last_closest->end, &light, &a2);
 
         // add a triangle to the mesh
-        Color white = {1,1,1,0.3};
-        result->add_point(light, white);
-        result->add_point(i1, white);
-        result->add_point(i2, white);
+        result->add_point(light, color);
+        result->add_point(i1, color);
+        result->add_point(i2, color);
+
+        beginAngle = nextAngle;
+
+        // we're on the second pass and we just completed the missing mesh
+        if(kk == 1) break;
       }
-      beginAngle = nextAngle;
     }
   }
 }
-OBJECT_METHOD(LightCaster, compute_light_mesh, void, (Mesh*, Walls*, Vector_));
+OBJECT_METHOD(LightCaster, compute_light_mesh, void, (Mesh*, Walls*, Vector_, Color));
