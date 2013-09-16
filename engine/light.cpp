@@ -173,6 +173,7 @@ static float restrict_angle(float angle) {
 
 void LightCaster::compute_light_mesh(Mesh* result, Walls* walls, const Vector_& light) {
   long nwalls = walls->nwalls();
+  angle = restrict_angle(angle);
 
   WallPoint* wall_points = (WallPoint*)frame_alloc(sizeof(WallPoint) * nwalls * 2);
   Wall** open_set = (Wall**)frame_alloc(sizeof(Wall*) * nwalls);

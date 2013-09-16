@@ -470,7 +470,37 @@ local vector = require 'vector'
 
 function M.forward_direction(go)
    local angle = go:angle()
+   -- fixme, angles should increase counterclockwise
    return vector.new({-math.sin(angle), math.cos(angle)})
+end
+
+function M.restrict_angle(angle)
+   while angle <= -math.pi do
+      angle = angle + 2 * math.pi
+   end
+
+   while angle > math.pi do
+      angle = angle - 2 * math.pi
+   end
+   return angle
+end
+
+function M.signed_angular_distance(a, b)
+   a = M.restrict_angle(a)
+   b = M.restrict_angle(b)
+
+   local diff = b - a
+   if diff >= math.pi then
+      return -(2*math.pi - diff)
+   elseif diff < -math.pi then
+      return 2*math.pi + diff
+   else
+      return diff
+   end
+end
+
+function M.minimum_angular_distance(a, b)
+   return math.abs(M.signed_angular_distance(a, b))
 end
 
 function M.lerp(a, b, s)

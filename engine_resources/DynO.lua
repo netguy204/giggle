@@ -48,6 +48,7 @@ end
 
 function DynO:init(pos)
    self._go = world:create_go()
+
    self.alive = true
    DynO.reg:register(self._go, self)
 

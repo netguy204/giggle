@@ -51,8 +51,8 @@ function M.class(base)
          end
       end
 
-      -- if the constructed obj obj includes a __native field then
-      -- wrap it as a native overlay
+      -- if the constructed obj includes a __native field then wrap it
+      -- as a native overlay
       if obj.__native then
          obj = wrap_native(obj.__native, obj)
          obj.class = function(self)
