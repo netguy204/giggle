@@ -16,6 +16,7 @@ public:
   float max_range;
   float angle;
   float halfwidth;
+  float max_angle_step;
 };
 
 #endif

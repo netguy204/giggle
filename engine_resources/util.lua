@@ -503,6 +503,10 @@ function M.minimum_angular_distance(a, b)
    return math.abs(M.signed_angular_distance(a, b))
 end
 
+function M.degrees_to_radians(d)
+   return d * math.pi / 180
+end
+
 function M.lerp(a, b, s)
    local d = b - a
    return a + (s * d)
