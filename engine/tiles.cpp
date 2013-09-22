@@ -47,7 +47,7 @@ TileMap::~TileMap() {
   free(tiles);
 }
 
-TileMap* TileMap::from_file(World* world, const char* fname) {
+TileMap* TileMap::from_file(Game* game, const char* fname) {
   FILE* f = fopen(fname, "r");
   if(!f) fail_exit("couldn't open %s", fname);
 
@@ -74,7 +74,7 @@ TileMap* TileMap::from_file(World* world, const char* fname) {
       // handle the "nothing image" case
       spec.image = NULL;
     } else {
-      spec.image = world->atlas_entry(atlas, entry);
+      spec.image = game->atlas_entry(atlas, entry);
     }
 
     map->tile_specs.push_back(spec);
@@ -303,12 +303,12 @@ BaseSprite TileMap::spritelist(BaseSprite spritelist, float x_bl, float y_bl,
 
 OBJECT_IMPL(TileMapFactory, Object);
 
-TileMapFactory::TileMapFactory(void* _world)
-  : world((World*)_world) {
+TileMapFactory::TileMapFactory(void* _game)
+  : game((Game*)_game) {
 }
 
 TileMap* TileMapFactory::from_file(const char* fname) {
-  TileMap* tm = TileMap::from_file(world, fname);
+  TileMap* tm = TileMap::from_file(game, fname);
   tm->reference_count = 0; // disown
   return tm;
 }

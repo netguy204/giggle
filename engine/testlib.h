@@ -43,8 +43,6 @@
 extern uint32_t screen_width;
 extern uint32_t screen_height;
 
-extern Random_ rgen;
-
 extern const char* libbase;
 
 /* initialize the internal allocators for the library. Must be called

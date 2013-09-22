@@ -11,7 +11,7 @@ OBJECT_PROPERTY(LightCaster, angle);
 OBJECT_PROPERTY(LightCaster, halfwidth);
 OBJECT_PROPERTY(LightCaster, max_angle_step);
 
-LightCaster::LightCaster(void* _world)
+LightCaster::LightCaster(void* _game)
   : max_range(1e7), angle(0), halfwidth(M_PI), max_angle_step(2*M_PI) {
 }
 

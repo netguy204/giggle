@@ -6,7 +6,7 @@
 class LightCaster : public Object {
 public:
   OBJECT_PROTO(LightCaster);
-  LightCaster(void* _world);
+  LightCaster(void* _game);
 
   void compute_light_mesh(Mesh* result, Walls* walls, const Vector_& light);
   void add_triangle(Mesh* result, const Vector_& ref, Wall* w, float a1, float a2);

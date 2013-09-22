@@ -46,7 +46,7 @@ function DynO.find_all_of_type(t)
    return result
 end
 
-function DynO:init(pos)
+function DynO:init(world, pos)
    self._go = world:create_go()
 
    self.alive = true

@@ -111,6 +111,8 @@ OBJECT_IMPL(Camera, Component);
 OBJECT_PROPERTY(Camera, pre_render);
 OBJECT_PROPERTY(Camera, post_render);
 OBJECT_ACCESSOR(Camera, world2camera, get_world2camera, set_world2camera);
+OBJECT_PROPERTY(Camera, viewport_width);
+OBJECT_PROPERTY(Camera, viewport_height);
 
 Camera::Camera(void* _go)
   : Component((GO*)_go, PRIORITY_SHOW), world2camera(NULL) {
@@ -216,6 +218,7 @@ OBJECT_ACCESSOR(GO, angle, angle, set_angle);
 OBJECT_ACCESSOR(GO, fixed_rotation, fixed_rotation, set_fixed_rotation);
 OBJECT_ACCESSOR(GO, angle_rate, angle_rate, set_angle_rate);
 OBJECT_PROPERTY(GO, delete_me);
+OBJECT_PROPERTY(GO, world);
 
 GO::GO(void* _world)
   : world((World*)_world), stash(NULL), delete_me(0), _handle(NULL) {
@@ -626,90 +629,90 @@ void CScripted::messages_received() {
 
 struct LuaKeyData {
   void* fnkey;
-  World* world;
+  Game* game;
   float value;
 };
 
 struct LuaSIData {
   void* fnkey;
-  World* world;
+  Game* game;
   SpatialInput value;
 };
 
 static void handle_lua_key(void* _kd) {
   LuaKeyData* kd = (LuaKeyData*)_kd;
-  lua_pushlightuserdata(kd->world->L, kd->fnkey);
-  lua_gettable(kd->world->L, LUA_REGISTRYINDEX);
-  lua_pushnumber(kd->world->L, kd->value);
-  lua_call(kd->world->L, 1, 0);
-  kd->world->lk_alloc.free(kd);
+  lua_pushlightuserdata(kd->game->L, kd->fnkey);
+  lua_gettable(kd->game->L, LUA_REGISTRYINDEX);
+  lua_pushnumber(kd->game->L, kd->value);
+  lua_call(kd->game->L, 1, 0);
+  kd->game->lk_alloc.free(kd);
 }
 
 struct LuaUnregisterData {
   /* sizeof(this) <= sizeof(LuaKeyData) */
   void* fnkey;
-  World *world;
+  Game* game;;
 };
 
 static void unregister_lua_fn(void* _ud) {
   LuaUnregisterData* ud = (LuaUnregisterData*)_ud;
-  lua_pushlightuserdata(ud->world->L, ud->fnkey);
-  lua_pushnil(ud->world->L);
-  lua_settable(ud->world->L, LUA_REGISTRYINDEX);
+  lua_pushlightuserdata(ud->game->L, ud->fnkey);
+  lua_pushnil(ud->game->L);
+  lua_settable(ud->game->L, LUA_REGISTRYINDEX);
 }
 
-LuaKeyBinding::LuaKeyBinding(KeyNumber keyn, World* world)
-  : world(world), keyn(keyn) {
-  world->keybindings.add_head(this);
+LuaKeyBinding::LuaKeyBinding(KeyNumber keyn, Game* game)
+  : game(game), keyn(keyn) {
+  game->keybindings.add_head(this);
 }
 
 LuaKeyBinding::~LuaKeyBinding() {
-  LuaUnregisterData* ud = (LuaUnregisterData*)world->lk_alloc.alloc();
+  LuaUnregisterData* ud = (LuaUnregisterData*)game->lk_alloc.alloc();
   ud->fnkey = this;
-  ud->world = world;
-  world->enqueue_command(unregister_lua_fn, ud);
-  world->keybindings.remove(this);
+  ud->game = game;
+  game->enqueue_command(unregister_lua_fn, ud);
+  game->keybindings.remove(this);
 }
 
 void LuaKeyBinding::activate(float value) {
-  LuaKeyData* kd = (LuaKeyData*)world->lk_alloc.alloc();
+  LuaKeyData* kd = (LuaKeyData*)game->lk_alloc.alloc();
   kd->fnkey = this; // we know this by prior arrangement
   kd->value = value;
-  kd->world = world;
-  world->enqueue_command(handle_lua_key, kd);
+  kd->game = game;
+  game->enqueue_command(handle_lua_key, kd);
 }
 
-LuaSIBinding::LuaSIBinding(SpatialInputNumber keyn, World* world)
-  : world(world), keyn(keyn) {
-  world->sibindings.add_head(this);
+LuaSIBinding::LuaSIBinding(SpatialInputNumber keyn, Game* game)
+  : game(game), keyn(keyn) {
+  game->sibindings.add_head(this);
 }
 
 LuaSIBinding::~LuaSIBinding() {
-  LuaUnregisterData* ud = (LuaUnregisterData*)world->lk_alloc.alloc();
+  LuaUnregisterData* ud = (LuaUnregisterData*)game->lk_alloc.alloc();
   ud->fnkey = this;
-  ud->world = world;
-  world->enqueue_command(unregister_lua_fn, ud);
-  world->sibindings.remove(this);
+  ud->game = game;
+  game->enqueue_command(unregister_lua_fn, ud);
+  game->sibindings.remove(this);
 }
 
 static void handle_si_key(void* _kd) {
   LuaSIData* kd = (LuaSIData*)_kd;
-  lua_pushlightuserdata(kd->world->L, kd->fnkey);
-  lua_gettable(kd->world->L, LUA_REGISTRYINDEX);
-  lua_pushnumber(kd->world->L, kd->value.absolute.x);
-  lua_pushnumber(kd->world->L, kd->value.absolute.y);
-  lua_pushnumber(kd->world->L, kd->value.relative.x);
-  lua_pushnumber(kd->world->L, kd->value.relative.y);
-  lua_call(kd->world->L, 4, 0);
-  kd->world->lk_alloc.free(kd);
+  lua_pushlightuserdata(kd->game->L, kd->fnkey);
+  lua_gettable(kd->game->L, LUA_REGISTRYINDEX);
+  lua_pushnumber(kd->game->L, kd->value.absolute.x);
+  lua_pushnumber(kd->game->L, kd->value.absolute.y);
+  lua_pushnumber(kd->game->L, kd->value.relative.x);
+  lua_pushnumber(kd->game->L, kd->value.relative.y);
+  lua_call(kd->game->L, 4, 0);
+  kd->game->lk_alloc.free(kd);
 }
 
 void LuaSIBinding::activate(SpatialInput* value) {
-  LuaSIData* kd = (LuaSIData*)world->lk_alloc.alloc();
+  LuaSIData* kd = (LuaSIData*)game->lk_alloc.alloc();
   kd->fnkey = this; // we know this by prior arrangement
   kd->value = *value;
-  kd->world = world;
-  world->enqueue_command(handle_si_key, kd);
+  kd->game = game;
+  game->enqueue_command(handle_si_key, kd);
 }
 
 OBJECT_IMPL(RevJoint, Object);
@@ -838,22 +841,19 @@ OBJECT_ACCESSOR(World, time_scale, get_time_scale, set_time_scale);
 OBJECT_ACCESSOR(World, gravity, get_gravity, set_gravity);
 OBJECT_PROPERTY(World, pre_render);
 OBJECT_PROPERTY(World, post_render);
+OBJECT_PROPERTY(World, delete_me);
+OBJECT_PROPERTY(World, stage);
 
-void init_lua(World* world) {
-  world->clock = clock_make();
-  world->camera_clock = clock_make();
-  world->stage = world->create_go();
-  world->stage->add_component(&Camera::Type);
-
+void init_lua(Game* game) {
   lua_State* L = luaL_newstate();
-  world->L = L;
+  game->L = L;
 
   luaL_openlibs(L);
   LCprepare_ooc(L);
 
-  if(world->game->lua_path) {
+  if(game->lua_path) {
     lua_getglobal(L, "package");
-    LCpush(L, world->game->lua_path);
+    LCpush(L, game->lua_path);
     lua_setfield(L, -2, "path");
     lua_pop(L, 1);
   }
@@ -868,17 +868,21 @@ void init_lua(World* world) {
     {NULL, NULL}};
   LClink_metatable(L, comp_m, Component::Type);
 
-  LCpush(L, world);
+  LCpush(L, game);
+  lua_setglobal(L, "game");
+
+  World* default_world = game->create_world();
+  LCpush(L, default_world);
   lua_setglobal(L, "world");
 
-  LCpush(L, world->stage);
+  LCpush(L, default_world->stage);
   lua_setglobal(L, "stage");
 
-  lua_pushnumber(L, screen_width);
-  lua_setglobal(L, "screen_width");
+  Camera* default_camera = (Camera*)default_world->stage->find_component(&Camera::Type, NULL);
+  LCpush(L, default_camera);
+  lua_setglobal(L, "camera");
 
-  lua_pushnumber(L, screen_height);
-  lua_setglobal(L, "screen_height");
+  game->load_script("resources/init.lua");
 
   lua_pop(L, lua_gettop(L));
 }
@@ -917,13 +921,17 @@ class GlobalContactListener : public b2ContactListener {
 World::World(void* _game)
   : game((Game*)_game),
     saved_time_delta(0), max_delta(5),
-    L(NULL), bWorld(b2Vec2(0, -50)),
+    bWorld(b2Vec2(0, -50)),
     contact_listener(new GlobalContactListener()),
-    lk_alloc(MAX(sizeof(LuaKeyData), sizeof(LuaSIData)),
-             MAX_INFLIGHT_INPUTS, "lk_alloc"),
-    cmd_alloc(sizeof(Command), MAX_INFLIGHT_INPUTS*2, "cmd_alloc") {
+    delete_me(0) {
+
   bWorld.SetContactListener(contact_listener);
-  init_lua(this);
+  clock = clock_make();
+  stage = create_go();
+  Camera* camera = (Camera*)stage->add_component(&Camera::Type);
+  camera->viewport_width = screen_width;
+  camera->viewport_height = screen_height;
+  random_init(&rgen, 1234);
 }
 
 struct DeleteGO {
@@ -933,43 +941,13 @@ struct DeleteGO {
   }
 };
 
-struct NullKeyBinding {
-  World* world;
-  NullKeyBinding(World* world)
-    : world(world) {
-  }
-
-  bool operator()(LuaKeyBinding* kb) {
-    set_key_binding(kb->keyn, NULL);
-    return 0;
-  }
-};
-
-struct NullSIBinding {
-  World* world;
-  NullSIBinding(World* world)
-    : world(world) {
-  }
-
-  bool operator()(LuaSIBinding* kb) {
-    set_si_binding(kb->keyn, NULL);
-    return 0;
-  }
-};
-
 World::~World() {
   game_objects.foreach(DeleteGO());
-
-  keybindings.foreach(NullKeyBinding(this));
-
-  sibindings.foreach(NullSIBinding(this));
 
   free_thread(&pre_render);
   free_thread(&post_render);
 
-  lua_close(L);
   clock_free(clock);
-  clock_free(camera_clock);
 
   delete contact_listener;
 }
@@ -1005,7 +983,6 @@ void World::update(long delta) {
 }
 
 void World::update_step(long delta) {
-  evaluate_commands();
   this->dt = clock_update(clock, delta / 1000.0);;
 
   // do an integration step
@@ -1056,38 +1033,16 @@ void World::update_step(long delta) {
   }
 }
 
-void World::load_level(const char* level) {
-  if(!luaL_dofile(L, level)) {
-    lua_getglobal(L, "level_init");
-    if(!lua_isnil(L, -1)) {
-      lua_call(L, 0, 0);
-    } else {
-      lua_pop(L, 1);
-      fail_exit("`level_init' was not defined after loading %s", level);
-    }
-  } else {
-    const char* error = lua_tostring(L, -1);
-    fail_exit("level loading failed: %s", error);
-  }
-}
-
 GO* World::create_go() {
   GO* go = new GO(this);
   return go;
 }
 OBJECT_METHOD(World, create_go, GO*, ());
 
-Object* World::create_object(TypeInfo* type) {
-  Object* obj = type->makeInstance(this);
-  obj->reference_count = 0; // disown
-  return obj;
+float World::random_gaussian() {
+  return random_next_gaussian(&rgen);
 }
-OBJECT_METHOD(World, create_object, Object*, (TypeInfo*));
-
-void World::show_mouse_cursor(int show) {
-  window_show_mouse(show);
-}
-OBJECT_METHOD(World, show_mouse_cursor, void, (int));
+OBJECT_METHOD(World, random_gaussian, float, ());
 
 RevJoint* World::create_joint(GO* ga, Vector_ la, GO* gb, Vector_ lb) {
   b2RevoluteJoint *joint;
@@ -1109,20 +1064,6 @@ RevJoint* World::create_joint(GO* ga, Vector_ la, GO* gb, Vector_ lb) {
   return rj;
 }
 OBJECT_METHOD(World, create_joint, RevJoint*, (GO*, Vector_, GO*, Vector_));
-
-SpriteAtlas World::atlas(const char* atlas) {
-  return game->atlas(atlas);
-}
-OBJECT_METHOD(World, atlas, SpriteAtlas, (const char*));
-
-SpriteAtlasEntry World::atlas_entry(const char* atlas_name, const char* entry) {
-  return atlas_entry(game->atlas(atlas_name), entry);
-}
-OBJECT_METHOD(World, atlas_entry, SpriteAtlasEntry, (const char*, const char*));
-
-SpriteAtlasEntry World::atlas_entry(SpriteAtlas atlas, const char* entry) {
-  return game->atlas_entry(atlas, entry);
-}
 
 class RayCallbackListener : public b2RayCastCallback {
 public:
@@ -1218,53 +1159,6 @@ int World::raycast(lua_State* L, int pos) {
 }
 OBJECT_LUA_METHOD(World, raycast);
 
-Animation* World::animation(const char* filename, const char* atlas_name, const char* anim) {
-  return game->animation(filename, atlas(atlas_name), anim);
-}
-OBJECT_METHOD(World, animation, Animation*, (const char*, const char*, const char*));
-
-int World::set_keybinding(lua_State* L, int pos) {
-  const char* keyname = luaL_checkstring(L, pos + 1);
-  int keyn = find_keynumber(keyname);
-  if(keyn < 0) {
-    lua_pushnil(L);
-    return 1;
-  }
-
-  LuaKeyBinding* kb = new LuaKeyBinding((KeyNumber)keyn, this);
-
-  // store the provided closure, using the kb as the registry key
-  lua_pushlightuserdata(L, kb);
-  lua_pushvalue(L, pos + 2); // the closure
-  lua_settable(L, LUA_REGISTRYINDEX);
-  set_key_binding((KeyNumber)keyn, kb);
-
-  lua_pushboolean(L, true);
-  return 1;
-}
-OBJECT_LUA_METHOD(World, set_keybinding);
-
-int World::set_sibinding(lua_State* L, int pos) {
-  const char* keyname = luaL_checkstring(L, pos + 1);
-  int keyn = find_sinumber(keyname);
-  if(keyn < 0) {
-    lua_pushnil(L);
-    return 1;
-  }
-
-  LuaSIBinding* kb = new LuaSIBinding((SpatialInputNumber)keyn, this);
-
-  // store the provided closure, using the kb as the registry key
-  lua_pushlightuserdata(L, kb);
-  lua_pushvalue(L, pos + 2); // the closure
-  lua_settable(L, LUA_REGISTRYINDEX);
-  set_si_binding((SpatialInputNumber)keyn, kb);
-
-  lua_pushboolean(L, true);
-  return 1;
-}
-OBJECT_LUA_METHOD(World, set_sibinding);
-
 Sound* World::get_sound(const char* name, float scale) {
   return game->sound.get_sync(name, scale);
 }
@@ -1338,37 +1232,57 @@ void World::unregister_fixture(b2Fixture* fixture) {
   contact_listener->sensors.erase(fixture);
 }
 
-void World::enqueue_command(CommandFunction fn, void* data) {
-  Command* command = (Command*)cmd_alloc.alloc();
-  command->function = fn;
-  command->data = data;
-  command_queue.enqueue(command);
-}
-
-void World::evaluate_commands() {
-  Command* cmd;
-  while((cmd = command_queue.dequeue_noblock()) != NULL) {
-    cmd->function(cmd->data);
-    cmd_alloc.free(cmd);
-  }
-}
-
 OBJECT_IMPL(Game, Object);
 OBJECT_PROPERTY(Game, stash);
 OBJECT_PROPERTY(Game, lua_path);
 
 Game::Game(void* _path)
-  : stash(NULL) {
+  : stash(NULL),
+    lk_alloc(MAX(sizeof(LuaKeyData), sizeof(LuaSIData)),
+             MAX_INFLIGHT_INPUTS, "lk_alloc"),
+    cmd_alloc(sizeof(Command), MAX_INFLIGHT_INPUTS*2, "cmd_alloc") {
   if(_path) {
     lua_path = malloc_lstring((char*)_path, strlen((char*)_path));
   } else {
     lua_path = NULL;
   }
+  init_lua(this);
 }
+
+struct NullKeyBinding {
+  bool operator()(LuaKeyBinding* kb) {
+    set_key_binding(kb->keyn, NULL);
+    return 0;
+  }
+};
+
+struct NullSIBinding {
+  bool operator()(LuaSIBinding* kb) {
+    set_si_binding(kb->keyn, NULL);
+    return 0;
+  }
+};
 
 Game::~Game() {
   if(stash) free_lstring(stash);
 
+  // shutdown lua first
+  lua_close(L);
+
+  // remove keybindings
+  keybindings.foreach(NullKeyBinding());
+  sibindings.foreach(NullSIBinding());
+
+  // delete worlds
+  DLLNode node = worlds.head;
+  while(node) {
+    DLLNode next = node->next;
+    World* world = worlds.to_element(node);
+    delete world;
+    node = next;
+  }
+
+  // free our spriter and atlas caches
   for(NameToAtlas::iterator iter = name_to_atlas.begin();
       iter != name_to_atlas.end(); ++iter) {
     free((char*)iter->first);
@@ -1381,6 +1295,82 @@ Game::~Game() {
     spriter_free(iter->second);
   }
 }
+
+void Game::load_script(const char* script) {
+  if(!luaL_dofile(L, script)) {
+    lua_getglobal(L, "game_init");
+    if(!lua_isnil(L, -1)) {
+      lua_call(L, 0, 0);
+    } else {
+      lua_pop(L, 1);
+      fail_exit("`game_init' was not defined after loading %s", script);
+    }
+  } else {
+    const char* error = lua_tostring(L, -1);
+    fail_exit("script loading failed: %s", error);
+  }
+}
+
+World* Game::create_world() {
+  World* world = new World(this);
+  worlds.add_head(world);
+  return world;
+}
+OBJECT_METHOD(Game, create_world, World*, ());
+
+Object* Game::create_object(TypeInfo* type) {
+  Object* obj = type->makeInstance(this);
+  obj->reference_count = 0; // disown
+  return obj;
+}
+OBJECT_METHOD(Game, create_object, Object*, (TypeInfo*));
+
+void Game::show_mouse_cursor(int show) {
+  window_show_mouse(show);
+}
+OBJECT_METHOD(Game, show_mouse_cursor, void, (int));
+
+int Game::set_keybinding(lua_State* L, int pos) {
+  const char* keyname = luaL_checkstring(L, pos + 1);
+  int keyn = find_keynumber(keyname);
+  if(keyn < 0) {
+    lua_pushnil(L);
+    return 1;
+  }
+
+  LuaKeyBinding* kb = new LuaKeyBinding((KeyNumber)keyn, this);
+
+  // store the provided closure, using the kb as the registry key
+  lua_pushlightuserdata(L, kb);
+  lua_pushvalue(L, pos + 2); // the closure
+  lua_settable(L, LUA_REGISTRYINDEX);
+  set_key_binding((KeyNumber)keyn, kb);
+
+  lua_pushboolean(L, true);
+  return 1;
+}
+OBJECT_LUA_METHOD(Game, set_keybinding);
+
+int Game::set_sibinding(lua_State* L, int pos) {
+  const char* keyname = luaL_checkstring(L, pos + 1);
+  int keyn = find_sinumber(keyname);
+  if(keyn < 0) {
+    lua_pushnil(L);
+    return 1;
+  }
+
+  LuaSIBinding* kb = new LuaSIBinding((SpatialInputNumber)keyn, this);
+
+  // store the provided closure, using the kb as the registry key
+  lua_pushlightuserdata(L, kb);
+  lua_pushvalue(L, pos + 2); // the closure
+  lua_settable(L, LUA_REGISTRYINDEX);
+  set_si_binding((SpatialInputNumber)keyn, kb);
+
+  lua_pushboolean(L, true);
+  return 1;
+}
+OBJECT_LUA_METHOD(Game, set_sibinding);
 
 SpriteAtlas Game::atlas(const char* atlas_name) {
   NameToAtlas::iterator iter = name_to_atlas.find(atlas_name);
@@ -1395,10 +1385,16 @@ SpriteAtlas Game::atlas(const char* atlas_name) {
 
   return atlas;
 }
+OBJECT_METHOD(Game, atlas, SpriteAtlas, (const char*));
 
 SpriteAtlasEntry Game::atlas_entry(SpriteAtlas atlas, const char* entry) {
   return spriteatlas_find(atlas, entry);
 }
+
+SpriteAtlasEntry Game::atlas_entry(const char* atlas_name, const char* entry) {
+  return spriteatlas_find(atlas(atlas_name), entry);
+}
+OBJECT_METHOD(Game, atlas_entry, SpriteAtlasEntry, (const char*, const char*));
 
 Entity* Game::scml_entity(const char* filename, SpriteAtlas atlas) {
   NameToEntity::iterator iter = name_to_entity.find(filename);
@@ -1415,6 +1411,7 @@ Entity* Game::scml_entity(const char* filename, SpriteAtlas atlas) {
 }
 
 void Game::update(long delta) {
+  // free any expired handles
   LongToHandle::iterator iter = long_to_handle.begin();
   while(iter != long_to_handle.end()) {
     long handle_name = iter->first;
@@ -1426,11 +1423,28 @@ void Game::update(long delta) {
       long_to_handle.erase(handle_name);
     }
   }
+
+  // handle incoming commands
+  evaluate_commands();
+
+  // allow all worlds to update
+  DLLNode node = worlds.head;
+  while(node) {
+    DLLNode next = node->next;
+    World* world = worlds.to_element(node);
+    if(world->delete_me) {
+      delete world;
+    } else {
+      world->update(delta);
+    }
+    node = next;
+  }
 }
 
-Animation* Game::animation(const char* filename, SpriteAtlas atlas, const char* anim) {
-  return spriter_find(scml_entity(filename, atlas), anim);
+Animation* Game::animation(const char* filename, const char* atlasname, const char* anim) {
+  return spriter_find(scml_entity(filename, atlas(atlasname)), anim);
 }
+OBJECT_METHOD(Game, animation, Animation*, (const char*, const char*, const char*));
 
 AudioHandle* Game::play_sound(Sound* s, int channel)  {
   AudioHandle* handle = sound.play(s, channel);
@@ -1450,10 +1464,17 @@ AudioHandle* Game::sound_handle(long handle) {
   return iter->second;
 }
 
-/*
-void Game::update(long delta) {
+void Game::enqueue_command(CommandFunction fn, void* data) {
+  Command* command = (Command*)cmd_alloc.alloc();
+  command->function = fn;
+  command->data = data;
+  command_queue.enqueue(command);
 }
 
-void Game::init_world() {
+void Game::evaluate_commands() {
+  Command* cmd;
+  while((cmd = command_queue.dequeue_noblock()) != NULL) {
+    cmd->function(cmd->data);
+    cmd_alloc.free(cmd);
+  }
 }
-*/

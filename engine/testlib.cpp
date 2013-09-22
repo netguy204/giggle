@@ -31,7 +31,6 @@ FixedAllocator* image_resource_allocator;
 StackAllocator frame_allocator;
 CommandQueue* render_queue;
 AllocatorQueue* render_reply_queue;
-Random_ rgen;
 
 uint32_t screen_width;
 uint32_t screen_height;
@@ -58,7 +57,6 @@ void renderer_await_startup(void* empty) {
 }
 
 void testlib_init() {
-  random_init(&rgen, 1234);
   input_init();
   clock_allocator = new FixedAllocator(sizeof(struct Clock_), MAX_NUM_CLOCKS, "clock_allocator");
   image_resource_allocator = new FixedAllocator(sizeof(struct ImageResource_), MAX_NUM_IMAGES, "image_resource_allocator");

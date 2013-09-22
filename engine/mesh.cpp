@@ -3,7 +3,7 @@
 OBJECT_IMPL(Mesh, Object);
 OBJECT_PROPERTY(Mesh, type);
 
-Mesh::Mesh(void* _world)
+Mesh::Mesh(void* _game)
   : type(MESH_TRIS) {
 }
 
@@ -148,7 +148,7 @@ void CMesh::render(Camera* camera) {
 
 OBJECT_IMPL(Walls, Object);
 
-Walls::Walls(void* _world) {
+Walls::Walls(void* _game) {
 }
 
 void Walls::add_wall(const Vector_& start, const Vector_& end) {

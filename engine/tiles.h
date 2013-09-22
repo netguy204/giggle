@@ -84,7 +84,6 @@ inline void LCcheck<TilePosition>(lua_State* L, TilePosition* tp, int pos) {
 }
 
 class TileMap;
-class World;
 
 typedef int(*LineCallback)(TileMap* map, const TilePosition& pos, void* udata);
 
@@ -103,7 +102,7 @@ public:
   TileMap(int width, int height, int tw, int th);
   ~TileMap();
 
-  static TileMap* from_file(World* world, const char* fname);
+  static TileMap* from_file(Game* game, const char* fname);
 
   int index(const TilePosition& pos) const;
   int validindex(const TilePosition& pos) const;
@@ -128,11 +127,11 @@ class TileMapFactory : public Object {
 public:
   OBJECT_PROTO(TileMapFactory);
 
-  TileMapFactory(void* _world);
+  TileMapFactory(void* _game);
 
   TileMap* from_file(const char* fname);
 
-  World* world;
+  Game* game;
 };
 
 typedef struct CharImage_ {

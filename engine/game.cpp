@@ -34,7 +34,6 @@
 #include <stdarg.h>
 #include <math.h>
 
-World* world = NULL;
 Game* game;
 
 OBJECT_IMPL(CTimer, Component);
@@ -349,7 +348,7 @@ const char* CDrawTilemap::get_map_filename() {
 
 void CDrawTilemap::set_map_filename(const char* fname) {
   if(map) map->release();
-  map = TileMap::from_file(world, fname);
+  map = TileMap::from_file(go->world->game, fname);
   map_dirty = 1;
 }
 
@@ -373,39 +372,6 @@ void CDrawTilemap::render(Camera* camera) {
 }
 
 void game_step(long delta);
-
-int world_reset_requested = 0;
-
-int Lreset_world(lua_State* L) {
-  world_reset_requested = 1;
-  return 0;
-}
-
-int Lrandom_gaussian(lua_State* L) {
-  lua_pushnumber(L, random_next_gaussian(&rgen));
-  return 1;
-}
-
-void init_world() {
-  LOGI("init_world");
-
-  if(world) {
-    delete world;
-  }
-
-  world = new World(game);
-
-  lua_register(world->L, "reset_world", Lreset_world);
-  lua_register(world->L, "random_gaussian", Lrandom_gaussian);
-
-  LCpush(world->L, game);
-  lua_setglobal(world->L, "game");
-
-  world->load_level("resources/init.lua");
-
-  world_reset_requested = 0;
-  LOGI("init complete");
-}
 
 void game_support_init() {
   color_init();
@@ -559,16 +525,10 @@ void game_init(int argc, char** argv) {
   game_support_init();
   game = new Game(buffer);
 
-  init_world();
   set_game_step(game_step);
 }
 
 void game_step(long delta) {
-  if(world_reset_requested) {
-    init_world();
-  }
-
-  world->update(delta);
   game->update(delta);
 }
 

@@ -25,7 +25,7 @@
 class Font : public Object {
  public:
   OBJECT_PROTO(Font);
-  Font(void* world);
+  Font(void* game);
 
   void load(SpriteAtlas atlas, const char* prefix, const char* character_map);
   const char* wrap_string(const char* string, int width);
@@ -62,7 +62,7 @@ class Font : public Object {
 
   int kerning[256][256];
 
-  World* world;
+  Game* game;
 };
 
 class CDrawText : public Component {

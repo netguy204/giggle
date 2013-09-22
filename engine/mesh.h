@@ -24,7 +24,7 @@ class Mesh : public Object {
 public:
   OBJECT_PROTO(Mesh);
 
-  Mesh(void* _world);
+  Mesh(void* _game);
 
   void add_point(const Vector_& point, const Color& color);
   long nverts() const;
@@ -71,7 +71,7 @@ typedef std::vector<Wall> WallList;
 class Walls : public Object {
 public:
   OBJECT_PROTO(Walls);
-  Walls(void* _world);
+  Walls(void* _game);
 
   void add_wall(const Vector_& start, const Vector_& end);
   void clear();

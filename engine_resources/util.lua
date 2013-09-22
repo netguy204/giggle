@@ -209,7 +209,7 @@ end
 
 function M.add_antigrav_force(go)
    local mass = go:mass() * go:gravity_scale()
-   local grav = world:gravity()
+   local grav = go:world():gravity()
    grav[1] = grav[1] * -mass
    grav[2] = grav[2] * -mass
    go:apply_force(grav)
@@ -331,7 +331,7 @@ function M.loop_music(songs)
    local current_handle = nil
    local current_handle_name = stash:get('handle_name', nil)
    if current_handle_name ~= nil then
-      current_handle = world:sound_handle(current_handle_name)
+      current_handle = game:sound_handle(current_handle_name)
    end
 
    local play_next_music = function()
@@ -341,7 +341,7 @@ function M.loop_music(songs)
       end
       local song = songs[next_song]
 
-      current_handle = world:stream_sound(song, world:current_sample())
+      current_handle = game:stream_sound(song, game:current_sample())
       local stop_time = current_handle:last_sample()
       stash:update({song_num=next_song,
                     song_end=stop_time,
@@ -353,7 +353,7 @@ function M.loop_music(songs)
          while true do
             coroutine.yield()
             local stop_time = stash:get('song_end', 0)
-            if stop_time < world:current_sample() then
+            if stop_time < game:current_sample() then
                play_next_music()
             end
          end
@@ -408,7 +408,7 @@ end
 
 function M.install_keymap(mapping)
    for name, fn in pairs(mapping) do
-      assert(world:set_keybinding(name, fn))
+      assert(game:set_keybinding(name, fn))
    end
 end
 
@@ -436,7 +436,7 @@ function M.install_mouse_map()
    local callback = function(x, y)
       mouse_state = vector.new({x,y})
    end
-   world:set_sibinding(key, callback)
+   game:set_sibinding(key, callback)
 
    local mouse_buttons = {
       mouse1 = 'K_MOUSE1',
@@ -450,7 +450,7 @@ function M.install_mouse_map()
    }
 
    for name, button in pairs(mouse_buttons) do
-      world:set_keybinding(button, M.button_fn(name))
+      game:set_keybinding(button, M.button_fn(name))
    end
 end
 

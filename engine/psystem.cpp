@@ -48,7 +48,7 @@ SystemDefinition::SystemDefinition(void* empty) {
 SystemDefinition::SystemDefinition(unsigned int n)
   : renderer(NULL), activator(new PSAlwaysActivator(this)), n(n), feature_flags(0),
     layer(LAYER_PLAYER) {
-
+  random_init(&rgen, 1234);
 }
 
 ParticleSystemComponent* SystemDefinition::add_component(TypeInfo* type) {
@@ -630,7 +630,7 @@ ParticleSystemComponent::ParticleSystemComponent(void* _def)
 
 ParticleSystemComponent::~ParticleSystemComponent() {
   // we can't use virtual typeinfo() to determine the type here
-  // because in the constructor all the derived type information has
+  // because in the destructor all the derived type information has
   // been lost. We'll have to figure out what list we're in the slow
   // way.
   if(def->initializers.contains((ParticleSystemInitializer*)this)) {
@@ -809,10 +809,10 @@ void PSBoxInitializer::firstInitialize() {
   float maxy = center.y + initial.maxy;
 
   for(int ii = 0; ii < def->n; ++ii) {
-    positions[ii].x = rand_in_range(&rgen, minx, maxx);
-    positions[ii].y = rand_in_range(&rgen, miny, maxy);
-    velocities[ii].x = rand_in_range(&rgen, minv.x, maxv.x);
-    velocities[ii].y = rand_in_range(&rgen, minv.y, maxv.y);
+    positions[ii].x = rand_in_range(&def->rgen, minx, maxx);
+    positions[ii].y = rand_in_range(&def->rgen, miny, maxy);
+    velocities[ii].x = rand_in_range(&def->rgen, minv.x, maxv.x);
+    velocities[ii].y = rand_in_range(&def->rgen, minv.y, maxv.y);
     valids[ii] = 0;
   }
 }
@@ -832,10 +832,10 @@ void PSBoxInitializer::initialize() {
 
   for(int ii = 0; ii < def->n; ++ii) {
     if(!valids[ii]) {
-      positions[ii].x = rand_in_range(&rgen, minx, maxx);
-      positions[ii].y = rand_in_range(&rgen, miny, maxy);
-      velocities[ii].x = rand_in_range(&rgen, minv.x, maxv.x);
-      velocities[ii].y = rand_in_range(&rgen, minv.y, maxv.y);
+      positions[ii].x = rand_in_range(&def->rgen, minx, maxx);
+      positions[ii].y = rand_in_range(&def->rgen, miny, maxy);
+      velocities[ii].x = rand_in_range(&def->rgen, minv.x, maxv.x);
+      velocities[ii].y = rand_in_range(&def->rgen, minv.y, maxv.y);
     }
   }
 }
@@ -856,7 +856,7 @@ void PSTimeInitializer::firstInitialize() {
   float* times = def->system_featuref(PF_TIME);
 
   for(int ii = 0; ii < def->n; ++ii) {
-    times[ii] = rand_in_rangef(&rgen, 0.0, max_life);
+    times[ii] = rand_in_rangef(&def->rgen, 0.0, max_life);
   }
 }
 
@@ -866,7 +866,7 @@ void PSTimeInitializer::initialize() {
 
   for(int ii = 0; ii < def->n; ++ii) {
     if(!valids[ii]) {
-      times[ii] = rand_in_rangef(&rgen, min_life, max_life);
+      times[ii] = rand_in_rangef(&def->rgen, min_life, max_life);
     }
   }
 }
@@ -895,10 +895,10 @@ void PSRandColorInitializer::firstInitialize() {
   Color* colors = def->system_featurec(PF_COLOR);
 
   for(int ii = 0; ii < def->n; ++ii) {
-    colors[ii].r = rand_in_rangef(&rgen, min_color.r, max_color.r);
-    colors[ii].g = rand_in_rangef(&rgen, min_color.g, max_color.g);
-    colors[ii].b = rand_in_rangef(&rgen, min_color.b, max_color.b);
-    colors[ii].a = rand_in_rangef(&rgen, min_color.a, max_color.a);
+    colors[ii].r = rand_in_rangef(&def->rgen, min_color.r, max_color.r);
+    colors[ii].g = rand_in_rangef(&def->rgen, min_color.g, max_color.g);
+    colors[ii].b = rand_in_rangef(&def->rgen, min_color.b, max_color.b);
+    colors[ii].a = rand_in_rangef(&def->rgen, min_color.a, max_color.a);
   }
 }
 
@@ -908,10 +908,10 @@ void PSRandColorInitializer::initialize() {
 
   for(int ii = 0; ii < def->n; ++ii) {
     if(!valids[ii]) {
-      colors[ii].r = rand_in_rangef(&rgen, min_color.r, max_color.r);
-      colors[ii].g = rand_in_rangef(&rgen, min_color.g, max_color.g);
-      colors[ii].b = rand_in_rangef(&rgen, min_color.b, max_color.b);
-      colors[ii].a = rand_in_rangef(&rgen, min_color.a, max_color.a);
+      colors[ii].r = rand_in_rangef(&def->rgen, min_color.r, max_color.r);
+      colors[ii].g = rand_in_rangef(&def->rgen, min_color.g, max_color.g);
+      colors[ii].b = rand_in_rangef(&def->rgen, min_color.b, max_color.b);
+      colors[ii].a = rand_in_rangef(&def->rgen, min_color.a, max_color.a);
     }
   }
 }
@@ -932,7 +932,7 @@ void PSRandScaleInitializer::firstInitialize() {
   float* scales = def->system_featuref(PF_SCALE);
 
   for(int ii = 0; ii < def->n; ++ii) {
-    scales[ii] = rand_in_rangef(&rgen, min_scale, max_scale);
+    scales[ii] = rand_in_rangef(&def->rgen, min_scale, max_scale);
   }
 }
 
@@ -942,7 +942,7 @@ void PSRandScaleInitializer::initialize() {
 
   for(int ii = 0; ii < def->n; ++ii) {
     if(!valids[ii]) {
-      scales[ii] = rand_in_rangef(&rgen, min_scale, max_scale);
+      scales[ii] = rand_in_rangef(&def->rgen, min_scale, max_scale);
     }
   }
 }

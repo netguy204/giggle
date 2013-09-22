@@ -151,6 +151,9 @@ class Camera : public Component {
 
   void enqueue();
 
+  int viewport_width;
+  int viewport_height;
+
   // base layers are interpreted as if they contain only basesprite
   // representations (no rotation, color, or shifted origin)
   BaseSprite baseLayers[LAYER_MAX];
@@ -326,12 +329,12 @@ class Game;
 
 class LuaKeyBinding : public Binding {
  public:
-  LuaKeyBinding(KeyNumber keyn, World* world);
+  LuaKeyBinding(KeyNumber keyn, Game* game);
   virtual ~LuaKeyBinding();
 
   virtual void activate(float value);
 
-  World* world;
+  Game* game;
   DLLNode_ node;
 
   // stash so we can unregister at destruct
@@ -340,12 +343,12 @@ class LuaKeyBinding : public Binding {
 
 class LuaSIBinding : public SpatialInputBinding {
  public:
-  LuaSIBinding(SpatialInputNumber keyn, World* world);
+  LuaSIBinding(SpatialInputNumber keyn, Game* game);
   virtual ~LuaSIBinding();
 
   virtual void activate(SpatialInput* input);
 
-  World* world;
+  Game* game;
   DLLNode_ node;
 
   // stash so we can unregister at destruct
@@ -383,17 +386,7 @@ class World : public Object {
   virtual void update(long delta);
   virtual void update_step(long delta);
 
-  void load_level(const char* level);
-
-  SpriteAtlas atlas(const char* atlas);
-  virtual SpriteAtlasEntry atlas_entry(const char* atlas, const char* entry);
-  SpriteAtlasEntry atlas_entry(SpriteAtlas atlas, const char* entry);
-  Animation* animation(const char* scml, const char* atlas, const char* anim);
-
   int raycast(lua_State* L, int pos);
-
-  int set_keybinding(lua_State* L, int pos);
-  int set_sibinding(lua_State* L, int pos);
 
   Sound* get_sound(const char* name, float scale);
   AudioHandle* play_sound(Sound* sound, int channel);
@@ -406,9 +399,7 @@ class World : public Object {
   void set_gravity(Vector_ vector);
   Vector_ get_gravity();
   GO* create_go();
-  Object* create_object(TypeInfo* type);
-
-  void show_mouse_cursor(int show);
+  float random_gaussian();
 
   RevJoint* create_joint(GO* ga, Vector_ la, GO* gb, Vector_ lb);
 
@@ -419,30 +410,23 @@ class World : public Object {
   long max_delta;
 
   Clock clock;
-  Clock camera_clock;
 
-  lua_State* L;
   b2World bWorld;
 
   GlobalContactListener* contact_listener;
   void register_fixture(b2Fixture* fixture, CSensor* sensor);
   void unregister_fixture(b2Fixture* fixture);
 
-  void enqueue_command(CommandFunction fn, void* data);
-  void evaluate_commands();
-
-  FixedAllocator lk_alloc;
-  FixedAllocator cmd_alloc;
-  CommandQueue command_queue;
   LuaThread pre_render;
   LuaThread post_render;
 
   float dt;
+  Random_ rgen;
+  int delete_me;
+  DLLNode_ node;
 
   DLL_DECLARE(GO, world_node) game_objects;
   DLL_DECLARE(GO, messages_waiting_node) have_waiting_messages;
-  DLL_DECLARE(LuaKeyBinding, node) keybindings;
-  DLL_DECLARE(LuaSIBinding, node) sibindings;
 
   DLL_DECLARE(Component, world_node) components;
   DLL_DECLARE(Camera, camera_node) cameras;
@@ -455,11 +439,20 @@ class Game : public Object {
   Game(void* path);
   virtual ~Game();
 
+  void load_script(const char* script);
+  World* create_world();
+  Object* create_object(TypeInfo* type);
+  void show_mouse_cursor(int show);
+
+  int set_keybinding(lua_State* L, int pos);
+  int set_sibinding(lua_State* L, int pos);
+
   SpriteAtlas atlas(const char* atlas);
   SpriteAtlasEntry atlas_entry(SpriteAtlas atlas, const char* entry);
+  SpriteAtlasEntry atlas_entry(const char* atlas, const char* entry);
 
   Entity* scml_entity(const char* filename, SpriteAtlas atlas);
-  Animation* animation(const char* scml, SpriteAtlas atlas, const char* anim);
+  Animation* animation(const char* scml, const char* atlas, const char* anim);
 
   virtual void update(long delta);
 
@@ -467,14 +460,26 @@ class Game : public Object {
   AudioHandle* stream_sound(const char* fname, long start);
   AudioHandle* sound_handle(long handle);
 
+  void enqueue_command(CommandFunction fn, void* data);
+  void evaluate_commands();
+
+  FixedAllocator lk_alloc;
+  FixedAllocator cmd_alloc;
+  CommandQueue command_queue;
+
   SoundMgr sound;
 
+  lua_State* L;
   LString* stash;
   LString* lua_path;
 
   NameToAtlas name_to_atlas;
   NameToEntity name_to_entity;
   LongToHandle long_to_handle;
+
+  DLL_DECLARE(World, node) worlds;
+  DLL_DECLARE(LuaKeyBinding, node) keybindings;
+  DLL_DECLARE(LuaSIBinding, node) sibindings;
 };
 
 template <typename Func>

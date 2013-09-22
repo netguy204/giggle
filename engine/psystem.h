@@ -140,6 +140,7 @@ class SystemDefinition : public Object {
   DLL_DECLARE(ParticleSystemUpdater, node) updaters;
   DLL_DECLARE(ParticleSystemTerminator, node) terminators;
 
+  Random_ rgen;
   Component* component;
   SystemRenderer* renderer;
   ParticleActivator* activator;

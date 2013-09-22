@@ -99,9 +99,8 @@ OBJECT_PROPERTY(Font, word_separation);
 OBJECT_PROPERTY(Font, line_separation);
 OBJECT_PROPERTY(Font, scale);
 
-Font::Font(void* _world)
-  : scale(1.0) {
-  world = (World*)_world;
+Font::Font(void* _game)
+  : scale(1.0), game((Game*)_game) {
 }
 
 void Font::load(SpriteAtlas atlas, const char* prefix, const char* character_map) {
@@ -116,7 +115,7 @@ void Font::load(SpriteAtlas atlas, const char* prefix, const char* character_map
   int idx = 1;
   for(const char* ch = character_map; *ch != '\0'; ++ch) {
     snprintf(tempname, sizeof(tempname), "%s%d", prefix, idx++);
-    table[(unsigned)*ch] = world->atlas_entry(atlas, tempname);
+    table[(unsigned)*ch] = game->atlas_entry(atlas, tempname);
     xadvance[(unsigned)*ch] = table[(unsigned)*ch]->w;
   }
 
