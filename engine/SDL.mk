@@ -5,7 +5,7 @@ SDL_BASE=$(PWD)/vender/SDL-1.2.15
 SDL_ROOT=$(PWD)/vender/SDL-root
 
 PLATFORM:=$(shell uname)
-CFLAGS+=-Ivender -I$(SDL_ROOT)/include
+CFLAGS+=-Ivender -I$(SDL_ROOT)/include -fdata-sections -ffunction-sections
 
 EXE_OBJS+=glew.o
 
@@ -26,11 +26,12 @@ $(SDL_LIBS):
 SDL_INJECT=-include "SDL/SDL.h"
 
 ifeq ($(PLATFORM), Darwin)
-	LDFLAGS+= -Fvender/ $(SDL_LIBS_FLAGS)
+	LDFLAGS+= -Fvender/ $(SDL_LIBS_FLAGS) -dead_strip
 	CFLAGS+= -DBUILD_SDL -mmacosx-version-min=10.5
 	EXE_OBJS+=
 	PLATFORM=macosx
 else
+	LDFLAGS+=-Wl,--gc-sections
 ifeq ($(PLATFORM), MINGW32_NT-5.1)
 	LDFLAGS+=-lglu32 -lopengl32 -L$(SDL_ROOT)/lib -Wl,-Bstatic -lmingw32 -lSDLmain -lSDL -mwindows -luser32 -lgdi32 -lwinmm -Wl,-Bdynamic
 	CFLAGS+=-DBUILD_SDL -DWINDOWS -DGLEW_STATIC
