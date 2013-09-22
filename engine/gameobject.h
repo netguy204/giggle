@@ -322,7 +322,7 @@ struct Cone {
   float angle;
 };
 
-class Universe;
+class Game;
 
 class LuaKeyBinding : public Binding {
  public:
@@ -414,7 +414,7 @@ class World : public Object {
 
   GO* stage;
 
-  Universe* universe;
+  Game* game;
   long saved_time_delta;
   long max_delta;
 
@@ -448,12 +448,12 @@ class World : public Object {
   DLL_DECLARE(Camera, camera_node) cameras;
 };
 
-class Universe : public Object {
+class Game : public Object {
  public:
-  OBJECT_PROTO(Universe);
+  OBJECT_PROTO(Game);
 
-  Universe(void* path);
-  virtual ~Universe();
+  Game(void* path);
+  virtual ~Game();
 
   SpriteAtlas atlas(const char* atlas);
   SpriteAtlasEntry atlas_entry(SpriteAtlas atlas, const char* entry);

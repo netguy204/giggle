@@ -35,7 +35,7 @@
 #include <math.h>
 
 World* world = NULL;
-Universe* universe;
+Game* game;
 
 OBJECT_IMPL(CTimer, Component);
 OBJECT_PROPERTY(CTimer, time_remaining);
@@ -393,13 +393,13 @@ void init_world() {
     delete world;
   }
 
-  world = new World(universe);
+  world = new World(game);
 
   lua_register(world->L, "reset_world", Lreset_world);
   lua_register(world->L, "random_gaussian", Lrandom_gaussian);
 
-  LCpush(world->L, universe);
-  lua_setglobal(world->L, "universe");
+  LCpush(world->L, game);
+  lua_setglobal(world->L, "game");
 
   world->load_level("resources/init.lua");
 
@@ -557,7 +557,7 @@ void game_init(int argc, char** argv) {
 
   // initialize globals
   game_support_init();
-  universe = new Universe(buffer);
+  game = new Game(buffer);
 
   init_world();
   set_game_step(game_step);
@@ -569,7 +569,7 @@ void game_step(long delta) {
   }
 
   world->update(delta);
-  universe->update(delta);
+  game->update(delta);
 }
 
 void game_shutdown() {

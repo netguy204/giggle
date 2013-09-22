@@ -851,9 +851,9 @@ void init_lua(World* world) {
   luaL_openlibs(L);
   LCprepare_ooc(L);
 
-  if(world->universe->lua_path) {
+  if(world->game->lua_path) {
     lua_getglobal(L, "package");
-    LCpush(L, world->universe->lua_path);
+    LCpush(L, world->game->lua_path);
     lua_setfield(L, -2, "path");
     lua_pop(L, 1);
   }
@@ -914,8 +914,8 @@ class GlobalContactListener : public b2ContactListener {
   }
 };
 
-World::World(void* _universe)
-  : universe((Universe*)_universe),
+World::World(void* _game)
+  : game((Game*)_game),
     saved_time_delta(0), max_delta(5),
     L(NULL), bWorld(b2Vec2(0, -50)),
     contact_listener(new GlobalContactListener()),
@@ -1111,17 +1111,17 @@ RevJoint* World::create_joint(GO* ga, Vector_ la, GO* gb, Vector_ lb) {
 OBJECT_METHOD(World, create_joint, RevJoint*, (GO*, Vector_, GO*, Vector_));
 
 SpriteAtlas World::atlas(const char* atlas) {
-  return universe->atlas(atlas);
+  return game->atlas(atlas);
 }
 OBJECT_METHOD(World, atlas, SpriteAtlas, (const char*));
 
 SpriteAtlasEntry World::atlas_entry(const char* atlas_name, const char* entry) {
-  return atlas_entry(universe->atlas(atlas_name), entry);
+  return atlas_entry(game->atlas(atlas_name), entry);
 }
 OBJECT_METHOD(World, atlas_entry, SpriteAtlasEntry, (const char*, const char*));
 
 SpriteAtlasEntry World::atlas_entry(SpriteAtlas atlas, const char* entry) {
-  return universe->atlas_entry(atlas, entry);
+  return game->atlas_entry(atlas, entry);
 }
 
 class RayCallbackListener : public b2RayCastCallback {
@@ -1219,7 +1219,7 @@ int World::raycast(lua_State* L, int pos) {
 OBJECT_LUA_METHOD(World, raycast);
 
 Animation* World::animation(const char* filename, const char* atlas_name, const char* anim) {
-  return universe->animation(filename, atlas(atlas_name), anim);
+  return game->animation(filename, atlas(atlas_name), anim);
 }
 OBJECT_METHOD(World, animation, Animation*, (const char*, const char*, const char*));
 
@@ -1266,22 +1266,22 @@ int World::set_sibinding(lua_State* L, int pos) {
 OBJECT_LUA_METHOD(World, set_sibinding);
 
 Sound* World::get_sound(const char* name, float scale) {
-  return universe->sound.get_sync(name, scale);
+  return game->sound.get_sync(name, scale);
 }
 OBJECT_METHOD(World, get_sound, Sound*, (const char*, float));
 
 AudioHandle* World::play_sound(Sound* sound, int channel) {
-  return universe->play_sound(sound, channel);
+  return game->play_sound(sound, channel);
 }
 OBJECT_METHOD(World, play_sound, AudioHandle*, (Sound*, int));
 
 AudioHandle* World::stream_sound(const char* sound, long start_sample) {
-  return universe->stream_sound(sound, start_sample);
+  return game->stream_sound(sound, start_sample);
 }
 OBJECT_METHOD(World, stream_sound, AudioHandle*, (const char*, long));
 
 AudioHandle* World::sound_handle(long handle_name) {
-  return universe->sound_handle(handle_name);
+  return game->sound_handle(handle_name);
 }
 OBJECT_METHOD(World, sound_handle, AudioHandle*, (long));
 
@@ -1353,11 +1353,11 @@ void World::evaluate_commands() {
   }
 }
 
-OBJECT_IMPL(Universe, Object);
-OBJECT_PROPERTY(Universe, stash);
-OBJECT_PROPERTY(Universe, lua_path);
+OBJECT_IMPL(Game, Object);
+OBJECT_PROPERTY(Game, stash);
+OBJECT_PROPERTY(Game, lua_path);
 
-Universe::Universe(void* _path)
+Game::Game(void* _path)
   : stash(NULL) {
   if(_path) {
     lua_path = malloc_lstring((char*)_path, strlen((char*)_path));
@@ -1366,7 +1366,7 @@ Universe::Universe(void* _path)
   }
 }
 
-Universe::~Universe() {
+Game::~Game() {
   if(stash) free_lstring(stash);
 
   for(NameToAtlas::iterator iter = name_to_atlas.begin();
@@ -1382,7 +1382,7 @@ Universe::~Universe() {
   }
 }
 
-SpriteAtlas Universe::atlas(const char* atlas_name) {
+SpriteAtlas Game::atlas(const char* atlas_name) {
   NameToAtlas::iterator iter = name_to_atlas.find(atlas_name);
   SpriteAtlas atlas;
 
@@ -1396,11 +1396,11 @@ SpriteAtlas Universe::atlas(const char* atlas_name) {
   return atlas;
 }
 
-SpriteAtlasEntry Universe::atlas_entry(SpriteAtlas atlas, const char* entry) {
+SpriteAtlasEntry Game::atlas_entry(SpriteAtlas atlas, const char* entry) {
   return spriteatlas_find(atlas, entry);
 }
 
-Entity* Universe::scml_entity(const char* filename, SpriteAtlas atlas) {
+Entity* Game::scml_entity(const char* filename, SpriteAtlas atlas) {
   NameToEntity::iterator iter = name_to_entity.find(filename);
   Entity* entity;
 
@@ -1414,7 +1414,7 @@ Entity* Universe::scml_entity(const char* filename, SpriteAtlas atlas) {
   return entity;
 }
 
-void Universe::update(long delta) {
+void Game::update(long delta) {
   LongToHandle::iterator iter = long_to_handle.begin();
   while(iter != long_to_handle.end()) {
     long handle_name = iter->first;
@@ -1428,32 +1428,32 @@ void Universe::update(long delta) {
   }
 }
 
-Animation* Universe::animation(const char* filename, SpriteAtlas atlas, const char* anim) {
+Animation* Game::animation(const char* filename, SpriteAtlas atlas, const char* anim) {
   return spriter_find(scml_entity(filename, atlas), anim);
 }
 
-AudioHandle* Universe::play_sound(Sound* s, int channel)  {
+AudioHandle* Game::play_sound(Sound* s, int channel)  {
   AudioHandle* handle = sound.play(s, channel);
   long_to_handle.insert(std::make_pair(handle->handle, handle));
   return handle;
 }
 
-AudioHandle* Universe::stream_sound(const char* fname, long start_sample) {
+AudioHandle* Game::stream_sound(const char* fname, long start_sample) {
   AudioHandle* handle = sound.stream(fname, start_sample);
   long_to_handle.insert(std::make_pair(handle->handle, handle));
   return handle;
 }
 
-AudioHandle* Universe::sound_handle(long handle) {
+AudioHandle* Game::sound_handle(long handle) {
   LongToHandle::const_iterator iter = long_to_handle.find(handle);
   if(iter == long_to_handle.end()) return NULL;
   return iter->second;
 }
 
 /*
-void Universe::update(long delta) {
+void Game::update(long delta) {
 }
 
-void Universe::init_world() {
+void Game::init_world() {
 }
 */
