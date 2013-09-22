@@ -111,8 +111,7 @@ OBJECT_IMPL(Camera, Component);
 OBJECT_PROPERTY(Camera, pre_render);
 OBJECT_PROPERTY(Camera, post_render);
 OBJECT_ACCESSOR(Camera, world2camera, get_world2camera, set_world2camera);
-OBJECT_PROPERTY(Camera, viewport_width);
-OBJECT_PROPERTY(Camera, viewport_height);
+OBJECT_PROPERTY(Camera, viewport);
 
 Camera::Camera(void* _go)
   : Component((GO*)_go, PRIORITY_SHOW), world2camera(NULL) {
@@ -154,26 +153,28 @@ void Camera::addRect(ColoredRect* list, ColoredRect rect) {
 
 extern Matrix44 orthographic_projection;
 
-class SetCameraTransform : public Renderable {
+class SetCameraParams : public Renderable {
 public:
-  SetCameraTransform(Matrix44& m)
-    : Renderable(NULL), matrix(&m) {
+  SetCameraParams(Matrix44& m, const Rect_& vp)
+    : Renderable(NULL), matrix(&m), vp(vp) {
   }
 
   virtual void render(void* args) {
     orthographic_projection = matrix;
+    glViewport(vp.minx, vp.miny, vp.maxx, vp.maxy);
   }
 
   Matrix44 matrix;
+  Rect_ vp;
 };
 
 void Camera::enqueue() {
   step_thread(&pre_render, go, this);
 
   // set transform
-  void* stfbuff = frame_alloc(sizeof(SetCameraTransform));
-  SetCameraTransform *stf = new(stfbuff) SetCameraTransform(world2camera);
-  renderable_enqueue_for_screen(stf, NULL);
+  void* stfbuff = frame_alloc(sizeof(SetCameraParams));
+  SetCameraParams *params = new(stfbuff) SetCameraParams(world2camera, viewport);
+  renderable_enqueue_for_screen(params, NULL);
 
   for(int ii = 0; ii < LAYER_MAX; ++ii) {
     if(renderables[ii]) {
@@ -929,8 +930,8 @@ World::World(void* _game)
   clock = clock_make();
   stage = create_go();
   Camera* camera = (Camera*)stage->add_component(&Camera::Type);
-  camera->viewport_width = screen_width;
-  camera->viewport_height = screen_height;
+  Rect_ vp = {0, 0, (float)screen_width, (float)screen_height};
+  camera->viewport = vp;
   random_init(&rgen, 1234);
 }
 

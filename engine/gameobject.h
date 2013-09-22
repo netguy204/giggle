@@ -150,9 +150,7 @@ class Camera : public Component {
   void addRect(ColoredRect* list, ColoredRect rect);
 
   void enqueue();
-
-  int viewport_width;
-  int viewport_height;
+  Rect_ viewport;
 
   // base layers are interpreted as if they contain only basesprite
   // representations (no rotation, color, or shifted origin)
