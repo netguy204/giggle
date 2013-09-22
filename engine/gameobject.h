@@ -408,6 +408,8 @@ class World : public Object {
   GO* create_go();
   Object* create_object(TypeInfo* type);
 
+  void show_mouse_cursor(int show);
+
   RevJoint* create_joint(GO* ga, Vector_ la, GO* gb, Vector_ lb);
 
   GO* stage;

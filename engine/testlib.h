@@ -78,6 +78,7 @@ long time_millis();
 void sleep_millis(long millis);
 void renderer_gl_init(int w, int h);
 void renderer_gl_shutdown();
+void window_show_mouse(bool show);
 
 /* exported by realmain */
 int loop_once();

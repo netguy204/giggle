@@ -206,3 +206,7 @@ void signal_render_complete(void* _allocator) {
   update_input_state();
 #endif
 }
+
+void window_show_mouse(bool show) {
+  SDL_ShowCursor(show);
+}

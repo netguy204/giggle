@@ -1084,6 +1084,11 @@ Object* World::create_object(TypeInfo* type) {
 }
 OBJECT_METHOD(World, create_object, Object*, (TypeInfo*));
 
+void World::show_mouse_cursor(int show) {
+  window_show_mouse(show);
+}
+OBJECT_METHOD(World, show_mouse_cursor, void, (int));
+
 RevJoint* World::create_joint(GO* ga, Vector_ la, GO* gb, Vector_ lb) {
   b2RevoluteJoint *joint;
 
