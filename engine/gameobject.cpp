@@ -1313,7 +1313,7 @@ void Game::load_script(const char* script) {
 
 World* Game::create_world() {
   World* world = new World(this);
-  worlds.add_head(world);
+  worlds.add_tail(world);
   return world;
 }
 OBJECT_METHOD(Game, create_world, World*, ());
