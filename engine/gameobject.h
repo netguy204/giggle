@@ -401,27 +401,27 @@ class World : public Object {
 
   RevJoint* create_joint(GO* ga, Vector_ la, GO* gb, Vector_ lb);
 
-  GO* stage;
-
-  Game* game;
-  long saved_time_delta;
-  long max_delta;
-
-  Clock clock;
-
-  b2World bWorld;
-
-  GlobalContactListener* contact_listener;
   void register_fixture(b2Fixture* fixture, CSensor* sensor);
   void unregister_fixture(b2Fixture* fixture);
 
+  Random_ rgen;
+  Clock clock;
+  b2World bWorld;
   LuaThread pre_render;
   LuaThread post_render;
+  DLLNode_ node;
+
+  GO* stage;
+  Game* game;
+  GlobalContactListener* contact_listener;
 
   float dt;
-  Random_ rgen;
+
+  long saved_time_delta;
+  long max_delta;
+
   int delete_me;
-  DLLNode_ node;
+  int render_disabled;
 
   DLL_DECLARE(GO, world_node) game_objects;
   DLL_DECLARE(GO, messages_waiting_node) have_waiting_messages;

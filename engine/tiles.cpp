@@ -106,6 +106,26 @@ void TileMap::tileposition(TilePosition& pos, int index) const {
   pos.y = index / width_IT;
 }
 
+int TileMap::nspecs() const {
+  return tile_specs.size();
+}
+OBJECT_METHOD(TileMap, nspecs, int, ());
+
+const TileSpec& TileMap::get_spec(int idx) const {
+  return tile_specs[idx];
+}
+OBJECT_METHOD(TileMap, get_spec, TileSpec, (int));
+
+void TileMap::set_spec(int idx, const TileSpec& spec) {
+  tile_specs[idx] = spec;
+}
+OBJECT_METHOD(TileMap, set_spec, void, (int, TileSpec));
+
+void TileMap::add_spec(const TileSpec& spec) {
+  tile_specs.push_back(spec);
+}
+OBJECT_METHOD(TileMap, add_spec, void, (TileSpec));
+
 int TileMap::vector_index(Vector vector) const {
   float x = vector->x / tile_width_IP;
   float y = vector->y / tile_height_IP;

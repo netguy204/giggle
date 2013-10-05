@@ -844,6 +844,7 @@ OBJECT_PROPERTY(World, pre_render);
 OBJECT_PROPERTY(World, post_render);
 OBJECT_PROPERTY(World, delete_me);
 OBJECT_PROPERTY(World, stage);
+OBJECT_PROPERTY(World, render_disabled);
 
 void init_lua(Game* game) {
   lua_State* L = luaL_newstate();
@@ -924,7 +925,8 @@ World::World(void* _game)
     saved_time_delta(0), max_delta(5),
     bWorld(b2Vec2(0, -50)),
     contact_listener(new GlobalContactListener()),
-    delete_me(0) {
+    delete_me(0),
+    render_disabled(0) {
 
   bWorld.SetContactListener(contact_listener);
   clock = clock_make();
@@ -954,7 +956,6 @@ World::~World() {
 }
 
 void World::update(long delta) {
-  // process waiting commands
   saved_time_delta += delta;
 
   while(saved_time_delta > 0) {
@@ -962,6 +963,8 @@ void World::update(long delta) {
     saved_time_delta -= step_delta;
     update_step(step_delta);
   }
+
+  if(render_disabled) return;
 
   // issue render requests
   step_thread(&pre_render, NULL, NULL);

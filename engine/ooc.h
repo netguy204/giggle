@@ -363,10 +363,7 @@ class MethodInfo {
       LCcheck(L, &obj, pos);                                            \
       GENCHECKS(ARGS);                                                  \
     }                                                                   \
-                                                                        \
-    void bind(va_list* args) {                                          \
-      GENVAARGS(ARGS);                                                  \
-    }                                                                   \
+    void bind(va_list* args);                                           \
   };                                                                    \
   static RTYPE LOPC_VLO(CLASS, METHOD) CONS(CLASS* obj, MAP(TYPEANDVARNAME, ARGS)) { \
     void* udata = untyped_userdata(obj, obj->sizeOf());                 \
@@ -404,25 +401,24 @@ class MethodInfo {
       bound->LCbind(L, pos);                                            \
       return bound;                                                     \
     }                                                                   \
-    virtual VoidFunction* framebind(Object* obj, ...) const {           \
-      va_list args;                                                     \
-      va_start(args, obj);                                              \
-      void* buffer = frame_alloc(sizeof(FLOPC(CLASS,METHOD)));          \
-      FLOPC(CLASS, METHOD) *bound = new(buffer) FLOPC(CLASS, METHOD)(); \
-      bound->obj = (CLASS*)obj;                                         \
-      bound->bind(&args);                                               \
-      return bound;                                                     \
-    }                                                                   \
+    virtual VoidFunction* framebind(Object* obj, ...) const;            \
     virtual void* vtable_lua_override() const {                         \
       return (void*)&LOPC_VLO(CLASS, METHOD);                           \
     }                                                                   \
   };                                                                    \
   static LOPC(CLASS, METHOD) LOP(CLASS, METHOD);                        \
-                                                                        \
-  int LOPC(CLASS, METHOD)::LCinvoke(lua_State* L, int pos) const
+
 
 #define OBJECT_METHOD(CLASS, METHOD, RTYPE, ARGS)                       \
-  OBJECT_BASE_METHOD(CLASS, METHOD, RTYPE, ARGS) {                      \
+  OBJECT_BASE_METHOD(CLASS, METHOD, RTYPE, ARGS)                        \
+  void FLOPC(CLASS, METHOD)::bind(va_list* args) {                      \
+    fail_exit("bind not supported");                                    \
+  }                                                                     \
+  VoidFunction* LOPC(CLASS, METHOD)::framebind(Object* obj, ...) const { \
+    fail_exit("framebind not supported");                               \
+    return NULL;                                                        \
+  }                                                                     \
+  int LOPC(CLASS, METHOD)::LCinvoke(lua_State* L, int pos) const {      \
     CLASS* obj;                                                         \
     GENVARS(ARGS);                                                      \
     LCcheck(L, &obj, pos);                                              \
@@ -431,6 +427,34 @@ class MethodInfo {
             NORETURN(ARGS, METHOD),                                     \
             RETURNS(RTYPE, ARGS, METHOD))                               \
   }
+
+#define OBJECT_DEFERABLE_METHOD_BASE(CLASS, METHOD, RTYPE, ARGS)        \
+  OBJECT_BASE_METHOD(CLASS, METHOD, RTYPE, ARGS)                        \
+  void FLOPC(CLASS, METHOD)::bind(va_list* args) {                      \
+    GENVAARGS(ARGS);                                                    \
+  }                                                                     \
+  VoidFunction* LOPC(CLASS, METHOD)::framebind(Object* obj, ...) const { \
+    va_list args;                                                       \
+    va_start(args, obj);                                                \
+    void* buffer = frame_alloc(sizeof(FLOPC(CLASS,METHOD)));            \
+    FLOPC(CLASS, METHOD) *bound = new(buffer) FLOPC(CLASS, METHOD)();   \
+    bound->obj = (CLASS*)obj;                                           \
+    bound->bind(&args);                                                 \
+    return bound;                                                       \
+  }                                                                     \
+  int LOPC(CLASS, METHOD)::LCinvoke(lua_State* L, int pos) const
+
+#define OBJECT_DEFERABLE_METHOD(CLASS, METHOD, RTYPE, ARGS)             \
+  OBJECT_DEFERABLE_METHOD_BASE(CLASS, METHOD, RTYPE, ARGS) {            \
+    CLASS* obj;                                                         \
+    GENVARS(ARGS);                                                      \
+    LCcheck(L, &obj, pos);                                              \
+    GENCHECKS(ARGS);                                                    \
+    IF_ELSE(CHECK_VOID(RTYPE),                                          \
+            NORETURN(ARGS, METHOD),                                     \
+            RETURNS(RTYPE, ARGS, METHOD))                               \
+  }
+
 
 #define OBJECT_LUA_METHOD(CLASS, METHOD)                                \
   class LOPC(CLASS, METHOD) : public MethodInfo {                       \
@@ -464,7 +488,7 @@ class MethodInfo {
   }
 
 #define DEFERRED_OBJECT_METHOD(TARGET, CLASS, METHOD, RTYPE, ARGS)      \
-  OBJECT_BASE_METHOD(CLASS, METHOD, RTYPE, ARGS) {                      \
+  OBJECT_DEFERABLE_METHOD_BASE(CLASS, METHOD, RTYPE, ARGS) {            \
     TARGET(LCframebind(L, pos));                                        \
     return 0;                                                           \
   }
@@ -589,7 +613,11 @@ inline void LCpush<int>(lua_State* L, int val) {
 
 template<>
 inline void LCcheck<int>(lua_State* L, int* target, int pos) {
-  *target = luaL_checkinteger(L, pos);
+  if(lua_isboolean(L, pos)) {
+    *target = lua_toboolean(L, pos);
+  } else {
+    *target = luaL_checkinteger(L, pos);
+  }
 }
 
 template<>

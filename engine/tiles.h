@@ -83,6 +83,30 @@ inline void LCcheck<TilePosition>(lua_State* L, TilePosition* tp, int pos) {
   lua_pop(L, 1);
 }
 
+template<>
+inline void LCpush<TileSpec>(lua_State* L, TileSpec spec) {
+  lua_createtable(L, 2, 0);
+
+  LCpush(L, spec.image);
+  lua_rawseti(L, -2, 1);
+
+  lua_pushnumber(L, spec.bitmask);
+  lua_rawseti(L, -2, 2);
+}
+
+template<>
+inline void LCcheck<TileSpec>(lua_State* L, TileSpec* spec, int pos) {
+  if(!lua_istable(L, pos)) luaL_argerror(L, pos, "expected TileSpec table");
+
+  lua_rawgeti(L, pos, 1);
+  LCcheck(L, &spec->image, -1);
+  lua_pop(L, 1);
+
+  lua_rawgeti(L, pos, 2);
+  spec->bitmask = luaL_checknumber(L, -1);
+  lua_pop(L, 1);
+}
+
 class TileMap;
 
 typedef int(*LineCallback)(TileMap* map, const TilePosition& pos, void* udata);
@@ -109,6 +133,12 @@ public:
   int size() const;
 
   void tileposition(TilePosition& pos, int index) const;
+
+  int nspecs() const;
+  const TileSpec& get_spec(int idx) const;
+  void set_spec(int idx, const TileSpec& spec);
+  void add_spec(const TileSpec& spec);
+
   int vector_index(Vector vector) const;
   void tilecenter(Vector v, int idx) const;
   int tile_bitmask(TilePosition pos) const;
