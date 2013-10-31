@@ -1,7 +1,7 @@
 CPP_SRC=testlib_sdl.cpp audio_sdl.cpp
 BIN=sdlmain
 
-SDL_BASE=$(PWD)/vender/SDL-1.2.15
+SDL_BASE=$(PWD)/vender/SDL2-2.0.1
 SDL_ROOT=$(PWD)/vender/SDL-root
 
 PLATFORM:=$(shell uname)
@@ -9,7 +9,7 @@ CFLAGS+=-Ivender -I$(SDL_ROOT)/include -fdata-sections -ffunction-sections
 
 EXE_OBJS+=glew.o
 
-SDL_LIBS=$(SDL_ROOT)/bin/sdl-config
+SDL_LIBS=$(SDL_ROOT)/bin/sdl2-config
 #SDL_STATIC_LIBS_FLAGS=-Wl,-Bstatic `$(SDL_LIBS) --static-libs` -Wl,-Bdynamic
 SDL_LIBS_FLAGS=`$(SDL_LIBS) --static-libs`
 SDL_LIBS_CFLAGS=`$(SDL_LIBS) --cflags`
@@ -23,7 +23,7 @@ endif
 $(SDL_LIBS):
 	cd $(SDL_BASE) && ./configure --prefix=$(SDL_ROOT) $(SDL_DISABLES) && make install
 
-SDL_INJECT=-include "SDL/SDL.h"
+SDL_INJECT=-include "SDL2/SDL.h"
 
 ifeq ($(PLATFORM), Darwin)
 	LDFLAGS+= -Fvender/ $(SDL_LIBS_FLAGS) -dead_strip
@@ -53,7 +53,7 @@ gambitmain.o: gambitmain.cpp $(SDL_LIBS)
 testlib_sdl.cpp: $(SDL_LIBS)
 
 audio_test: audio_test.cpp sampler.cpp
-	gcc -g -o audio_test sampler.cpp audio_test.cpp `sdl-config --libs` `sdl-config --cflags`
+	gcc -g -o audio_test sampler.cpp audio_test.cpp `sdl2-config --libs` `sdl2-config --cflags`
 
 APP=Mosaic.app/Contents
 

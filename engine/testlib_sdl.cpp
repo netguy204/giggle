@@ -16,7 +16,7 @@
 */
 /* SDL/OpenGL implementation of testlib suitable for desktops */
 
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 #include "testlib.h"
 #include "testlib_internal.h"
@@ -26,9 +26,11 @@
 #include "testlib_gl.h"
 
 #include <math.h>
+#include <map>
 
 // remap the SDL keycodes to our internal keycodes
-static int sdl_remap_table[SDLK_LAST];
+typedef std::map<unsigned long, int> SDLRemapTable;
+static SDLRemapTable sdl_remap_table;
 static InputState_ pstate;
 
 void native_init() {
@@ -36,11 +38,6 @@ void native_init() {
 
   screen_width = 1280;
   screen_height = 720;
-
-  /* default to unmapped */
-  for(int ii = 0; ii < sizeof(sdl_remap_table) / sizeof(sdl_remap_table[0]); ++ii) {
-    sdl_remap_table[ii] = -1;
-  }
 
   /* remap the ASCII keys, everything is lowercase */
   for(int ii = 0; ii < (SDLK_z - SDLK_a + 1); ++ii) {
@@ -57,12 +54,10 @@ void native_init() {
   sdl_remap_table[SDLK_TAB] = K_TAB;
   sdl_remap_table[SDLK_BACKSPACE] = K_BACKSPACE;
   sdl_remap_table[SDLK_SPACE] = K_SPACE;
-  sdl_remap_table[SDLK_LMETA] = K_ALT;
-  sdl_remap_table[SDLK_RMETA] = K_ALT;
   sdl_remap_table[SDLK_LALT] = K_ALT;
   sdl_remap_table[SDLK_RALT] = K_ALT;
-  sdl_remap_table[SDLK_LSUPER] = K_ALT;
-  sdl_remap_table[SDLK_RSUPER] = K_ALT;
+  sdl_remap_table[SDLK_LGUI] = K_ALT;
+  sdl_remap_table[SDLK_RGUI] = K_ALT;
 }
 
 KeyNumber mouse2kn(int mouse) {
@@ -83,6 +78,7 @@ void update_input_state() {
 
   /* pump the events */
   while(SDL_PollEvent(&event)) {
+    printf("got a thing\n");
     int keydown = 0;
 
     switch(event.type) {
@@ -110,9 +106,9 @@ void update_input_state() {
         handle_key(K_UPDOWN, keydown * 1.0f);
         break;
       default:
-        int remapped = sdl_remap_table[event.key.keysym.sym];
-        if(remapped >= 0) {
-          handle_key((KeyNumber)remapped, keydown * 1.0f);
+        SDLRemapTable::const_iterator remapped = sdl_remap_table.find(event.key.keysym.sym);
+        if(remapped != sdl_remap_table.end()) {
+          handle_key((KeyNumber)remapped->second, keydown * 1.0f);
         }
         break;
       }
@@ -135,10 +131,6 @@ void update_input_state() {
 }
 
 void inputstate_latest(InputState state) {
-#ifndef WINDOWS
-  update_input_state();
-#endif
-
   *state = pstate;
 }
 
@@ -150,9 +142,10 @@ void sleep_millis(long millis) {
   SDL_Delay(millis);
 }
 
+static SDL_Window* screen;
 void renderer_init(void* empty) {
   LOGI("renderer_init");
-  if ( SDL_Init(SDL_INIT_VIDEO) < 0 ) {
+  if ( SDL_Init(SDL_INIT_EVERYTHING) < 0 ) {
     fprintf(stderr, "Unable to init SDL: %s\n", SDL_GetError());
     exit(1);
   }
@@ -162,9 +155,13 @@ void renderer_init(void* empty) {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
   */
 
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-  SDL_Surface* screen = SDL_SetVideoMode(screen_width, screen_height,
-                                         16, SDL_OPENGL);
+  screen = SDL_CreateWindow("GGL",
+                            SDL_WINDOWPOS_UNDEFINED,
+                            SDL_WINDOWPOS_UNDEFINED,
+                            screen_width, screen_height,
+                            SDL_WINDOW_OPENGL);
+  SDL_GL_CreateContext(screen);
+
   if(screen == NULL) {
     fprintf(stderr, "Unable to set %dx%d video: %s\n",
             screen_width, screen_height, SDL_GetError());
@@ -178,9 +175,6 @@ void renderer_init(void* empty) {
   } else {
     LOGI("glew initialized");
   }
-
-  SDL_WM_SetCaption("GGL", NULL);
-  //SDL_WM_GrabInput();
 
   renderer_gl_init(screen_width, screen_height);
 }
@@ -197,14 +191,10 @@ void at_exit() {
 void signal_render_complete(void* _allocator) {
   renderer_end_frame();
   StackAllocator allocator = (StackAllocator)_allocator;
-  SDL_GL_SwapBuffers();
+  SDL_GL_SwapWindow(screen);
   render_reply_queue->enqueue(allocator);
 
-#ifdef WINDOWS
-  // on windows, the input events go to the thread that owns the
-  // window so we have to process them here.
   update_input_state();
-#endif
 }
 
 void window_show_mouse(bool show) {

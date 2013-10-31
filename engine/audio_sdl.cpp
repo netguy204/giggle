@@ -14,7 +14,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <SDL/SDL_audio.h>
+#include <SDL2/SDL_audio.h>
 #include <unistd.h>
 #include <assert.h>
 #include <string.h>

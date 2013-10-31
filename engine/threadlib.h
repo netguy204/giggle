@@ -20,14 +20,14 @@
 #include <stdlib.h>
 
 #ifdef BUILD_SDL
-#include <SDL/SDL_thread.h>
+#include <SDL2/SDL_thread.h>
 
 #define Thread SDL_Thread*
 #define Mutex SDL_mutex*
 #define Condition SDL_cond*
 
 typedef int(*THREAD_FN)(void*);
-#define thread_create(fn, arg) SDL_CreateThread((THREAD_FN)fn, (void*)arg)
+#define thread_create(fn, arg) SDL_CreateThread((THREAD_FN)fn, "ggl_worker", (void*)arg)
 
 #define mutex_create() SDL_CreateMutex()
 #define mutex_destroy(m) SDL_DestroyMutex(m)
