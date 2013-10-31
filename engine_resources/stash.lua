@@ -8,13 +8,13 @@ end
 
 function Stash:table()
    if not self._cache then
-      self._cache = util.deserialize(universe:stash()) or {}
+      self._cache = util.deserialize(game:stash()) or {}
    end
    return self._cache
 end
 
 function Stash:save()
-   universe:stash(util.serialize(self:table()))
+   game:stash(util.serialize(self:table()))
 end
 
 function Stash:invalidate()

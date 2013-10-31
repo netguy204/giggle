@@ -481,7 +481,7 @@ GOHandle* GO::handle() {
 
 Message* GO::create_message(int kind, const char* content, size_t nbytes) {
   Message* msg = (Message*)frame_alloc(sizeof(Message) + nbytes);
-  msg->source = this;
+  msg->source = handle();
   msg->kind = kind;
   msg->nbytes = nbytes;
   memcpy(msg->content, content, nbytes);
@@ -564,6 +564,7 @@ CSensor::CSensor(void* _go)
 
 CSensor::~CSensor() {
   if(fixture.fixture) {
+    go->world->unregister_fixture(fixture.fixture);
     go->body->DestroyFixture(fixture.fixture);
   }
 }
@@ -1163,31 +1164,6 @@ int World::raycast(lua_State* L, int pos) {
 }
 OBJECT_LUA_METHOD(World, raycast);
 
-Sound* World::get_sound(const char* name, float scale) {
-  return game->sound.get_sync(name, scale);
-}
-OBJECT_METHOD(World, get_sound, Sound*, (const char*, float));
-
-AudioHandle* World::play_sound(Sound* sound, int channel) {
-  return game->play_sound(sound, channel);
-}
-OBJECT_METHOD(World, play_sound, AudioHandle*, (Sound*, int));
-
-AudioHandle* World::stream_sound(const char* sound, long start_sample) {
-  return game->stream_sound(sound, start_sample);
-}
-OBJECT_METHOD(World, stream_sound, AudioHandle*, (const char*, long));
-
-AudioHandle* World::sound_handle(long handle_name) {
-  return game->sound_handle(handle_name);
-}
-OBJECT_METHOD(World, sound_handle, AudioHandle*, (long));
-
-long World::current_sample() const {
-  return audio_current_sample();
-}
-OBJECT_METHOD(World, current_sample, long, ());
-
 void World::set_time_scale(float scale) {
   clock->time_scale = scale;
 }
@@ -1450,23 +1426,36 @@ Animation* Game::animation(const char* filename, const char* atlasname, const ch
 }
 OBJECT_METHOD(Game, animation, Animation*, (const char*, const char*, const char*));
 
+Sound* Game::get_sound(const char* name, float scale) {
+  return sound.get_sync(name, scale);
+}
+OBJECT_METHOD(Game, get_sound, Sound*, (const char*, float));
+
 AudioHandle* Game::play_sound(Sound* s, int channel)  {
   AudioHandle* handle = sound.play(s, channel);
   long_to_handle.insert(std::make_pair(handle->handle, handle));
   return handle;
 }
+OBJECT_METHOD(Game, play_sound, AudioHandle*, (Sound*, int));
 
 AudioHandle* Game::stream_sound(const char* fname, long start_sample) {
   AudioHandle* handle = sound.stream(fname, start_sample);
   long_to_handle.insert(std::make_pair(handle->handle, handle));
   return handle;
 }
+OBJECT_METHOD(Game, stream_sound, AudioHandle*, (const char*, long));
 
 AudioHandle* Game::sound_handle(long handle) {
   LongToHandle::const_iterator iter = long_to_handle.find(handle);
   if(iter == long_to_handle.end()) return NULL;
   return iter->second;
 }
+OBJECT_METHOD(Game, sound_handle, AudioHandle*, (long));
+
+long Game::current_sample() const {
+  return audio_current_sample();
+}
+OBJECT_METHOD(Game, current_sample, long, ());
 
 void Game::enqueue_command(CommandFunction fn, void* data) {
   Command* command = (Command*)cmd_alloc.alloc();

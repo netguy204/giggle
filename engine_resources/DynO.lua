@@ -47,6 +47,13 @@ function DynO.find_all_of_type(t)
 end
 
 function DynO:init(world, pos)
+   if not pos then
+      -- support the old 1 arg form of this constructor for the
+      -- (common) case of a single world game.
+      pos = world
+      world = _G.world
+   end
+
    self._go = world:create_go()
 
    self.alive = true

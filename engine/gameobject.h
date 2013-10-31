@@ -76,7 +76,7 @@ class Message {
   void operator delete(void* obj);
 
   struct DLLNode_ node;
-  GO* source;
+  GOHandle* source;
   int kind;
   size_t nbytes;
   char content[0];
@@ -386,12 +386,6 @@ class World : public Object {
 
   int raycast(lua_State* L, int pos);
 
-  Sound* get_sound(const char* name, float scale);
-  AudioHandle* play_sound(Sound* sound, int channel);
-  AudioHandle* stream_sound(const char* name, long start_time);
-  AudioHandle* sound_handle(long handle_name);
-  long current_sample() const;
-
   void set_time_scale(float scale);
   float get_time_scale();
   void set_gravity(Vector_ vector);
@@ -454,9 +448,11 @@ class Game : public Object {
 
   virtual void update(long delta);
 
+  Sound* get_sound(const char* name, float scale);
   AudioHandle* play_sound(Sound* sound, int channel);
   AudioHandle* stream_sound(const char* fname, long start);
   AudioHandle* sound_handle(long handle);
+  long current_sample() const;
 
   void enqueue_command(CommandFunction fn, void* data);
   void evaluate_commands();
