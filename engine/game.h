@@ -23,6 +23,8 @@
 #include "tiles.h"
 #include "testlib_gl.h"
 
+void* game_exec(void* empty);
+
 class CLeftAndRight : public Component {
  public:
   OBJECT_PROTO(CLeftAndRight);

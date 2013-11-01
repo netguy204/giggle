@@ -47,7 +47,7 @@ C_OBJS=\
 	$(patsubst %.cpp,%.o,$(CPP_SRC)) \
 	$(patsubst %.c,%.o,$(C_SRC))
 
-EXE_OBJS+=$(C_OBJS) gambitmain.o
+EXE_OBJS+=$(C_OBJS)
 
 all: $(OGG_HEADER) $(BIN)
 

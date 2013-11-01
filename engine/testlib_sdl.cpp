@@ -78,7 +78,6 @@ void update_input_state() {
 
   /* pump the events */
   while(SDL_PollEvent(&event)) {
-    printf("got a thing\n");
     int keydown = 0;
 
     switch(event.type) {

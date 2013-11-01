@@ -55,6 +55,7 @@ void lib_init(int argc, char** argv);
 void lib_shutdown();
 
 /* must be called from render thread */
+void* renderer_exec(void* empty);
 void process_render_command();
 void renderer_resize(int w, int h);
 

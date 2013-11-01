@@ -46,6 +46,8 @@ void process_render_command() {
 
 static int renderer_running = 0;
 void* renderer_exec(void* empty) {
+  // let the renderer finish init
+  renderer_running = 1;
   while(renderer_running) {
     process_render_command();
   }
@@ -56,7 +58,14 @@ void renderer_await_startup(void* empty) {
   threadbarrier_wait(render_barrier);
 }
 
-void testlib_init() {
+void lib_init(int argc, char** argv) {
+  // won't work on android, need to decide what to do here instead
+  char* dir = dirname(strdup(argv[0]));
+  int nbuffer = strlen(dir) + 32;
+  char* buffer = (char*)malloc(nbuffer);
+  snprintf(buffer, nbuffer, "%s/../", dir);
+  libbase = buffer;
+
   input_init();
   clock_allocator = new FixedAllocator(sizeof(struct Clock_), MAX_NUM_CLOCKS, "clock_allocator");
   image_resource_allocator = new FixedAllocator(sizeof(struct ImageResource_), MAX_NUM_IMAGES, "image_resource_allocator");
@@ -70,26 +79,8 @@ void testlib_init() {
   //render_reply_queue->enqueue(stack_allocator_make(1024 * 1024, "frame_allocator3"));
 
   render_barrier = threadbarrier_make(2);
-}
-
-void lib_init(int argc, char** argv) {
-  // won't work on android, need to decide what to do here instead
-  char* dir = dirname(strdup(argv[0]));
-  int nbuffer = strlen(dir) + 32;
-  char* buffer = (char*)malloc(nbuffer);
-  snprintf(buffer, nbuffer, "%s/../", dir);
-  libbase = buffer;
-
-
-  testlib_init();
 
   native_init();
-
-  renderer_running = 1;
-  renderer_thread = thread_create(renderer_exec, NULL);
-
-  // let the renderer finish init
-  renderer_enqueue_sync(renderer_init, NULL);
 
   // kick off the audio system
   audio_init();

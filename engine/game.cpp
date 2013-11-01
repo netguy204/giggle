@@ -524,8 +524,6 @@ void game_init(int argc, char** argv) {
   // initialize globals
   game_support_init();
   game = new Game(buffer);
-
-  set_game_step(game_step);
 }
 
 void game_step(long delta) {
@@ -533,6 +531,47 @@ void game_step(long delta) {
 }
 
 void game_shutdown() {
+  lib_shutdown();
+}
+
+Timer_ timer;
+
+#define min_time 1
+#define max_time 100
+
+static float last_frame_ms = (1.0 / 60.0) * 1e3;
+
+int loop_once() {
+  struct InputState_ state;
+  inputstate_latest(&state);
+  if(state.quit_requested) {
+    return 0;
+  }
+
+  float start_ms = time_millis();
+
+  begin_frame();
+
+  PROFILE_START(&timer, "main_update");
+  game_step(roundf(last_frame_ms));
+  PROFILE_END(&timer);
+
+  end_frame();
+
+  last_frame_ms = time_millis() - start_ms;
+  last_frame_ms = MAX(min_time, MIN(max_time, last_frame_ms));
+
+  return 1;
+}
+
+void* game_exec(void* empty) {
+  // ensure that any inflight requests due to game initialization get
+  // a chance to finish
+  end_frame();
+
+  while(loop_once()) {}
+  game_shutdown();
+  return NULL;
 }
 
 void print_lstack(lua_State* L) {

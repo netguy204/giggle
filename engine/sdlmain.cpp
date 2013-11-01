@@ -14,17 +14,30 @@
  *  You should have received a copy of the GNU General Public License
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <stdlib.h>
 #include <stdio.h>
+#include "testlib.h"
+#include "testlib_internal.h"
+#include "game.h"
+#include "utils.h"
+#include "config.h"
 
-extern int real_main(int, char**);
+#include <SDL2/SDL.h>
 
 // required by things that read files
 FILE* nativeOpen(const char* fname) {
   return fopen(fname, "rb");
 }
 
+static Thread game_thread;
+
 int main(int argc, char ** argv) {
-  int result = real_main(argc, argv);
-  return result;
+  lib_init(argc, argv);
+
+  renderer_init(NULL);
+  game_init(argc, argv);
+  game_thread = thread_create(game_exec, NULL);
+
+  renderer_exec(NULL); // renderer claims main thread
+
+  return 0;
 }

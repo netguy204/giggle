@@ -1,4 +1,4 @@
-CPP_SRC=testlib_sdl.cpp audio_sdl.cpp
+CPP_SRC=testlib_sdl.cpp audio_sdl.cpp sdlmain.cpp
 BIN=sdlmain
 
 SDL_BASE=$(PWD)/vender/SDL2-2.0.1
@@ -44,11 +44,6 @@ endif
 endif
 
 include Common.mk
-
-# force include of SDL header so that it can do it's main redirection
-# magic
-gambitmain.o: gambitmain.cpp $(SDL_LIBS)
-	$(CXX) -c $< $(CFLAGS) $(SDL_INJECT)
 
 testlib_sdl.cpp: $(SDL_LIBS)
 

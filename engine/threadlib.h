@@ -27,7 +27,7 @@
 #define Condition SDL_cond*
 
 typedef int(*THREAD_FN)(void*);
-#define thread_create(fn, arg) SDL_CreateThread((THREAD_FN)fn, "ggl_worker", (void*)arg)
+#define thread_create(fn, arg) SDL_CreateThread((THREAD_FN)fn, NULL, (void*)arg)
 
 #define mutex_create() SDL_CreateMutex()
 #define mutex_destroy(m) SDL_DestroyMutex(m)
