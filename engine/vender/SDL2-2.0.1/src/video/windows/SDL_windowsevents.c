@@ -309,15 +309,15 @@ WIN_WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
 
 #ifdef WMMSG_DEBUG
-	{
-		char message[1024];
-		if (msg > MAX_WMMSG) {
-			SDL_snprintf(message, sizeof(message), "Received windows message: %p UNKNOWN (%d) -- 0x%X, 0x%X\n", hwnd, msg, wParam, lParam);
-		} else {
-			SDL_snprintf(message, sizeof(message), "Received windows message: %p %s -- 0x%X, 0x%X\n", hwnd, wmtab[msg], wParam, lParam);
-		}
-		OutputDebugStringA(message);
-	}
+        {
+                char message[1024];
+                if (msg > MAX_WMMSG) {
+                        SDL_snprintf(message, sizeof(message), "Received windows message: %p UNKNOWN (%d) -- 0x%X, 0x%X\n", hwnd, msg, wParam, lParam);
+                } else {
+                        SDL_snprintf(message, sizeof(message), "Received windows message: %p %s -- 0x%X, 0x%X\n", hwnd, wmtab[msg], wParam, lParam);
+                }
+                OutputDebugStringA(message);
+        }
 #endif /* WMMSG_DEBUG */
 
     if (IME_HandleMessage(hwnd, msg, wParam, &lParam, data->videodata))
@@ -534,14 +534,6 @@ WIN_WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         returnCode = 0;
         break;
 
-    case WM_UNICHAR:
-        {
-            if (wParam == UNICODE_NOCHAR) {
-                returnCode = 1;
-                break;
-            }
-        }
-        /* no break */
     case WM_CHAR:
         {
             char text[5];
