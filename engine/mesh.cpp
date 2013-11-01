@@ -152,7 +152,9 @@ Walls::Walls(void* _game) {
 }
 
 void Walls::add_wall(const Vector_& start, const Vector_& end) {
-  Wall wall = {.start = start, .end = end};
+  Wall wall;
+  wall.start = start;
+  wall.end = end;
   walls.push_back(wall);
 }
 OBJECT_METHOD(Walls, add_wall, void, (Vector_, Vector_));

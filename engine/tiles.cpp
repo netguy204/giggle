@@ -175,8 +175,14 @@ void TileMap::get_walls(Walls* walls) const {
     int nii = ii + 1;
 
     for(int jj = 0; jj < width_IT; ++jj) {
-      TilePosition pos1 = {.x = jj, .y = ii};
-      TilePosition pos2 = {.x = jj, .y = nii};
+      TilePosition pos1;
+      pos1.x = jj;
+      pos1.y = ii;
+
+      TilePosition pos2;
+      pos2.x = jj;
+      pos2.y = nii;
+
       if((tile_bitmask(pos1) & TILESPEC_COLLIDABLE) !=
          (tile_bitmask(pos2) & TILESPEC_COLLIDABLE)) {
         // there is a boundary between our row and the next
@@ -210,8 +216,13 @@ void TileMap::get_walls(Walls* walls) const {
     int njj = jj + 1;
 
     for(int ii = 0; ii < height_IT; ++ii) {
-      TilePosition pos1 = {.x = jj, .y = ii};
-      TilePosition pos2 = {.x = njj, .y = ii};
+      TilePosition pos1;
+      pos1.x = jj;
+      pos1.y = ii;
+      TilePosition pos2;
+      pos2.x = njj;
+      pos2.y = ii;
+
       if((tile_bitmask(pos1) & TILESPEC_COLLIDABLE) !=
          (tile_bitmask(pos2) & TILESPEC_COLLIDABLE)) {
         // there is a boundary between our column and the next

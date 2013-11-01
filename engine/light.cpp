@@ -290,10 +290,12 @@ void LightCaster::add_triangle(Mesh* result, const Vector_& light,
 
     // interset the discovered angle range with the previously
     // closest wall segment
-    Vector_ a1 = {.x = light.x + cosf(beginAngle),
-                  .y = light.y + sinf(beginAngle)};
-    Vector_ a2 = {.x = light.x + cosf(nextAngle),
-                  .y = light.y + sinf(nextAngle)};
+    Vector_ a1;
+    a1.x = light.x + cosf(beginAngle);
+    a1.y = light.y + sinf(beginAngle);
+    Vector_ a2;
+    a2.x = light.x + cosf(nextAngle);
+    a2.y = light.y + sinf(nextAngle);
     Vector_ i1, i2;
     line_intersection(&i1, &last_closest->start, &last_closest->end, &light, &a1);
     line_intersection(&i2, &last_closest->start, &last_closest->end, &light, &a2);
