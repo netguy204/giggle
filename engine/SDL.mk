@@ -33,7 +33,8 @@ ifeq ($(PLATFORM), Darwin)
 else
 	LDFLAGS+=-Wl,--gc-sections
 ifeq ($(PLATFORM), MINGW32_NT-5.1)
-	LDFLAGS+=-lglu32 -lopengl32 -L$(SDL_ROOT)/lib -Wl,-Bstatic -lmingw32 -lSDLmain -lSDL -mwindows -luser32 -lgdi32 -lwinmm -Wl,-Bdynamic
+	LDFLAGS+=-lglu32 -lopengl32 $(SDL_LIBS_FLAGS)
+#	LDFLAGS+=-lglu32 -lopengl32 -L$(SDL_ROOT)/lib -Wl,-Bstatic -lmingw32 -lSDL2 -mwindows -luser32 -lgdi32 -lwinmm -limm32 -lole32 -lversion -Wl,-Bdynamic
 	CFLAGS+=-DBUILD_SDL -DWINDOWS -DGLEW_STATIC
 	PLATFORM=windows
 else

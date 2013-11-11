@@ -472,11 +472,11 @@ protected:
     GIGGLE->renderer->end_frame();
   }
 
-  float last_frame_ms = (1.0 / 60.0) * 1e3;
+  float last_frame_ms;
 
 public:
   DefaultGameLogic(Giggle* giggle)
-    : GameLogic(giggle) {
+    : GameLogic(giggle), last_frame_ms((1.0 / 60.0) * 1e3) {
   }
 
   virtual bool step() {
