@@ -17,7 +17,7 @@
 #include "threadlib.h"
 #include "audio.h"
 #include "memlib.h"
-#include "testlib.h"
+#include "giggle.h"
 
 #include <limits>
 #include <new>

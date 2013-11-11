@@ -32,7 +32,7 @@ void sprite_render_to_screen(Sprite sprite);
 void at_exit();
 
 /* internal data structures */
-extern ThreadBarrier render_barrier;
+extern ThreadBarrier* render_barrier;
 extern CommandQueue* render_queue;
 
 #endif

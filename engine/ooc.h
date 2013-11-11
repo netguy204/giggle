@@ -396,7 +396,7 @@ class MethodInfo {
     virtual int LCinvoke(lua_State* L, int pos) const;                  \
                                                                         \
     virtual VoidFunction* LCframebind(lua_State* L, int pos) const {    \
-      void* buffer = frame_alloc(sizeof(FLOPC(CLASS,METHOD)));          \
+      void* buffer = GIGGLE->renderer->alloc(sizeof(FLOPC(CLASS,METHOD))); \
       FLOPC(CLASS, METHOD) *bound = new(buffer) FLOPC(CLASS, METHOD)(); \
       bound->LCbind(L, pos);                                            \
       return bound;                                                     \
@@ -436,7 +436,7 @@ class MethodInfo {
   VoidFunction* LOPC(CLASS, METHOD)::framebind(Object* obj, ...) const { \
     va_list args;                                                       \
     va_start(args, obj);                                                \
-    void* buffer = frame_alloc(sizeof(FLOPC(CLASS,METHOD)));            \
+    void* buffer = GIGGLE->renderer->alloc(sizeof(FLOPC(CLASS,METHOD))); \
     FLOPC(CLASS, METHOD) *bound = new(buffer) FLOPC(CLASS, METHOD)();   \
     bound->obj = (CLASS*)obj;                                           \
     bound->bind(&args);                                                 \

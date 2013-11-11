@@ -18,7 +18,7 @@
 #define TILES_H
 
 #include "spriteatlas.h"
-#include "testlib.h"
+#include "giggle.h"
 #include "vector.h"
 #include "ooc.h"
 #include "mesh.h"

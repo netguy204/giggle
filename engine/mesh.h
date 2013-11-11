@@ -4,8 +4,8 @@
 #include "ooc.h"
 #include "vector.h"
 #include "color.h"
-#include "testlib.h"
-#include "testlib_gl.h"
+#include "giggle.h"
+#include "giggle_gl.h"
 #include "gameobject.h"
 
 #include <vector>

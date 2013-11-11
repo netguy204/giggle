@@ -19,7 +19,6 @@
 #include "listlib.h"
 #include "memlib.h"
 #include "rect.h"
-#include "controls.h"
 #include "steering.h"
 #include "tiles.h"
 #include "game_ui.h"
@@ -101,7 +100,7 @@ void CTestDisplay::render(Camera* camera) {
   go->pos(&pos);
   vector_add(&pos, &pos, &offset);
 
-  ColoredRect rect = (ColoredRect)frame_alloc(sizeof(ColoredRect_));
+  ColoredRect rect = (ColoredRect)GIGGLE->renderer->alloc(sizeof(ColoredRect_));
   rect->minx = pos.x - w/2;
   rect->maxx = pos.x + w/2;
   rect->miny = pos.y - h/2;
@@ -131,7 +130,7 @@ void CStaticSprite::render(Camera* camera) {
   go->pos(&pos);
   vector_add(&pos, &pos, &offset);
 
-  Sprite sprite = frame_make_sprite();
+  Sprite sprite = GIGGLE->make_sprite();
   sprite_fillfromentry(sprite, entry);
   sprite->displayX = pos.x;
   sprite->displayY = pos.y;
@@ -160,7 +159,7 @@ void CColoredSprite::render(Camera* camera) {
   go->pos(&pos);
   vector_add(&pos, &pos, &offset);
 
-  Sprite sprite = frame_make_sprite();
+  Sprite sprite = GIGGLE->make_sprite();
   sprite_fillfromentry(sprite, entry);
   sprite->displayX = pos.x;
   sprite->displayY = pos.y;
@@ -209,69 +208,6 @@ void CSpriterSprite::render(Camera* camera) {
   camera->layers[layer] = list;
 }
 
-OBJECT_IMPL(CDrawWallpaper, Component);
-OBJECT_PROPERTY(CDrawWallpaper, entry);
-OBJECT_PROPERTY(CDrawWallpaper, offset);
-OBJECT_PROPERTY(CDrawWallpaper, w);
-OBJECT_PROPERTY(CDrawWallpaper, h);
-OBJECT_PROPERTY(CDrawWallpaper, style);
-OBJECT_PROPERTY(CDrawWallpaper, layer);
-
-CDrawWallpaper::CDrawWallpaper(void* _go)
-  : Component((GO*)_go, PRIORITY_SHOW), style(WALLPAPER_TILE), layer(LAYER_BACKGROUND) {
-  vector_zero(&offset);
-}
-
-void CDrawWallpaper::render(Camera* camera) {
-  Vector_ pos;
-  go->pos(&pos);
-
-  vector_add(&pos, &pos, &offset);
-
-  float x_bl = (pos.x - w/2);
-  if(x_bl > screen_width) return;
-
-  float y_bl = (pos.y - h/2);
-  if(y_bl > screen_height) return;
-
-  float x_tr = (pos.x + w/2);
-  if(x_tr < 0) return;
-
-  float y_tr = (pos.y + h/2);
-  if(y_tr < 0) return;
-
-  // now we have some overlap, clamp the tr to the screen and figure
-  // out the bl offset
-  x_tr = MIN(x_tr, screen_width);
-  y_tr = MIN(y_tr, screen_height);
-
-  if(x_bl < 0) {
-    x_bl += floorf(fabs(x_bl) / entry->w) * entry->w;
-  }
-
-  if(y_bl < 0) {
-    y_bl += floorf(fabs(y_bl) / entry->h) * entry->h;
-  }
-
-  if(style != WALLPAPER_TILE) {
-    fail_exit("i haven't bothered to implement the other wallpaper styles yet\n");
-  }
-
-  float y = y_bl;
-  while(y < y_tr) {
-    float x = x_bl;
-    while(x < x_tr) {
-      BaseSprite sprite = (BaseSprite)frame_alloc(sizeof(BaseSprite_));
-      sprite_fillfromentry(sprite, entry);
-      sprite->displayX = x;
-      sprite->displayY = y;
-      camera->addSprite(&camera->baseLayers[layer], sprite);
-      x += entry->w;
-    }
-    y += entry->h;
-  }
-}
-
 OBJECT_IMPL(TileMapRenderer, Renderable);
 
 TileMapRenderer::TileMapRenderer(void *empty)
@@ -309,7 +245,8 @@ void TileMapRenderer::render(void* _sprites) {
 
   gl_check(glUniform1i(program->requireUniform(UNIFORM_TEX0), 0));
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
-                              1, GL_FALSE, orthographic_projection.data));
+                              1, GL_FALSE,
+                              GIGGLE->renderer->orthographic_projection.data));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, nverts));
 }
 
@@ -371,10 +308,7 @@ void CDrawTilemap::render(Camera* camera) {
   }
 }
 
-void game_step(long delta);
-
 void game_support_init() {
-  color_init();
 }
 
 OBJECT_IMPL(GradientScreenRectRenderer, Renderable);
@@ -439,7 +373,8 @@ void GradientScreenRectRenderer::render(void *args) {
 
   gl_check(glUniform1i(program->requireUniform(UNIFORM_TEX0), 0));
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
-                              1, GL_FALSE, orthographic_projection.data));
+                              1, GL_FALSE,
+                              GIGGLE->renderer->orthographic_projection.data));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, 6));
 }
 
@@ -466,7 +401,7 @@ CGradientScreenRect::~CGradientScreenRect() {
 
 void CGradientScreenRect::render(Camera* camera) {
   GradientScreenRectParams* params
-    = (GradientScreenRectParams*)frame_alloc(sizeof(GradientScreenRectParams));
+    = (GradientScreenRectParams*)GIGGLE->renderer->alloc(sizeof(GradientScreenRectParams));
   params->corners[0] = bl_p;
   params->corners[1] = br_p;
   params->corners[2] = tr_p;
@@ -476,7 +411,7 @@ void CGradientScreenRect::render(Camera* camera) {
   params->colors[1] = br_c;
   params->colors[2] = tr_c;
   params->colors[3] = tl_c;
-  params->texture = frame_make_sprite();
+  params->texture = GIGGLE->make_sprite();
   sprite_fillfromentry(params->texture, entry);
 
   camera->addRenderable(layer, renderer, params);
@@ -516,62 +451,57 @@ void CTire::update(float dt) {
 
 }
 
-void game_init(int argc, char** argv) {
-  // build up the default lua path
-  char buffer[1024];
-  snprintf(buffer, sizeof(buffer), "resources/?.lua;%sengine_resources/?.lua", libbase);
-
-  // initialize globals
-  game_support_init();
-  game = new Game(buffer);
-}
-
-void game_step(long delta) {
-  game->update(delta);
-}
-
-void game_shutdown() {
-  lib_shutdown();
-}
-
-Timer_ timer;
 
 #define min_time 1
 #define max_time 100
 
-static float last_frame_ms = (1.0 / 60.0) * 1e3;
+class DefaultGameLogic : public GameLogic {
+protected:
+  virtual void initializer() {
+    char buffer[1024];
+    snprintf(buffer, sizeof(buffer), "resources/?.lua;%sengine_resources/?.lua", GIGGLE->libbase);
 
-int loop_once() {
-  struct InputState_ state;
-  inputstate_latest(&state);
-  if(state.quit_requested) {
-    return 0;
+    // initialize globals
+    color_init();
+
+    // allow the instantiation process to make renderer calls (to
+    // allocate image assets, etc)
+    GIGGLE->renderer->await_initialization();
+    GIGGLE->renderer->begin_frame();
+    game = new Game(buffer);
+    GIGGLE->renderer->end_frame();
   }
 
-  float start_ms = time_millis();
+  float last_frame_ms = (1.0 / 60.0) * 1e3;
 
-  begin_frame();
+public:
+  DefaultGameLogic(Giggle* giggle)
+    : GameLogic(giggle) {
+  }
 
-  PROFILE_START(&timer, "main_update");
-  game_step(roundf(last_frame_ms));
-  PROFILE_END(&timer);
+  virtual bool step() {
+    struct InputState_ state;
+    inputstate_latest(&state);
+    if(state.quit_requested) {
+      return 0;
+    }
 
-  end_frame();
+    float start_ms = GIGGLE->renderer->time_millis();
+    GIGGLE->renderer->begin_frame();
 
-  last_frame_ms = time_millis() - start_ms;
-  last_frame_ms = MAX(min_time, MIN(max_time, last_frame_ms));
+    game->update(last_frame_ms);
 
-  return 1;
-}
+    GIGGLE->renderer->end_frame();
 
-void* game_exec(void* empty) {
-  // ensure that any inflight requests due to game initialization get
-  // a chance to finish
-  end_frame();
+    last_frame_ms = GIGGLE->renderer->time_millis() - start_ms;
+    last_frame_ms = MAX(min_time, MIN(max_time, last_frame_ms));
 
-  while(loop_once()) {}
-  game_shutdown();
-  return NULL;
+    return true;
+  }
+};
+
+GameLogic* default_gamelogic(Giggle* giggle) {
+  return new DefaultGameLogic(giggle);
 }
 
 void print_lstack(lua_State* L) {

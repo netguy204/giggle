@@ -271,7 +271,7 @@ SpriteAtlasEntry patch_cache[EP_MAX];
 
 static Sprite ui_make_sprite(SpriteAtlasEntry entry, int x, int y,
                              Color* c) {
-  Sprite sprite = frame_make_sprite();
+  Sprite sprite = GIGGLE->make_sprite();
   sprite_fillfromentry(sprite, entry);
   sprite->displayX = x;
   sprite->displayY = y;

@@ -15,7 +15,7 @@
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "matrix.h"
-#include "testlib.h"
+#include "giggle.h"
 
 OBJECT_IMPL(Matrix44, Object);
 

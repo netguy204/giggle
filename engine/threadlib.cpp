@@ -16,36 +16,72 @@
 */
 #include "threadlib.h"
 
-ThreadBarrier threadbarrier_make(int nthreads) {
-  ThreadBarrier barrier = (ThreadBarrier)malloc(sizeof(struct ThreadBarrier_));
-  barrier->mutex = mutex_create();
-  barrier->cond = condition_create();
-  barrier->nthreads = nthreads;
-  barrier->threads_waiting = 0;
-  barrier->seq_no = 0;
-  return barrier;
+ThreadBarrier::ThreadBarrier(int nthreads)
+  : nthreads(nthreads), threads_waiting(0), seq_no(0) {
+  mutex = mutex_create();
+  cond = condition_create();
 }
 
-void threadbarrier_free(ThreadBarrier barrier) {
-  condition_destroy(barrier->cond);
-  mutex_destroy(barrier->mutex);
-  free(barrier);
+ThreadBarrier::~ThreadBarrier() {
+  condition_destroy(cond);
+  mutex_destroy(mutex);
 }
 
-void threadbarrier_wait(ThreadBarrier barrier) {
-  mutex_lock(barrier->mutex);
-  barrier->threads_waiting += 1;
+void ThreadBarrier::wait() {
+  mutex_lock(mutex);
+  threads_waiting += 1;
 
-  if(barrier->threads_waiting == barrier->nthreads) {
-    barrier->threads_waiting = 0;
-    barrier->seq_no++;
-    condition_broadcast(barrier->cond);
+  if(threads_waiting == nthreads) {
+    threads_waiting = 0;
+    seq_no++;
+    condition_broadcast(cond);
   } else {
-    int last_seq_no = barrier->seq_no;
-    while(barrier->seq_no == last_seq_no) {
-      condition_wait(barrier->cond, barrier->mutex);
+    int last_seq_no = seq_no;
+    while(seq_no == last_seq_no) {
+      condition_wait(cond, mutex);
     }
   }
 
-  mutex_unlock(barrier->mutex);
+  mutex_unlock(mutex);
+}
+
+
+
+ThreadEvent::ThreadEvent()
+  : triggered(false), seq_no(0) {
+  mutex = mutex_create();
+  cond = condition_create();
+}
+
+void ThreadEvent::wait() {
+  if(triggered) return;
+
+  mutex_lock(mutex);
+  int last_seq_no = seq_no;
+  while(!triggered && last_seq_no == seq_no) {
+    condition_wait(cond, mutex);
+  }
+  mutex_unlock(mutex);
+}
+
+void ThreadEvent::notify() {
+  mutex_lock(mutex);
+  triggered = true;
+  seq_no++;
+  condition_broadcast(cond);
+  mutex_unlock(mutex);
+}
+
+bool ThreadEvent::has_fired() {
+  bool result;
+  mutex_lock(mutex);
+  result = triggered;
+  mutex_unlock(mutex);
+  return result;
+}
+
+void ThreadEvent::reset() {
+  mutex_lock(mutex);
+  triggered = false;
+  mutex_unlock(mutex);
 }

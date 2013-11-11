@@ -17,7 +17,7 @@
 #ifndef PSYSTEM_H
 #define PSYSTEM_H
 
-#include "testlib.h"
+#include "giggle.h"
 #include "spriteatlas.h"
 #include "color.h"
 #include "utils.h"

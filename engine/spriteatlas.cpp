@@ -16,7 +16,7 @@
 */
 #include "spriteatlas.h"
 #include "filenumbers.h"
-#include "testlib.h"
+#include "giggle.h"
 #include "utils.h"
 
 #include <stdio.h>
@@ -36,7 +36,7 @@ SpriteAtlas spriteatlas_load(const char* name, const char* imgtype) {
     // assume this is a single sprite image
     atlas = (SpriteAtlas)malloc(sizeof(SpriteAtlas_) + sizeof(SpriteAtlasEntry_));
     atlas->nentries = 1;
-    atlas->image = image_load(imgfilename);
+    atlas->image = GIGGLE->image_load(imgfilename);
 
     SpriteAtlasEntry entry = &atlas->entries[0];
     entry->atlas = atlas;
@@ -63,7 +63,7 @@ SpriteAtlas spriteatlas_load(const char* name, const char* imgtype) {
     atlas = (SpriteAtlas)malloc(sizeof(SpriteAtlas_) +
                                 sizeof(SpriteAtlasEntry_) * nentries);
     atlas->nentries = nentries;
-    atlas->image = image_load(imgfilename);
+    atlas->image = GIGGLE->image_load(imgfilename);
 
     // read the data
     int ii;
@@ -86,7 +86,7 @@ SpriteAtlas spriteatlas_load(const char* name, const char* imgtype) {
 }
 
 void spriteatlas_free(SpriteAtlas atlas) {
-  image_free(atlas->image);
+  GIGGLE->image_free(atlas->image);
   free(atlas);
 }
 

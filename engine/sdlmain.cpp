@@ -15,7 +15,8 @@
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <stdio.h>
-#include "testlib.h"
+#include "giggle.h"
+#include "giggle_sdl.h"
 #include "testlib_internal.h"
 #include "game.h"
 #include "utils.h"
@@ -28,16 +29,16 @@ FILE* nativeOpen(const char* fname) {
   return fopen(fname, "rb");
 }
 
-static Thread game_thread;
-
 int main(int argc, char ** argv) {
-  lib_init(argc, argv);
+  Giggle* giggle = lib_init(argc, argv);
+  giggle->renderer = sdl_renderer(giggle);
+  giggle->logic = default_gamelogic(giggle);
 
-  renderer_init(NULL);
-  game_init(argc, argv);
-  game_thread = thread_create(game_exec, NULL);
+  giggle->renderer->initialize();
+  giggle->logic->start();
 
-  renderer_exec(NULL); // renderer claims main thread
+  // renderer claims main thread
+  giggle->renderer->run();
 
   return 0;
 }

@@ -97,17 +97,35 @@ class Queue {
   }
 };
 
-typedef struct ThreadBarrier_ {
+class ThreadBarrier {
+private:
   Mutex mutex;
   Condition cond;
   int nthreads;
   int threads_waiting;
   int seq_no; // number of times we've waited at this barrier, overflow ok
-} *ThreadBarrier;
 
-ThreadBarrier threadbarrier_make(int nthreads);
-void threadbarrier_free(ThreadBarrier barrier);
+public:
+  ThreadBarrier(int nthreads);
+  ~ThreadBarrier();
 
-void threadbarrier_wait(ThreadBarrier barrier);
+  void wait();
+};
+
+class ThreadEvent {
+private:
+  Mutex mutex;
+  Condition cond;
+  bool triggered;
+  int seq_no;
+
+public:
+  ThreadEvent();
+
+  void wait();
+  void notify();
+  bool has_fired();
+  void reset();
+};
 
 #endif

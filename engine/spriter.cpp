@@ -239,7 +239,7 @@ BaseSprite spriter_append(BaseSprite list, Animation* anim, Vector pos,
   // build a transform stack that is as big as the bone heirarchy
   // could possibly be deep
   int timeline_stack_size = master->nrefs + 1;
-  int* timeline_stack = (int*)frame_alloc(sizeof(int) * timeline_stack_size);
+  int* timeline_stack = (int*)GIGGLE->renderer->alloc(sizeof(int) * timeline_stack_size);
 
   // now, using the list in the before key, we start tweening and
   // drawing
@@ -247,7 +247,7 @@ BaseSprite spriter_append(BaseSprite list, Animation* anim, Vector pos,
     MasterElementRef* ref = &master->refs[ii];
 
     // create the sprite
-    Sprite sprite = frame_make_sprite();
+    Sprite sprite = GIGGLE->make_sprite();
     KeyFrameElement* end_before = &anim->timelines[ref->timeline_idx].elements[ref->keyframe_idx];
     sprite_fillfromentry(sprite, end_before->entry);
     sprite->originX = 0;

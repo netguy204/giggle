@@ -14,17 +14,28 @@
  *  You should have received a copy of the GNU General Public License
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef CONTROLS_H
-#define CONTROLS_H
+#include <stdio.h>
+#include "giggle.h"
+#include "giggle_sdl.h"
+#include "testlib_internal.h"
+#include "game.h"
+#include "utils.h"
+#include "config.h"
 
-typedef struct RepeatingLatch_ {
-  long last_time;
-  float period;
-  int latch_value, last_state;
-} *RepeatingLatch;
+#include <SDL2/SDL.h>
 
-struct Clock_;
-int repeatinglatch_state(RepeatingLatch latch, struct Clock_* clock,
-                         int input_state);
+// required by things that read files
+FILE* nativeOpen(const char* fname) {
+  return fopen(fname, "rb");
+}
 
-#endif
+int main(int argc, char ** argv) {
+  Giggle* giggle = lib_init(argc, argv);
+  giggle->renderer = sdl_nonthreaded_renderer(giggle);
+  giggle->logic = default_gamelogic(giggle);
+
+  giggle->renderer->initialize();
+  giggle->logic->run();
+
+  return 0;
+}

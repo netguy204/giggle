@@ -321,7 +321,7 @@ BaseSprite TileMap::spritelist(BaseSprite spritelist, float x_bl, float y_bl,
       TileSpec* spec = &tile_specs[tile];
       if((spec->bitmask & TILESPEC_VISIBLE) == 0) continue;
 
-      BaseSprite sprite = (BaseSprite)frame_alloc(sizeof(BaseSprite_));
+      BaseSprite sprite = (BaseSprite)GIGGLE->renderer->alloc(sizeof(BaseSprite_));
       sprite_fillfromentry(sprite, spec->image);
       sprite->displayX = x;
       sprite->displayY = y;

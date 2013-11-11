@@ -399,7 +399,7 @@ class World : public Object {
   void unregister_fixture(b2Fixture* fixture);
 
   Random_ rgen;
-  Clock clock;
+  Clock* clock;
   b2World bWorld;
   LuaThread pre_render;
   LuaThread post_render;
