@@ -23,8 +23,6 @@
 #include "tiles.h"
 #include "giggle_gl.h"
 
-void* game_exec(void* empty);
-
 class CLeftAndRight : public Component {
  public:
   OBJECT_PROTO(CLeftAndRight);
@@ -189,8 +187,7 @@ class CTire : public Component {
   float max_lateral_impulse;
 };
 
-void game_init(int argc, char** argv);
-void game_shutdown();
+GameLogic* default_gamelogic(Giggle* giggle);
 
 void print_lstack(lua_State* L);
 

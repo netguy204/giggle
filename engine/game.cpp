@@ -308,10 +308,7 @@ void CDrawTilemap::render(Camera* camera) {
   }
 }
 
-void game_step(long delta);
-
 void game_support_init() {
-  color_init();
 }
 
 OBJECT_IMPL(GradientScreenRectRenderer, Renderable);
@@ -454,62 +451,57 @@ void CTire::update(float dt) {
 
 }
 
-void game_init(int argc, char** argv) {
-  // build up the default lua path
-  char buffer[1024];
-  snprintf(buffer, sizeof(buffer), "resources/?.lua;%sengine_resources/?.lua", GIGGLE->libbase);
-
-  // initialize globals
-  game_support_init();
-
-  // allow the instantiation process to make renderer calls (to
-  // allocate image assets, etc)
-  GIGGLE->renderer->begin_frame();
-  game = new Game(buffer);
-  GIGGLE->renderer->end_frame();
-}
-
-void game_step(long delta) {
-  game->update(delta);
-}
-
-void game_shutdown() {
-}
-
-Timer_ timer;
 
 #define min_time 1
 #define max_time 100
 
-static float last_frame_ms = (1.0 / 60.0) * 1e3;
+class DefaultGameLogic : public GameLogic {
+protected:
+  virtual void initializer() {
+    char buffer[1024];
+    snprintf(buffer, sizeof(buffer), "resources/?.lua;%sengine_resources/?.lua", GIGGLE->libbase);
 
-int loop_once() {
-  struct InputState_ state;
-  inputstate_latest(&state);
-  if(state.quit_requested) {
-    return 0;
+    // initialize globals
+    color_init();
+
+    // allow the instantiation process to make renderer calls (to
+    // allocate image assets, etc)
+    GIGGLE->renderer->await_initialization();
+    GIGGLE->renderer->begin_frame();
+    game = new Game(buffer);
+    GIGGLE->renderer->end_frame();
   }
 
-  float start_ms = GIGGLE->renderer->time_millis();
+  float last_frame_ms = (1.0 / 60.0) * 1e3;
 
-  GIGGLE->renderer->begin_frame();
+public:
+  DefaultGameLogic(Giggle* giggle)
+    : GameLogic(giggle) {
+  }
 
-  PROFILE_START(&timer, "main_update");
-  game_step(roundf(last_frame_ms));
-  PROFILE_END(&timer);
+  virtual bool step() {
+    struct InputState_ state;
+    inputstate_latest(&state);
+    if(state.quit_requested) {
+      return 0;
+    }
 
-  GIGGLE->renderer->end_frame();
+    float start_ms = GIGGLE->renderer->time_millis();
+    GIGGLE->renderer->begin_frame();
 
-  last_frame_ms = GIGGLE->renderer->time_millis() - start_ms;
-  last_frame_ms = MAX(min_time, MIN(max_time, last_frame_ms));
+    game->update(last_frame_ms);
 
-  return 1;
-}
+    GIGGLE->renderer->end_frame();
 
-void* game_exec(void* empty) {
-  while(loop_once()) {}
-  game_shutdown();
-  return NULL;
+    last_frame_ms = GIGGLE->renderer->time_millis() - start_ms;
+    last_frame_ms = MAX(min_time, MIN(max_time, last_frame_ms));
+
+    return true;
+  }
+};
+
+GameLogic* default_gamelogic(Giggle* giggle) {
+  return new DefaultGameLogic(giggle);
 }
 
 void print_lstack(lua_State* L) {

@@ -29,16 +29,13 @@ FILE* nativeOpen(const char* fname) {
   return fopen(fname, "rb");
 }
 
-static Thread game_thread;
-
 int main(int argc, char ** argv) {
   Giggle* giggle = lib_init(argc, argv);
   giggle->renderer = sdl_renderer(giggle);
+  giggle->logic = default_gamelogic(giggle);
 
   giggle->renderer->initialize();
-
-  game_init(argc, argv);
-  game_thread = thread_create(game_exec, NULL);
+  giggle->logic->start();
 
   // renderer claims main thread
   giggle->renderer->run();

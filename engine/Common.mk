@@ -49,10 +49,10 @@ C_OBJS=\
 
 EXE_OBJS+=$(C_OBJS)
 
-all: $(OGG_HEADER) $(BIN)
+all: $(OGG_HEADER) $(BINS)
 
-$(BIN): $(EXE_OBJS) $(LUA_LIB)
-	$(CXX) -o $@ $(EXE_OBJS) $(LDFLAGS) $(CXXFLAGS)
+%.bin: %.o $(EXE_OBJS) $(LUA_LIB)
+	$(CXX) -o $@ $< $(EXE_OBJS) $(LDFLAGS) $(CXXFLAGS)
 
 test_bin: $(C_OBJS) testlib_test.o
 	$(CXX) -o $@ $(C_OBJS) testlib_test.o $(LDFLAGS) $(CXXFLAGS)

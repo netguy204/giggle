@@ -1,5 +1,5 @@
-CPP_SRC=giggle_sdl.cpp audio_sdl.cpp sdlmain.cpp
-BIN=sdlmain
+CPP_SRC=giggle_sdl.cpp audio_sdl.cpp
+BINS=sdlmain.bin sdlmain_nt.bin
 
 SDL_BASE=$(PWD)/vender/SDL2-2.0.1
 SDL_ROOT=$(PWD)/vender/SDL-root
@@ -53,11 +53,11 @@ audio_test: audio_test.cpp sampler.cpp
 APP=Mosaic.app/Contents
 
 ifeq ($(PLATFORM), macosx)
-package: sdlmain resources
-	cp sdlmain $(APP)/MacOS
+package: sdlmain.bin resources
+	cp sdlmain.bin $(APP)/MacOS
 	rm -rf $(APP)/Frameworks/SDL.framework
 	cp -r vender/SDL.framework $(APP)/Frameworks/
-	install_name_tool -change @rpath/SDL.framework/Versions/A/SDL "@executable_path/../Frameworks/SDL.framework/Versions/A/SDL" $(APP)/MacOS/sdlmain
+	install_name_tool -change @rpath/SDL.framework/Versions/A/SDL "@executable_path/../Frameworks/SDL.framework/Versions/A/SDL" $(APP)/MacOS/sdlmain.bin
 	rm -rf $(APP)/Resources/*
 	cp -r resources $(APP)/Resources/
 	cp -r sounds $(APP)/Resources/
@@ -67,8 +67,8 @@ package: sdlmain resources
 	codesign -s "Developer ID Application: Brian Taylor" Mosaic.app/
 else
 ifeq ($(PLATFORM), windows)
-package: sdlmain resources
-	cp sdlmain windist/
+package: sdlmain.bin resources
+	cp sdlmain.bin windist/
 	rm -rf windist/resources windist/sounds
 	cp -r resources windist/
 	cp -r sounds windist/

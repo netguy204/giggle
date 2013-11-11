@@ -42,6 +42,41 @@
 
 typedef void (*CommandFunction)(void*);
 
+typedef struct ImageResource_ {
+  struct DLLNode_ node;
+  int w, h;
+  Texture* texture;
+  int channels;
+  unsigned char* data; /* shortlived, internal */
+} *ImageResource;
+
+typedef struct BaseSprite_ {
+  BaseSprite_* next;
+  Texture* texture;
+  unsigned int count;
+  float u0, u1, v0, v1;
+  int16_t displayX;
+  int16_t displayY;
+  int16_t w, h;
+} *BaseSprite;
+
+#define sprite_append(list, sprite) do {        \
+    sprite->next = list;                       \
+    if(list) {                                  \
+      sprite->count = (list)->count + 1;        \
+    } else {                                    \
+      sprite->count = 1;                        \
+    }                                           \
+    list = sprite;                              \
+  } while(0)
+
+typedef struct Sprite_ : BaseSprite_ {
+  float angle;
+  float originX;
+  float originY;
+  float color[4];
+} *Sprite;
+
 // this is the last resort rendering mechanism for very special cases
 class Renderable : public Object {
  public:
@@ -164,42 +199,6 @@ public:
 
   virtual bool step() = 0;
 };
-
-typedef struct ImageResource_ {
-  struct DLLNode_ node;
-  int w, h;
-  Texture* texture;
-  int channels;
-  unsigned char* data; /* shortlived, internal */
-} *ImageResource;
-
-typedef struct BaseSprite_ {
-  BaseSprite_* next;
-  Texture* texture;
-  unsigned int count;
-  float u0, u1, v0, v1;
-  int16_t displayX;
-  int16_t displayY;
-  int16_t w, h;
-} *BaseSprite;
-
-#define sprite_append(list, sprite) do {        \
-    sprite->next = list;                       \
-    if(list) {                                  \
-      sprite->count = (list)->count + 1;        \
-    } else {                                    \
-      sprite->count = 1;                        \
-    }                                           \
-    list = sprite;                              \
-  } while(0)
-
-typedef struct Sprite_ : BaseSprite_ {
-  float angle;
-  float originX;
-  float originY;
-  float color[4];
-} *Sprite;
-
 
 /*
 class AudioSystem : public Task {

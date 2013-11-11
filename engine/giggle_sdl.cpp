@@ -95,6 +95,11 @@ protected:
     Renderer::initializer();
   }
 
+  virtual void renderer_begin_frame() {
+    Renderer::renderer_begin_frame();
+    update_input_state();
+  }
+
   virtual void renderer_end_frame(StackAllocator active_allocator) {
     SDL_GL_SwapWindow(screen);
     Renderer::renderer_end_frame(active_allocator);
@@ -106,7 +111,6 @@ public:
   }
 
   virtual bool step() {
-    update_input_state();
     if(pstate.quit_requested) return false;
 
     return Renderer::step();
@@ -130,8 +134,20 @@ Renderer* sdl_renderer(Giggle* giggle) {
   return new SDLRenderer(giggle, 2, 1024 * 1024);
 }
 
+class SDLNTRenderer : public SDLRenderer {
+public:
+  SDLNTRenderer(Giggle* giggle, int depth, size_t sz)
+    : SDLRenderer(giggle, depth, sz) {
+  }
 
+  void enqueue(CommandFunction function, void* data) {
+    function(data);
+  }
+};
 
+Renderer* sdl_nonthreaded_renderer(Giggle* giggle) {
+  return new SDLNTRenderer(giggle, 1, 1024 * 1024);
+}
 
 // internal stuff
 KeyNumber mouse2kn(int mouse) {
