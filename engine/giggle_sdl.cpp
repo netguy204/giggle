@@ -32,7 +32,7 @@
 typedef std::map<unsigned long, int> SDLRemapTable;
 static SDLRemapTable sdl_remap_table;
 static InputState_ pstate;
-
+void update_input_state();
 
 class SDLRenderer : public Renderer {
 protected:
@@ -103,6 +103,13 @@ protected:
 public:
   SDLRenderer(Giggle* giggle, int depth, size_t sz)
     : Renderer(giggle, depth, sz) {
+  }
+
+  virtual bool step() {
+    update_input_state();
+    if(pstate.quit_requested) return false;
+
+    return Renderer::step();
   }
 
   long time_millis() {
