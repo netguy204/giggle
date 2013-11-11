@@ -25,8 +25,8 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#include "testlib.h"
-#include "testlib_gl.h"
+#include "giggle.h"
+#include "giggle_gl.h"
 #include "testlib_internal.h"
 #include "gl_headers.h"
 #include "utils.h"

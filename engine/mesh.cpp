@@ -88,7 +88,8 @@ void MeshRenderer::render(void* args) {
   gl_unclaim(&colors);
 
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
-                              1, GL_FALSE, orthographic_projection.data));
+                              1, GL_FALSE,
+                              GIGGLE->renderer->orthographic_projection.data));
 
   if(mesh->type == MESH_TRIS) {
     gl_check(glDrawArrays(GL_TRIANGLES, 0, mesh->nverts));
@@ -131,7 +132,7 @@ void CMesh::render(Camera* camera) {
   size_t csize = sizeof(Color) * nverts;
 
   // allocate enough space in one go
-  char* mem = (char*)frame_alloc(sizeof(MeshRendererArgs) + vsize + csize);
+  char* mem = (char*)GIGGLE->renderer->alloc(sizeof(MeshRendererArgs) + vsize + csize);
   MeshRendererArgs* marg = (MeshRendererArgs*)mem;
   marg->verts = (Vector_*)&mem[sizeof(MeshRendererArgs)];
   marg->colors = (Color*)&mem[sizeof(MeshRendererArgs) + vsize];

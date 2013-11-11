@@ -15,7 +15,7 @@
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "utils.h"
-#include "testlib.h"
+#include "giggle.h"
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -83,7 +83,7 @@ const char* filename_resolve(const char* filename) {
     return filename;
   }
 
-  snprintf(resolve_buffer, sizeof(resolve_buffer), "%s/%s", libbase, filename);
+  snprintf(resolve_buffer, sizeof(resolve_buffer), "%s/%s", GIGGLE->libbase, filename);
   return resolve_buffer;
 }
 

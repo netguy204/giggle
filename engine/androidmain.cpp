@@ -15,7 +15,7 @@
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "utils.h"
-#include "testlib.h"
+#include "giggle.h"
 #include "game.h"
 #include "android_fopen.h"
 #include "testlib_internal.h"

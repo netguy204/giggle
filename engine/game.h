@@ -18,10 +18,10 @@
 #define GAME_H
 
 #include "platform.h"
-#include "testlib.h"
+#include "giggle.h"
 #include "spriteatlas.h"
 #include "tiles.h"
-#include "testlib_gl.h"
+#include "giggle_gl.h"
 
 void* game_exec(void* empty);
 
@@ -105,26 +105,6 @@ class CSpriterSprite : public Component {
   float time_scale;
   float scale_x;
   float scale_y;
-};
-
-enum WallpaperStyle {
-  WALLPAPER_SCALE,
-  WALLPAPER_TILE,
-};
-
-class CDrawWallpaper : public Component {
- public:
-  OBJECT_PROTO(CDrawWallpaper);
-
-  CDrawWallpaper(void* go);
-
-  virtual void render(Camera* camera);
-
-  SpriteAtlasEntry entry;
-  Vector_ offset;
-  float w, h;
-  int style;
-  int layer;
 };
 
 class TileMapRenderer : public Renderable {

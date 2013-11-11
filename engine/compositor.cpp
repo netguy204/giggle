@@ -1,6 +1,6 @@
 #include "compositor.h"
-#include "testlib.h"
-#include "testlib_gl.h"
+#include "giggle.h"
+#include "giggle_gl.h"
 
 class VoidFunctionRenderable : public Renderable {
 public:
@@ -19,9 +19,9 @@ public:
 OBJECT_IMPL(VoidFunctionRenderable, Renderable);
 
 void as_renderable(VoidFunction* fn) {
-  void* buffer = frame_alloc(sizeof(VoidFunctionRenderable));
+  void* buffer = GIGGLE->renderer->alloc(sizeof(VoidFunctionRenderable));
   VoidFunctionRenderable* vfr = new(buffer) VoidFunctionRenderable(fn);
-  renderable_enqueue_for_screen(vfr, NULL);
+  GIGGLE->renderer->enqueue(vfr, NULL);
 }
 
 OBJECT_IMPL(TextureObject, Object);
@@ -116,7 +116,7 @@ Matrix44* Compositor::transform_create() {
 OBJECT_METHOD(Compositor, transform_create, Matrix44*, ());
 
 void Compositor::transform_set(Matrix44* m) {
-  orthographic_projection = *m;
+  GIGGLE->renderer->orthographic_projection = *m;
 }
 DEFERRED_OBJECT_METHOD(as_renderable, Compositor, transform_set, void, (Matrix44*));
 
@@ -179,7 +179,8 @@ void Compositor::frame_buffer_bind(FrameBuffer* fb) {
     glViewport(0, 0, fb->color_buffer->width, fb->color_buffer->height);
   } else {
     gl_check(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-    glViewport(0, 0, real_screen_width, real_screen_height);
+    glViewport(0, 0, GIGGLE->renderer->screen_width,
+               GIGGLE->renderer->screen_height);
   }
 }
 DEFERRED_OBJECT_METHOD(as_renderable, Compositor, frame_buffer_bind, void, (FrameBuffer*));
@@ -236,7 +237,8 @@ void Compositor::textured_quad(Rect_ rect, Color color, TextureObject* texture) 
 
   gl_check(glUniform1i(program->requireUniform(UNIFORM_TEX0), 0));
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
-                              1, GL_FALSE, orthographic_projection.data));
+                              1, GL_FALSE,
+                              GIGGLE->renderer->orthographic_projection.data));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, 6));
 }
 DEFERRED_OBJECT_METHOD(as_renderable, Compositor, textured_quad, void, (Rect_, Color, TextureObject*))

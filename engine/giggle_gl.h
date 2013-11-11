@@ -14,12 +14,12 @@
  *  You should have received a copy of the GNU General Public License
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef TESTLIB_GL_H
-#define TESTLIB_GL_H
+#ifndef GIGGLE_GL_H
+#define GIGGLE_GL_H
 
 #include "matrix.h"
 #include "gl_headers.h"
-#include "testlib.h"
+#include "giggle.h"
 #include "utils.h"
 
 #include <map>
@@ -49,12 +49,8 @@ typedef enum {
   UNIFORM_DONE
 } ProgramUniforms;
 
-extern int real_screen_width;
-extern int real_screen_height;
 extern float gl_version;
 extern int fbo_support;
-
-void* renderer_alloc(long size);
 
 class Program {
  public:
@@ -95,10 +91,6 @@ void program_bind_uniforms(Program* p, ...);
 
 GLuint next_buffer();
 
-extern Matrix44 orthographic_projection;
-extern GLuint tex0_uniform_location;
-extern GLuint mvp_uniform_location;
-
 class BaseSpriteListRenderer : public Renderable {
  public:
   OBJECT_PROTO(BaseSpriteListRenderer);
@@ -125,6 +117,11 @@ class ColoredSpriteListRenderer : public Renderable {
 
   Program *program;
 };
+
+typedef struct ColoredRect_ : Rect_ {
+  ColoredRect_* next;
+  float color[4];
+} *ColoredRect;
 
 class RectRenderer : public Renderable {
  public:

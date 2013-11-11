@@ -18,12 +18,12 @@
 
 #include <SDL2/SDL.h>
 
-#include "testlib.h"
+#include "giggle.h"
 #include "testlib_internal.h"
 #include "gl_headers.h"
 #include "utils.h"
 #include "input.h"
-#include "testlib_gl.h"
+#include "giggle_gl.h"
 
 #include <math.h>
 #include <map>
@@ -33,33 +33,100 @@ typedef std::map<unsigned long, int> SDLRemapTable;
 static SDLRemapTable sdl_remap_table;
 static InputState_ pstate;
 
-void native_init() {
-  /* appears to be the ouya default resolution */
 
-  screen_width = 1280;
-  screen_height = 720;
+class SDLRenderer : public Renderer {
+protected:
+  SDL_Window* screen;
 
-  /* remap the ASCII keys, everything is lowercase */
-  for(int ii = 0; ii < (SDLK_z - SDLK_a + 1); ++ii) {
-    sdl_remap_table[SDLK_a + ii] = 'a' + ii;
+  virtual void initializer() {
+    /* remap the ASCII keys, everything is lowercase */
+    for(int ii = 0; ii < (SDLK_z - SDLK_a + 1); ++ii) {
+      sdl_remap_table[SDLK_a + ii] = 'a' + ii;
+    }
+
+    /* remap numbers */
+    for(int ii = 0; ii < 10; ++ii) {
+      sdl_remap_table[SDLK_0 + ii] = '0' + ii;
+    }
+
+    /* remap a few others manually */
+    sdl_remap_table[SDLK_RETURN] = K_ENTER;
+    sdl_remap_table[SDLK_TAB] = K_TAB;
+    sdl_remap_table[SDLK_BACKSPACE] = K_BACKSPACE;
+    sdl_remap_table[SDLK_SPACE] = K_SPACE;
+    sdl_remap_table[SDLK_LALT] = K_ALT;
+    sdl_remap_table[SDLK_RALT] = K_ALT;
+    sdl_remap_table[SDLK_LGUI] = K_ALT;
+    sdl_remap_table[SDLK_RGUI] = K_ALT;
+
+
+    LOGI("renderer_init");
+    if ( SDL_Init(SDL_INIT_EVERYTHING) < 0 ) {
+      fprintf(stderr, "Unable to init SDL: %s\n", SDL_GetError());
+      exit(1);
+    }
+
+    /* probably supported in sdl > 1.2
+       SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+       SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+    */
+
+    screen = SDL_CreateWindow("GGL",
+                              SDL_WINDOWPOS_UNDEFINED,
+                              SDL_WINDOWPOS_UNDEFINED,
+                              screen_width, screen_height,
+                              SDL_WINDOW_OPENGL);
+    SDL_GL_CreateContext(screen);
+
+    if(screen == NULL) {
+      fprintf(stderr, "Unable to set %dx%d video: %s\n",
+              screen_width, screen_height, SDL_GetError());
+      exit(1);
+    }
+
+    GLenum err = glewInit();
+    if(err != GLEW_OK) {
+      fprintf(stderr, "Failed to initialize GLEW\n");
+      exit(1);
+    } else {
+      LOGI("glew initialized");
+    }
+
+    Renderer::initializer();
   }
 
-  /* remap numbers */
-  for(int ii = 0; ii < 10; ++ii) {
-    sdl_remap_table[SDLK_0 + ii] = '0' + ii;
+  virtual void renderer_end_frame(StackAllocator active_allocator) {
+    SDL_GL_SwapWindow(screen);
+    Renderer::renderer_end_frame(active_allocator);
   }
 
-  /* remap a few others manually */
-  sdl_remap_table[SDLK_RETURN] = K_ENTER;
-  sdl_remap_table[SDLK_TAB] = K_TAB;
-  sdl_remap_table[SDLK_BACKSPACE] = K_BACKSPACE;
-  sdl_remap_table[SDLK_SPACE] = K_SPACE;
-  sdl_remap_table[SDLK_LALT] = K_ALT;
-  sdl_remap_table[SDLK_RALT] = K_ALT;
-  sdl_remap_table[SDLK_LGUI] = K_ALT;
-  sdl_remap_table[SDLK_RGUI] = K_ALT;
+public:
+  SDLRenderer(Giggle* giggle, int depth, size_t sz)
+    : Renderer(giggle, depth, sz) {
+  }
+
+  long time_millis() {
+    return SDL_GetTicks();
+  }
+
+  void sleep_millis(long millis) {
+    SDL_Delay(millis);
+  }
+
+  void show_mouse(bool show) {
+    SDL_ShowCursor(show);
+  }
+
+};
+
+Renderer* sdl_renderer(Giggle* giggle) {
+  return new SDLRenderer(giggle, 2, 1024 * 1024);
 }
 
+
+
+
+// internal stuff
 KeyNumber mouse2kn(int mouse) {
   switch(mouse) {
   case SDL_BUTTON_LEFT:
@@ -116,14 +183,11 @@ void update_input_state() {
     } else if(event.type == SDL_MOUSEBUTTONUP) {
       handle_key(mouse2kn(event.button.button), 0.0f);
     } else if(event.type == SDL_MOUSEMOTION) {
-      float xs = screen_width / (float)real_screen_width;
-      float ys = screen_height / (float)real_screen_height;
-
       SpatialInput input;
-      input.absolute.x = event.motion.x * xs;
-      input.absolute.y = (real_screen_height - event.motion.y) * ys;
-      input.relative.x = event.motion.xrel * xs;
-      input.relative.y = -event.motion.yrel * ys;
+      input.absolute.x = event.motion.x;
+      input.absolute.y = (GIGGLE->renderer->screen_height - event.motion.y);
+      input.relative.x = event.motion.xrel;
+      input.relative.y = -event.motion.yrel;
       handle_spatialinput(SI_MOUSE, &input);
     }
   }
@@ -131,71 +195,4 @@ void update_input_state() {
 
 void inputstate_latest(InputState state) {
   *state = pstate;
-}
-
-long time_millis() {
-  return SDL_GetTicks();
-}
-
-void sleep_millis(long millis) {
-  SDL_Delay(millis);
-}
-
-static SDL_Window* screen;
-void renderer_init(void* empty) {
-  LOGI("renderer_init");
-  if ( SDL_Init(SDL_INIT_EVERYTHING) < 0 ) {
-    fprintf(stderr, "Unable to init SDL: %s\n", SDL_GetError());
-    exit(1);
-  }
-
-  /* probably supported in sdl > 1.2
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-  */
-
-  screen = SDL_CreateWindow("GGL",
-                            SDL_WINDOWPOS_UNDEFINED,
-                            SDL_WINDOWPOS_UNDEFINED,
-                            screen_width, screen_height,
-                            SDL_WINDOW_OPENGL);
-  SDL_GL_CreateContext(screen);
-
-  if(screen == NULL) {
-    fprintf(stderr, "Unable to set %dx%d video: %s\n",
-            screen_width, screen_height, SDL_GetError());
-    exit(1);
-  }
-
-  GLenum err = glewInit();
-  if(err != GLEW_OK) {
-    fprintf(stderr, "Failed to initialize GLEW\n");
-    exit(1);
-  } else {
-    LOGI("glew initialized");
-  }
-
-  renderer_gl_init(screen_width, screen_height);
-}
-
-void renderer_shutdown(void* empty) {
-  LOGI("renderer_shutdown");
-  renderer_gl_shutdown();
-}
-
-void at_exit() {
-  SDL_Quit();
-}
-
-void signal_render_complete(void* _allocator) {
-  renderer_end_frame();
-  StackAllocator allocator = (StackAllocator)_allocator;
-  SDL_GL_SwapWindow(screen);
-  render_reply_queue->enqueue(allocator);
-
-  update_input_state();
-}
-
-void window_show_mouse(bool show) {
-  SDL_ShowCursor(show);
 }

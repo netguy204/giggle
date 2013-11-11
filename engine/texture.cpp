@@ -15,7 +15,7 @@
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "texture.h"
-#include "testlib_gl.h"
+#include "giggle_gl.h"
 
 Texture::Texture()
   : texid(0) {

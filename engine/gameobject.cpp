@@ -17,7 +17,7 @@
 #include "gameobject.h"
 #include "memlib.h"
 #include "config.h"
-#include "testlib.h"
+#include "giggle.h"
 #include "utils.h"
 #include "psystem.h"
 #include "compositor.h"
@@ -44,7 +44,7 @@ void free_lstring(LString* str) {
 }
 
 LString* frame_alloc_lstring(const char* data, size_t length) {
-  LString *result = (LString*)frame_alloc(sizeof(LString) + length + 1);
+  LString *result = (LString*)GIGGLE->renderer->alloc(sizeof(LString) + length + 1);
   init_lstring(result, data, length);
   return result;
 }
@@ -122,7 +122,8 @@ Camera::Camera(void* _go)
   memset(testRects, 0, sizeof(testRects));
 
   // reasonable default
-  world2camera.orthographic_proj(0.0f, screen_width, 0.0f, screen_height,
+  world2camera.orthographic_proj(0.0f, GIGGLE->renderer->screen_width,
+                                 0.0f, GIGGLE->renderer->screen_height,
                                  -1.0f, 1.0f);
 
   go->world->cameras.add_head(this);
@@ -135,7 +136,7 @@ Camera::~Camera() {
 }
 
 void Camera::addRenderable(int layer, Renderable* renderable, void* args) {
-  RenderableCommand* command = (RenderableCommand*)frame_alloc(sizeof(RenderableCommand));
+  RenderableCommand* command = (RenderableCommand*)GIGGLE->renderer->alloc(sizeof(RenderableCommand));
   command->renderable = renderable;
   command->args = args;
   command->next = renderables[layer];
@@ -151,8 +152,6 @@ void Camera::addRect(ColoredRect* list, ColoredRect rect) {
   *list = rect;
 }
 
-extern Matrix44 orthographic_projection;
-
 class SetCameraParams : public Renderable {
 public:
   SetCameraParams(Matrix44& m, const Rect_& vp)
@@ -160,7 +159,7 @@ public:
   }
 
   virtual void render(void* args) {
-    orthographic_projection = matrix;
+    GIGGLE->renderer->orthographic_projection = matrix;
     glViewport(vp.minx, vp.miny, vp.maxx, vp.maxy);
   }
 
@@ -172,32 +171,37 @@ void Camera::enqueue() {
   step_thread(&pre_render, go, this);
 
   // set transform
-  void* stfbuff = frame_alloc(sizeof(SetCameraParams));
+  void* stfbuff = GIGGLE->renderer->alloc(sizeof(SetCameraParams));
   SetCameraParams *params = new(stfbuff) SetCameraParams(world2camera, viewport);
-  renderable_enqueue_for_screen(params, NULL);
+  GIGGLE->renderer->enqueue(params, NULL);
 
   for(int ii = 0; ii < LAYER_MAX; ++ii) {
     if(renderables[ii]) {
-      renderables_enqueue_for_screen(renderables[ii]);
+      GIGGLE->renderer->enqueue(renderables[ii]);
       renderables[ii] = NULL;
     }
     if(baseLayers[ii]) {
-      renderable_enqueue_for_screen(basespritelist_renderer, baseLayers[ii]);
+      GIGGLE->renderer->enqueue(GIGGLE->renderer->basespritelist_renderer,
+                                baseLayers[ii]);
     }
     if(layers[ii]) {
-      renderable_enqueue_for_screen(spritelist_renderer, layers[ii]);
+      GIGGLE->renderer->enqueue(GIGGLE->renderer->spritelist_renderer,
+                                layers[ii]);
     }
     if(particles[ii]) {
-      renderable_enqueue_for_screen(coloredspritelist_renderer, particles[ii]);
+      GIGGLE->renderer->enqueue(GIGGLE->renderer->coloredspritelist_renderer,
+                                particles[ii]);
     }
     while(testRects[ii]) {
-      renderable_enqueue_for_screen(filledrect_renderer, testRects[ii]);
+      GIGGLE->renderer->enqueue(GIGGLE->renderer->filledrect_renderer,
+                                testRects[ii]);
       testRects[ii] = testRects[ii]->next;
     }
     layers[ii] = NULL;
     particles[ii] = NULL;
     baseLayers[ii] = NULL;
   }
+
   step_thread(&post_render, go, this);
 }
 
@@ -480,7 +484,7 @@ GOHandle* GO::handle() {
 }
 
 Message* GO::create_message(int kind, const char* content, size_t nbytes) {
-  Message* msg = (Message*)frame_alloc(sizeof(Message) + nbytes);
+  Message* msg = (Message*)GIGGLE->renderer->alloc(sizeof(Message) + nbytes);
   msg->source = handle();
   msg->kind = kind;
   msg->nbytes = nbytes;
@@ -930,10 +934,11 @@ World::World(void* _game)
     render_disabled(0) {
 
   bWorld.SetContactListener(contact_listener);
-  clock = clock_make();
+  clock = GIGGLE->clock_make();
   stage = create_go();
   Camera* camera = (Camera*)stage->add_component(&Camera::Type);
-  Rect_ vp = {0, 0, (float)screen_width, (float)screen_height};
+  Rect_ vp = {0, 0, (float)GIGGLE->renderer->screen_width,
+              (float)GIGGLE->renderer->screen_height};
   camera->viewport = vp;
   random_init(&rgen, 1234);
 }
@@ -951,7 +956,7 @@ World::~World() {
   free_thread(&pre_render);
   free_thread(&post_render);
 
-  clock_free(clock);
+  GIGGLE->clock_free(clock);
 
   delete contact_listener;
 }
@@ -988,7 +993,7 @@ void World::update(long delta) {
 }
 
 void World::update_step(long delta) {
-  this->dt = clock_update(clock, delta / 1000.0);;
+  this->dt = clock->update(delta / 1000.0);;
 
   // do an integration step
   bWorld.Step(dt, 6, 2);
@@ -1306,7 +1311,7 @@ Object* Game::create_object(TypeInfo* type) {
 OBJECT_METHOD(Game, create_object, Object*, (TypeInfo*));
 
 void Game::show_mouse_cursor(int show) {
-  window_show_mouse(show);
+  GIGGLE->renderer->show_mouse(show);
 }
 OBJECT_METHOD(Game, show_mouse_cursor, void, (int));
 

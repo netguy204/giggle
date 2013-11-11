@@ -17,7 +17,7 @@
 #ifndef GAME_UI_H
 #define GAME_UI_H
 
-#include "testlib.h"
+#include "giggle.h"
 #include "spriteatlas.h"
 #include "color.h"
 #include "gameobject.h"

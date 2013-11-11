@@ -15,11 +15,11 @@
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "gl_headers.h"
-#include "testlib_gl.h"
+#include "giggle_gl.h"
 
 #include "memlib.h"
 #include "utils.h"
-#include "testlib.h"
+#include "giggle.h"
 #include "utils.h"
 
 #include <math.h>
@@ -28,15 +28,10 @@
 
 #define NBUFFERS 30
 
-StackAllocator gldata_allocator = NULL;
 float gl_version = 0.0f;
 int fbo_support = 0;
 GLuint buffers[NBUFFERS];
 int current_buffer = 0;
-
-void* renderer_alloc(long size) {
-  return stack_allocator_alloc(gldata_allocator, size);
-}
 
 void gl_check_(const char * msg) {
   GLenum error = glGetError();
@@ -274,37 +269,9 @@ Program* tile_program_loader() {
   return program;
 }
 
-Matrix44 orthographic_projection(NULL);
+Timer_ rtimer;
 
-Renderable* basespritelist_renderer;
-Renderable* spritelist_renderer;
-Renderable* coloredspritelist_renderer;
-Renderable* rect_renderer;
-Renderable* filledrect_renderer;
-
-void renderer_init_standard_shader() {
-  basespritelist_renderer = new BaseSpriteListRenderer(NULL);
-  spritelist_renderer = new SpriteListRenderer(NULL);
-  coloredspritelist_renderer = new ColoredSpriteListRenderer(NULL);
-  rect_renderer = new RectRenderer(NULL);
-  filledrect_renderer = new FilledRectRenderer(NULL);
-}
-
-int real_screen_width;
-int real_screen_height;
-
-void renderer_resize(int w, int h) {
-  real_screen_width = w;
-  real_screen_height = h;
-
-  screen_width = w;
-  screen_height = h;
-  glViewport(0, 0, screen_width, screen_height);
-  orthographic_projection.orthographic_proj(0.0f, screen_width, 0.0f, screen_height,
-                                            -1.0f, 1.0f);
-}
-
-void renderer_gl_init(int w, int h) {
+void Renderer::initializer() {
   LOGI("renderer_gl_init");
 
   // determine opengl version
@@ -318,10 +285,6 @@ void renderer_gl_init(int w, int h) {
     fbo_support = 1;
   }
 #endif
-
-  if(!gldata_allocator) {
-    gldata_allocator = stack_allocator_make(1024 * 1024, "gldata_allocator");
-  }
 
   glEnable(GL_TEXTURE_2D);
   gl_check_("GL_TEXTURE_2D");
@@ -341,8 +304,6 @@ void renderer_gl_init(int w, int h) {
   float b = 225.0f / 255.0f;
   glClearColor(r, g, b, 1.0f);
 
-  renderer_resize(w, h);
-
   // build a vao that we'll use for everything
   GLuint vao;
 #ifdef __APPLE__
@@ -361,25 +322,26 @@ void renderer_gl_init(int w, int h) {
 #endif
   gl_check_("vertex arrays");
 
-  renderer_init_standard_shader();
+  basespritelist_renderer = new BaseSpriteListRenderer(NULL);
+  spritelist_renderer = new SpriteListRenderer(NULL);
+  coloredspritelist_renderer = new ColoredSpriteListRenderer(NULL);
+  rect_renderer = new RectRenderer(NULL);
+  filledrect_renderer = new FilledRectRenderer(NULL);
 
   gl_check_("setup");
+
+  glViewport(0, 0, screen_width, screen_height);
+  orthographic_projection.orthographic_proj(0.0f, screen_width, 0.0f, screen_height,
+                                            -1.0f, 1.0f);
 }
 
-void renderer_gl_shutdown() {
-  glClear(GL_COLOR_BUFFER_BIT);
-}
-
-Timer_ rtimer;
-
-void renderer_begin_frame(void* empty) {
-  PROFILE_START(&rtimer, "renderer");
-  stack_allocator_freeall(gldata_allocator);
+void Renderer::renderer_begin_frame() {
+  stack_allocator_freeall(renderer_allocator);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void renderer_end_frame() {
-  PROFILE_END(&rtimer);
+void Renderer::renderer_end_frame(StackAllocator active_allocator) {
+  render_reply_queue.enqueue(active_allocator);
 }
 
 void renderer_finish_image_load(ImageResource resource) {
@@ -517,7 +479,8 @@ void BaseSpriteListRenderer::render(void* _list) {
 
   gl_check(glUniform1i(program->requireUniform(UNIFORM_TEX0), 0));
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
-                              1, GL_FALSE, orthographic_projection.data));
+                              1, GL_FALSE,
+                              GIGGLE->renderer->orthographic_projection.data));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, nverts));
 }
 
@@ -623,7 +586,8 @@ void SpriteListRenderer::render(void* _list) {
 
   gl_check(glUniform1i(program->requireUniform(UNIFORM_TEX0), 0));
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
-                              1, GL_FALSE, orthographic_projection.data));
+                              1, GL_FALSE,
+                              GIGGLE->renderer->orthographic_projection.data));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, nverts));
 }
 
@@ -702,7 +666,8 @@ void ColoredSpriteListRenderer::render(void* _list) {
 
   gl_check(glUniform1i(program->requireUniform(UNIFORM_TEX0), 0));
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
-                              1, GL_FALSE, orthographic_projection.data));
+                              1, GL_FALSE,
+                              GIGGLE->renderer->orthographic_projection.data));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, nverts));
 }
 
@@ -737,7 +702,8 @@ void RectRenderer::render(void* _crect) {
   gl_check(program->use());
 
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
-                              1, GL_FALSE, orthographic_projection.data));
+                              1, GL_FALSE,
+                              GIGGLE->renderer->orthographic_projection.data));
 
   GLuint vertex_buffer = next_buffer();
   gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
@@ -777,7 +743,8 @@ void FilledRectRenderer::render(void* _crect) {
   Texture::unbind();
 
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
-                              1, GL_FALSE, orthographic_projection.data));
+                              1, GL_FALSE,
+                              GIGGLE->renderer->orthographic_projection.data));
 
   GLuint vertex_buffer = next_buffer();
   gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));

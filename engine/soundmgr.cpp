@@ -15,7 +15,7 @@
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "soundmgr.h"
-#include "testlib.h"
+#include "giggle.h"
 #include "utils.h"
 
 Sound::~Sound() {

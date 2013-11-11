@@ -15,7 +15,7 @@
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "psystem.h"
-#include "testlib_gl.h"
+#include "giggle_gl.h"
 #include "color.h"
 
 static long system_offset(SystemDefinition* def, ParticleFeature feature) {
@@ -279,8 +279,8 @@ struct P_ESParams {
 };
 
 void P_ESSystemRenderer::submit(Camera* camera, int layer, SystemDefinition* def) {
-  P_ESParams* params = (P_ESParams*)frame_alloc(sizeof(P_ESParams) +
-                                                sizeof(Vector_) * def->n);
+  P_ESParams* params = (P_ESParams*)GIGGLE->renderer->alloc(sizeof(P_ESParams) +
+                                                            sizeof(Vector_) * def->n);
 
   params->scale = scale;
   params->entry = entry;
@@ -309,7 +309,8 @@ void P_ESSystemRenderer::render(void *args) {
   Program *program = get_program(p_es_program_loader);
   program->use();
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
-                              1, GL_FALSE, orthographic_projection.data));
+                              1, GL_FALSE,
+                              GIGGLE->renderer->orthographic_projection.data));
 
   params->entry->atlas->image->texture->bind();
   gl_check(glUniform1i(program->requireUniform(UNIFORM_TEX0), 0));
@@ -368,14 +369,14 @@ PSC_E2SystemRenderer::PSC_E2SystemRenderer(void *empty)
 }
 
 void PSC_E2SystemRenderer::submit(Camera* camera, int layer, SystemDefinition* def) {
-  PSC_EParams* params = (PSC_EParams*)frame_alloc(sizeof(PSC_EParams));
+  PSC_EParams* params = (PSC_EParams*)GIGGLE->renderer->alloc(sizeof(PSC_EParams));
 
   params->entry = entry;
   params->n = def->n;
-  params->positions = (Vector)frame_alloc(sizeof(Vector_) * def->n);
-  params->scales = (float*)frame_alloc(sizeof(float) * def->n);
-  params->colors = (Color*)frame_alloc(sizeof(Color) * def->n);
-  params->valids = (char*)frame_alloc(sizeof(char) * def->n);
+  params->positions = (Vector)GIGGLE->renderer->alloc(sizeof(Vector_) * def->n);
+  params->scales = (float*)GIGGLE->renderer->alloc(sizeof(float) * def->n);
+  params->colors = (Color*)GIGGLE->renderer->alloc(sizeof(Color) * def->n);
+  params->valids = (char*)GIGGLE->renderer->alloc(sizeof(char) * def->n);
 
   memcpy(params->positions, def->system_featurev(PF_POSITION), def->n * sizeof(Vector_));
   memcpy(params->scales, def->system_featuref(PF_SCALE), def->n * sizeof(float));
@@ -489,7 +490,8 @@ void PSC_E2SystemRenderer::render(void *args) {
   }
 
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
-                              1, GL_FALSE, orthographic_projection.data));
+                              1, GL_FALSE,
+                              GIGGLE->renderer->orthographic_projection.data));
 
   gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, vertmem.buffer));
@@ -605,7 +607,8 @@ void P_ES2SystemRenderer::render(void *args) {
   }
 
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
-                              1, GL_FALSE, orthographic_projection.data));
+                              1, GL_FALSE,
+                              GIGGLE->renderer->orthographic_projection.data));
 
   gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, vertmem.buffer));

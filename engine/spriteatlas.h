@@ -17,7 +17,7 @@
 #ifndef SPRITEATLAS_H
 #define SPRITEATLAS_H
 
-#include "testlib.h"
+#include "giggle.h"
 #include "listlib.h"
 
 #include <stdint.h>
