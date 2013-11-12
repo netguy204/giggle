@@ -42,8 +42,8 @@ struct EndFrameData {
 
 void Renderer::_renderer_end_frame(void* _efd) {
   EndFrameData* data = (EndFrameData*)_efd;
-  data->renderer->renderer_end_frame(data->allocator);
   _renderer_mark_step_complete(data->renderer);
+  data->renderer->renderer_end_frame(data->allocator);
 }
 
 void Renderer::_renderer_renderables(void* _commands) {
