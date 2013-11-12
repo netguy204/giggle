@@ -21,15 +21,25 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-void* fail_exit(const char * message, ...) {
-  fprintf(stderr, "FAIL_EXIT: ");
+#ifdef BUILD_SDL
+#include <SDL2/SDL.h>
+#endif
 
+void* fail_exit(const char * message, ...) {
   va_list args;
   va_start(args, message);
 #ifdef __ANDROID__
   __android_log_vprint(ANDROID_LOG_ERROR, "native-activity", message, args);
 #else
+#ifdef BUILD_SDL
+  char buffer[1024];
+  vsnprintf(buffer, sizeof(buffer), message, args);
+  SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "fail-exit",
+                           buffer, NULL);
+#else
+  fprintf(stderr, "FAIL_EXIT: ");
   vfprintf(stderr, message, args);
+#endif
 #endif
   va_end(args);
 

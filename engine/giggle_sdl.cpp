@@ -36,8 +36,6 @@ void update_input_state();
 
 class SDLRenderer : public Renderer {
 protected:
-  SDL_Window* screen;
-
   virtual void initializer() {
     /* remap the ASCII keys, everything is lowercase */
     for(int ii = 0; ii < (SDLK_z - SDLK_a + 1); ++ii) {
@@ -61,9 +59,8 @@ protected:
 
 
     LOGI("renderer_init");
-    if ( SDL_Init(SDL_INIT_EVERYTHING) < 0 ) {
-      fprintf(stderr, "Unable to init SDL: %s\n", SDL_GetError());
-      exit(1);
+    if ( SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0 ) {
+      fail_exit("Unable to init SDL: %s\n", SDL_GetError());
     }
 
     /* probably supported in sdl > 1.2
@@ -79,15 +76,13 @@ protected:
     SDL_GL_CreateContext(screen);
 
     if(screen == NULL) {
-      fprintf(stderr, "Unable to set %dx%d video: %s\n",
-              screen_width, screen_height, SDL_GetError());
-      exit(1);
+      fail_exit("Unable to set %dx%d video: %s\n",
+                screen_width, screen_height, SDL_GetError());
     }
 
     GLenum err = glewInit();
     if(err != GLEW_OK) {
-      fprintf(stderr, "Failed to initialize GLEW\n");
-      exit(1);
+      fail_exit("Failed to initialize GLEW\n");
     } else {
       LOGI("glew initialized");
     }
@@ -106,6 +101,8 @@ protected:
   }
 
 public:
+  SDL_Window* screen;
+
   SDLRenderer(Giggle* giggle, int depth, size_t sz)
     : Renderer(giggle, depth, sz) {
   }

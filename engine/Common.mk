@@ -74,7 +74,7 @@ sfmt/SFMT.o: sfmt/SFMT.c
 GAME_OBJS=$(patsubst %.cpp,%.o,$(GAME_SRC))
 
 clean:
-	rm -rf *.o $(BIN) buildatlas test items_bin
+	rm -rf *.o $(BINS) buildatlas test items_bin
 
 distclean: clean
 	rm -rf $(C_OBJS)

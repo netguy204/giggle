@@ -22,6 +22,7 @@ endif
 
 $(SDL_LIBS):
 	cd $(SDL_BASE) && ./configure --prefix=$(SDL_ROOT) $(SDL_DISABLES) && make install
+	rm -f $(SDL_ROOT)/lib/*.dll.a
 
 SDL_INJECT=-include "SDL2/SDL.h"
 
@@ -46,7 +47,7 @@ endif
 
 include Common.mk
 
-testlib_sdl.cpp: $(SDL_LIBS)
+$(BINS): $(SDL_LIBS)
 
 audio_test: audio_test.cpp sampler.cpp
 	gcc -g -o audio_test sampler.cpp audio_test.cpp `sdl2-config --libs` `sdl2-config --cflags`
