@@ -275,7 +275,6 @@ class MethodInfo {
   const char* name() const;
   virtual int LCinvoke(lua_State* L, int pos) const = 0;
   virtual VoidFunction* LCframebind(lua_State* L, int pos) const = 0;
-  virtual VoidFunction* framebind(Object* obj, ...) const = 0;
   virtual void* vtable_lua_override() const = 0;
 
   TypeInfo* m_type;
@@ -310,10 +309,10 @@ class MethodInfo {
 
 #define CHAR2INT(TYPE) IF_ELSE(CHECK_CHAR(TYPE), int, TYPE)
 
-#define GENVAARGS2(TYPE, OFFSET)                               \
-  JOIN(var, OFFSET) = va_arg(*args, CHAR2INT(FLOAT2DOUBLE(TYPE)));
-#define GENVAARGS1($, X) GENVAARGS2(HEAD(TAIL(X)), HEAD(X))
-#define GENVAARGS(X) IF(NOT(ISEMPTY(X)), JOIN(RECR_D, 0)(1, LLC, GENVAARGS1, LLU, LLF, CONS(1, X)))
+#define GENASARGS2(TYPE, OFFSET)                                       \
+  this->JOIN(var, OFFSET) = JOIN(var, OFFSET);
+#define GENASARGS1($, X) GENASARGS2(HEAD(TAIL(X)), HEAD(X))
+#define GENASARGS(X) IF(NOT(ISEMPTY(X)), JOIN(RECR_D, 0)(1, LLC, GENASARGS1, LLU, LLF, CONS(1, X)))
 
 #define GENPUSHES2(TYPE, OFFSET) LCpush(L, JOIN(var, OFFSET));
 #define GENPUSHES1($, X) GENPUSHES2(HEAD(TAIL(X)), HEAD(X))
@@ -363,7 +362,7 @@ class MethodInfo {
       LCcheck(L, &obj, pos);                                            \
       GENCHECKS(ARGS);                                                  \
     }                                                                   \
-    void bind(va_list* args);                                           \
+    void bind MAP(TYPEANDVARNAME, ARGS);                                \
   };                                                                    \
   static RTYPE LOPC_VLO(CLASS, METHOD) CONS(CLASS* obj, MAP(TYPEANDVARNAME, ARGS)) { \
     void* udata = untyped_userdata(obj, obj->sizeOf());                 \
@@ -401,7 +400,7 @@ class MethodInfo {
       bound->LCbind(L, pos);                                            \
       return bound;                                                     \
     }                                                                   \
-    virtual VoidFunction* framebind(Object* obj, ...) const;            \
+    virtual VoidFunction* framebind CONS(CLASS* obj, MAP(TYPEANDVARNAME, ARGS)) const;            \
     virtual void* vtable_lua_override() const {                         \
       return (void*)&LOPC_VLO(CLASS, METHOD);                           \
     }                                                                   \
@@ -411,10 +410,10 @@ class MethodInfo {
 
 #define OBJECT_METHOD(CLASS, METHOD, RTYPE, ARGS)                       \
   OBJECT_BASE_METHOD(CLASS, METHOD, RTYPE, ARGS)                        \
-  void FLOPC(CLASS, METHOD)::bind(va_list* args) {                      \
+  void FLOPC(CLASS, METHOD)::bind MAP(TYPEANDVARNAME, ARGS) {           \
     fail_exit("bind not supported");                                    \
   }                                                                     \
-  VoidFunction* LOPC(CLASS, METHOD)::framebind(Object* obj, ...) const { \
+  VoidFunction* LOPC(CLASS, METHOD)::framebind CONS(CLASS* obj, MAP(TYPEANDVARNAME, ARGS)) const { \
     fail_exit("framebind not supported");                               \
     return NULL;                                                        \
   }                                                                     \
@@ -430,16 +429,14 @@ class MethodInfo {
 
 #define OBJECT_DEFERABLE_METHOD_BASE(CLASS, METHOD, RTYPE, ARGS)        \
   OBJECT_BASE_METHOD(CLASS, METHOD, RTYPE, ARGS)                        \
-  void FLOPC(CLASS, METHOD)::bind(va_list* args) {                      \
-    GENVAARGS(ARGS);                                                    \
+  void FLOPC(CLASS, METHOD)::bind MAP(TYPEANDVARNAME, ARGS) {           \
+    GENASARGS(ARGS);                                                    \
   }                                                                     \
-  VoidFunction* LOPC(CLASS, METHOD)::framebind(Object* obj, ...) const { \
-    va_list args;                                                       \
-    va_start(args, obj);                                                \
+  VoidFunction* LOPC(CLASS, METHOD)::framebind CONS(CLASS* obj, MAP(TYPEANDVARNAME, ARGS)) const { \
     void* buffer = GIGGLE->renderer->alloc(sizeof(FLOPC(CLASS,METHOD))); \
     FLOPC(CLASS, METHOD) *bound = new(buffer) FLOPC(CLASS, METHOD)();   \
     bound->obj = (CLASS*)obj;                                           \
-    bound->bind(&args);                                                 \
+    bound->bind MAP(VARNAME, ARGS);                                     \
     return bound;                                                       \
   }                                                                     \
   int LOPC(CLASS, METHOD)::LCinvoke(lua_State* L, int pos) const
@@ -493,10 +490,10 @@ class MethodInfo {
     return 0;                                                           \
   }
 
-#define DEFERRED_INVOKE(TARGET, OBJECT, METHOD, ...)                    \
+#define DEFERRED_INVOKE(TARGET, OBJECT, CLASS, METHOD, ...)             \
   do {                                                                  \
-    const MethodInfo* info = OBJECT->typeinfo()->method(STRINGIFY(METHOD)); \
-    VoidFunction* fn = info->framebind(OBJECT, __VA_ARGS__);            \
+    const LOPC(CLASS, METHOD)* info = (LOPC(CLASS, METHOD)*)OBJECT->typeinfo()->method(STRINGIFY(METHOD)); \
+    VoidFunction* fn = info->framebind(OBJECT, ##__VA_ARGS__);          \
     TARGET(fn);                                                         \
   } while(false)
 

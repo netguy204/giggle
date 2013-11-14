@@ -32,15 +32,15 @@ TextureObject::TextureObject(void* _texture)
   : texture((Texture*)_texture) {
 }
 
-void TextureObject::destroy() {
-  DEFERRED_INVOKE(as_renderable, this, deferred_destroy, NULL);
-}
-
 void TextureObject::deferred_destroy() {
   delete texture;
   delete this;
 }
 DEFERRED_OBJECT_METHOD(as_renderable, TextureObject, deferred_destroy, void, ());
+
+void TextureObject::destroy() {
+  DEFERRED_INVOKE(as_renderable, this, TextureObject, deferred_destroy);
+}
 
 OBJECT_IMPL(FrameBuffer, Object);
 OBJECT_ACCESSOR(FrameBuffer, color_buffer, get_color_buffer, set_color_buffer);
@@ -53,18 +53,18 @@ FrameBuffer::FrameBuffer()
   : color_buffer(NULL), fbo(0) {
 }
 
-void FrameBuffer::destroy() {
-  DEFERRED_INVOKE(as_renderable, this, deferred_destroy, NULL);
-  if(color_buffer) {
-    color_buffer->release();
-  }
-}
-
 void FrameBuffer::deferred_destroy() {
   glDeleteFramebuffers(1, &fbo);
   delete this;
 }
 DEFERRED_OBJECT_METHOD(as_renderable, FrameBuffer, deferred_destroy, void, ());
+
+void FrameBuffer::destroy() {
+  DEFERRED_INVOKE(as_renderable, this, FrameBuffer, deferred_destroy);
+  if(color_buffer) {
+    color_buffer->release();
+  }
+}
 
 TextureObject* FrameBuffer::get_color_buffer() {
   return color_buffer;
@@ -120,17 +120,6 @@ void Compositor::transform_set(Matrix44* m) {
 }
 DEFERRED_OBJECT_METHOD(as_renderable, Compositor, transform_set, void, (Matrix44*));
 
-TextureObject* Compositor::texture_create(int width, int height, int filter) {
-  TextureObject* texture = new TextureObject(new Texture());
-  texture->width = width;
-  texture->height = height;
-  texture->reference_count = 0; // disown
-
-  DEFERRED_INVOKE(as_renderable, this, texture_init, texture, width, height, filter);
-  return texture;
-}
-OBJECT_METHOD(Compositor, texture_create, TextureObject*, (int, int, int));
-
 void Compositor::texture_init(TextureObject* texture, int width, int height, int filter) {
   if(texture->texture->texid <= 0) {
     gl_check(glGenTextures(1, &texture->texture->texid));
@@ -146,15 +135,16 @@ void Compositor::texture_init(TextureObject* texture, int width, int height, int
 }
 DEFERRED_OBJECT_METHOD(as_renderable, Compositor, texture_init, void, (TextureObject*, int, int, int));
 
-FrameBuffer* Compositor::frame_buffer_create(TextureObject* color) {
-  FrameBuffer* fb = new FrameBuffer();
-  fb->set_color_buffer(color);
+TextureObject* Compositor::texture_create(int width, int height, int filter) {
+  TextureObject* texture = new TextureObject(new Texture());
+  texture->width = width;
+  texture->height = height;
+  texture->reference_count = 0; // disown
 
-  DEFERRED_INVOKE(as_renderable, this, frame_buffer_init, fb);
-  fb->reference_count = 0; // disown
-  return fb;
+  DEFERRED_INVOKE(as_renderable, this, Compositor, texture_init, texture, width, height, filter);
+  return texture;
 }
-OBJECT_METHOD(Compositor, frame_buffer_create, FrameBuffer*, (TextureObject*));
+OBJECT_METHOD(Compositor, texture_create, TextureObject*, (int, int, int));
 
 void Compositor::frame_buffer_init(FrameBuffer* fb) {
   if(fb->fbo == 0) {
@@ -172,6 +162,16 @@ void Compositor::frame_buffer_init(FrameBuffer* fb) {
   gl_check(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 }
 DEFERRED_OBJECT_METHOD(as_renderable, Compositor, frame_buffer_init, void, (FrameBuffer*));
+
+FrameBuffer* Compositor::frame_buffer_create(TextureObject* color) {
+  FrameBuffer* fb = new FrameBuffer();
+  fb->set_color_buffer(color);
+
+  DEFERRED_INVOKE(as_renderable, this, Compositor, frame_buffer_init, fb);
+  fb->reference_count = 0; // disown
+  return fb;
+}
+OBJECT_METHOD(Compositor, frame_buffer_create, FrameBuffer*, (TextureObject*));
 
 void Compositor::frame_buffer_bind(FrameBuffer* fb) {
   if(fb) {
