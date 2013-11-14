@@ -20,6 +20,24 @@
 #include <stdlib.h>
 
 #ifdef BUILD_SDL
+#ifdef EMSCRIPTEN
+#include "utils.h"
+#define Thread void*
+#define Mutex void*
+#define Condition void*
+#define thread_create(fn, arg) fail_exit("thread creation in emscriten code")
+#define mutex_create() (NULL)
+#define mutex_lock(m)
+#define mutex_unlock(m)
+#define mutex_destroy(m)
+
+#define condition_create() (NULL)
+#define condition_destroy(c)
+#define condition_signal(c)
+#define condition_broadcast(c)
+#define condition_wait(c, m) fail_exit("condition block in emscripten code")
+
+#else
 #include <SDL2/SDL_thread.h>
 
 #define Thread SDL_Thread*
@@ -40,6 +58,7 @@ typedef int(*THREAD_FN)(void*);
 #define condition_broadcast(c) SDL_CondBroadcast(c)
 #define condition_wait(c, m) SDL_CondWait(c, m)
 
+#endif
 #else
 #include <pthread.h>
 #error "pthread bindings incomplete"

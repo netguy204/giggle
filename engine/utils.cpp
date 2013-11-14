@@ -22,7 +22,9 @@
 #include <stdio.h>
 
 #ifdef BUILD_SDL
+#ifndef EMSCRIPTEN
 #include <SDL2/SDL.h>
+#endif
 #endif
 
 void* fail_exit(const char * message, ...) {
@@ -34,8 +36,12 @@ void* fail_exit(const char * message, ...) {
 #ifdef BUILD_SDL
   char buffer[1024];
   vsnprintf(buffer, sizeof(buffer), message, args);
+#ifdef EMSCRIPTEN
+  fprintf(stderr, buffer);
+#else
   SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "fail-exit",
                            buffer, NULL);
+#endif
 #else
   fprintf(stderr, "FAIL_EXIT: ");
   vfprintf(stderr, message, args);
