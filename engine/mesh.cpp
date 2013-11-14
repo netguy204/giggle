@@ -66,26 +66,26 @@ void MeshRenderer::render(void* args) {
 
   GLMemory verts;
   GLMemory colors;
-  gl_bufinit(&verts);
-  gl_bufinit(&colors);
+  GIGGLE->renderer->gl_bufinit(&verts);
+  GIGGLE->renderer->gl_bufinit(&colors);
 
   size_t vsize = sizeof(Vector_) * mesh->nverts;
-  gl_claim(&verts, vsize);
+  GIGGLE->renderer->gl_claim(&verts, vsize);
   memcpy(verts.data, mesh->verts, vsize);
 
   size_t csize = sizeof(Color) * mesh->nverts;
-  gl_claim(&colors, csize);
+  GIGGLE->renderer->gl_claim(&colors, csize);
   memcpy(colors.data, mesh->colors, csize);
 
   gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, verts.buffer));
   gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 2, GL_FLOAT, GL_FALSE, sizeof(Vector_), 0));
-  gl_unclaim(&verts);
+  GIGGLE->renderer->gl_unclaim(&verts);
 
   gl_check(glEnableVertexAttribArray(GLPARAM_COLOR0));
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, colors.buffer));
   gl_check(glVertexAttribPointer(GLPARAM_COLOR0, 4, GL_FLOAT, GL_FALSE, sizeof(Color), 0));
-  gl_unclaim(&colors);
+  GIGGLE->renderer->gl_unclaim(&colors);
 
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
                               1, GL_FALSE,

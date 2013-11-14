@@ -414,9 +414,18 @@ void PSC_E2SystemRenderer::render(void *args) {
   GLMemory texmem;
   GLMemory colmem;
 
-  GLfloat *verts = (GLfloat*)gl_claim(gl_bufinit(&vertmem), sizeof(GLfloat) * nfloats)->data;
-  GLfloat *texs = (GLfloat*)gl_claim(gl_bufinit(&texmem), sizeof(GLfloat) * nfloats)->data;
-  GLfloat *cols = (GLfloat*)gl_claim(gl_bufinit(&colmem), sizeof(GLfloat) * nverts * 4)->data;
+  GIGGLE->renderer->gl_bufinit(&vertmem);
+  GIGGLE->renderer->gl_claim(&vertmem, sizeof(GLfloat) * nfloats);
+
+  GIGGLE->renderer->gl_bufinit(&texmem);
+  GIGGLE->renderer->gl_claim(&texmem, sizeof(GLfloat) * nfloats);
+
+  GIGGLE->renderer->gl_bufinit(&colmem);
+  GIGGLE->renderer->gl_claim(&colmem, sizeof(GLfloat) * nverts * 4);
+
+  GLfloat *verts = (GLfloat*)vertmem.data;
+  GLfloat *texs = (GLfloat*)texmem.data;
+  GLfloat *cols = (GLfloat*)colmem.data;
 
   for(int ii = 0; ii < params->n; ++ii) {
     if(!valids[ii]) continue;
@@ -496,17 +505,17 @@ void PSC_E2SystemRenderer::render(void *args) {
   gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, vertmem.buffer));
   gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 2, GL_FLOAT, GL_FALSE, 0, 0));
-  gl_unclaim(&vertmem);
+  GIGGLE->renderer->gl_unclaim(&vertmem);
 
   gl_check(glEnableVertexAttribArray(GLPARAM_COLOR0));
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, colmem.buffer));
   gl_check(glVertexAttribPointer(GLPARAM_COLOR0, 4, GL_FLOAT, GL_FALSE, 0, 0));
-  gl_unclaim(&colmem);
+  GIGGLE->renderer->gl_unclaim(&colmem);
 
   gl_check(glEnableVertexAttribArray(GLPARAM_TEXCOORD0));
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, texmem.buffer));
   gl_check(glVertexAttribPointer(GLPARAM_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 0, 0));
-  gl_unclaim(&texmem);
+  GIGGLE->renderer->gl_unclaim(&texmem);
 
   if(vert_idx == 0) return;
   gl_check(glDrawArrays(GL_TRIANGLES, 0, vert_idx / 2));
@@ -560,8 +569,14 @@ void P_ES2SystemRenderer::render(void *args) {
   GLMemory vertmem;
   GLMemory texmem;
 
-  GLfloat *verts = (GLfloat*)gl_claim(gl_bufinit(&vertmem), sizeof(GLfloat) * nfloats)->data;
-  GLfloat *texs = (GLfloat*)gl_claim(gl_bufinit(&texmem), sizeof(GLfloat) * nfloats)->data;
+  GIGGLE->renderer->gl_bufinit(&vertmem);
+  GIGGLE->renderer->gl_claim(&vertmem, sizeof(GLfloat) * nfloats);
+
+  GIGGLE->renderer->gl_bufinit(&texmem);
+  GIGGLE->renderer->gl_claim(&texmem, sizeof(GLfloat) * nfloats);
+
+  GLfloat *verts = (GLfloat*)vertmem.data;
+  GLfloat *texs = (GLfloat*)texmem.data;
 
   for(int ii = 0; ii < params->n; ++ii) {
     float minx = positions[ii].x - hs;
@@ -613,12 +628,12 @@ void P_ES2SystemRenderer::render(void *args) {
   gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, vertmem.buffer));
   gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 2, GL_FLOAT, GL_FALSE, 0, 0));
-  gl_unclaim(&vertmem);
+  GIGGLE->renderer->gl_unclaim(&vertmem);
 
   gl_check(glEnableVertexAttribArray(GLPARAM_TEXCOORD0));
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, texmem.buffer));
   gl_check(glVertexAttribPointer(GLPARAM_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 0, 0));
-  gl_unclaim(&texmem);
+  GIGGLE->renderer->gl_unclaim(&texmem);
 
   gl_check(glDrawArrays(GL_TRIANGLES, 0, vert_idx / 2));
   glDisableVertexAttribArray(GLPARAM_TEXCOORD0);

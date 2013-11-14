@@ -37,6 +37,7 @@
 #include "task.h"
 #include "matrix.h"
 #include "ooc.h"
+#include "gl_headers.h"
 
 #include <stdint.h>
 
@@ -128,6 +129,16 @@ public:
 
 class Giggle;
 
+class GLMemory {
+ public:
+  GLMemory();
+
+  void* data;
+  size_t size;
+  GLenum access;
+  GLuint buffer;
+};
+
 class Renderer : public Task {
 private:
   ThreadBarrier render_barrier;
@@ -175,6 +186,12 @@ public:
   void enqueue(RenderableCommand* commands);
   virtual void enqueue(CommandFunction function, void* data);
   virtual void end_frame();
+
+  // only for use from the render thread (if there is one)
+  virtual GLMemory* gl_bufinit(GLMemory* mem);
+  virtual GLMemory* gl_claim(GLMemory* mem, size_t sz);
+  virtual void gl_unclaim(GLMemory* mem);
+
 
   // in/for are independently thread safe but not internally thread
   // safe

@@ -154,20 +154,6 @@ void gl_check_(const char * msg);
 #define gl_check(command) command
 #endif
 
-class GLMemory {
- public:
-  GLMemory();
-
-  void* data;
-  size_t size;
-  GLenum access;
-  GLuint buffer;
-};
-
-GLMemory* gl_bufinit(GLMemory* mem);
-GLMemory* gl_claim(GLMemory* mem, size_t sz);
-void gl_unclaim(GLMemory* mem);
-
 void swap_texture(int new_texture);
 void spritelist_set_texs_and_verts_gl(int nverts, GLMemory* verts, GLMemory* texs);
 int basespritelist_set(BaseSprite list, GLMemory* verts, GLMemory* texs);

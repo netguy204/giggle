@@ -5,7 +5,7 @@ SDL_BASE=$(PWD)/vender/SDL2-2.0.1
 SDL_ROOT=$(PWD)/vender/SDL-root
 
 PLATFORM:=$(shell uname)
-CFLAGS+=-Ivender -I$(SDL_ROOT)/include -fdata-sections -ffunction-sections
+CFLAGS+=-Ivender -I$(SDL_ROOT)/include -fdata-sections -ffunction-sections -DBUILD_SDL
 
 EXE_OBJS+=glew.o
 
@@ -17,7 +17,7 @@ SDL_LIBS_CFLAGS=`$(SDL_LIBS) --cflags`
 SDL_DISABLES= --disable-video-fbcon --disable-video-directfb --disable-video-svga --disable-video-wscons --disable-video-vgl --disable-video-ps3 --disable-video-ps2gs --disable-video-x11-xme
 
 ifeq ($(PLATFORM), Darwin)
-	SDL_DISABLES+= --disable-video-x11
+SDL_DISABLES+= --disable-video-x11
 endif
 
 $(SDL_LIBS):
@@ -25,23 +25,35 @@ $(SDL_LIBS):
 	rm -f $(SDL_ROOT)/lib/*.dll.a
 
 ifeq ($(PLATFORM), Darwin)
-	LDFLAGS+= -Fvender/ $(SDL_LIBS_FLAGS) -dead_strip
-	CFLAGS+= -DBUILD_SDL -mmacosx-version-min=10.5
-	EXE_OBJS+=
-	PLATFORM=macosx
+# Mac build flags
+LDFLAGS+=-Fvender/ $(SDL_LIBS_FLAGS) -dead_strip
+CFLAGS+=-mmacosx-version-min=10.5
+EXE_OBJS+=
+PLATFORM=macosx
 else
-	LDFLAGS+=-Wl,--gc-sections
+# now we're building with gcc
+LDFLAGS+=-Wl,--gc-sections
+
+
 ifeq ($(PLATFORM), MINGW32_NT-5.1)
-	LDFLAGS+=-lglu32 -lopengl32 $(SDL_LIBS_FLAGS)
-#	LDFLAGS+=-lglu32 -lopengl32 -L$(SDL_ROOT)/lib -Wl,-Bstatic -lmingw32 -lSDL2 -mwindows -luser32 -lgdi32 -lwinmm -limm32 -lole32 -lversion -Wl,-Bdynamic
-	CFLAGS+=-DBUILD_SDL -DWINDOWS -DGLEW_STATIC
-	PLATFORM=windows
+# Windows
+LDFLAGS+=-lglu32 -lopengl32 $(SDL_LIBS_FLAGS)
+CFLAGS+=-DWINDOWS -DGLEW_STATIC
+PLATFORM=windows
+
 else
-	LDFLAGS+= -lGL -lm -lutil $(SDL_LIBS_FLAGS)
-	CFLAGS+=$(SDL_LIBS_CFLAGS) -DBUILD_SDL
-	PLATFORM=linux
+
+# Linux
+LDFLAGS+= -lGL -lm -lutil $(SDL_LIBS_FLAGS)
+CFLAGS+=$(SDL_LIBS_CFLAGS)
+PLATFORM=linux
 endif
 endif
+
+echoecho:
+	echo $(PLATFORM)
+
+
 
 include Common.mk
 

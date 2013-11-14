@@ -29,7 +29,6 @@
 #define NBUFFERS 30
 
 float gl_version = 0.0f;
-int fbo_support = 0;
 GLuint buffers[NBUFFERS];
 int current_buffer = 0;
 
@@ -68,32 +67,24 @@ GLMemory::GLMemory()
   : data(NULL), buffer(0) {
 }
 
-GLMemory* gl_bufinit(GLMemory* mem) {
+GLMemory* Renderer::gl_bufinit(GLMemory* mem) {
   mem->buffer = next_buffer();
   return mem;
 }
 
-GLMemory* gl_claim(GLMemory* mem, size_t sz) {
+GLMemory* Renderer::gl_claim(GLMemory* mem, size_t sz) {
   mem->size = sz;
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, mem->buffer));
-#ifdef EMSCRIPTEN
-  mem->data = GIGGLE->renderer->renderer_alloc(sz);
-#else
   gl_check(glBufferData(GL_ARRAY_BUFFER, sz, NULL, GL_DYNAMIC_DRAW));
   mem->data = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
   gl_check_("glMapBuffer");
-#endif
   return mem;
 }
 
-void gl_unclaim(GLMemory* mem) {
+void Renderer::gl_unclaim(GLMemory* mem) {
   if(mem->data) {
     gl_check(glBindBuffer(GL_ARRAY_BUFFER, mem->buffer));
-#ifdef EMSCRIPTEN
-    gl_check(glBufferData(GL_ARRAY_BUFFER, mem->size, mem->data, GL_DYNAMIC_DRAW));
-#else
     gl_check(glUnmapBuffer(GL_ARRAY_BUFFER));
-#endif
     mem->data = NULL;
   }
 }
@@ -286,14 +277,6 @@ void Renderer::initializer() {
   gl_version = atof((char*)glGetString(GL_VERSION));
   LOGI("opengl version %f", gl_version);
 
-#ifdef ANDROID
-  fbo_support = 1;
-#else
-  if((void*)glGenFramebuffers != NULL) {
-    fbo_support = 1;
-  }
-#endif
-
   glEnable(GL_TEXTURE_2D);
   gl_check_("GL_TEXTURE_2D");
   glEnable(GL_BLEND);
@@ -389,12 +372,12 @@ void spritelist_set_texs_and_verts_gl(int nverts, GLMemory* verts, GLMemory* tex
   gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, verts->buffer));
   gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, 0));
-  gl_unclaim(verts);
+  GIGGLE->renderer->gl_unclaim(verts);
 
   gl_check(glEnableVertexAttribArray(GLPARAM_TEXCOORD0));
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, texs->buffer));
   gl_check(glVertexAttribPointer(GLPARAM_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 0, 0));
-  gl_unclaim(texs);
+  GIGGLE->renderer->gl_unclaim(texs);
 }
 
 int basespritelist_set(BaseSprite list, GLMemory* vertmem, GLMemory* texmem) {
@@ -403,8 +386,8 @@ int basespritelist_set(BaseSprite list, GLMemory* vertmem, GLMemory* texmem) {
   int ntris = nquads * 2;
   int nverts = 3 * ntris;
 
-  gl_claim(vertmem, sizeof(float) * nverts * 3);
-  gl_claim(texmem, sizeof(float) * nverts * 2);
+  GIGGLE->renderer->gl_claim(vertmem, sizeof(float) * nverts * 3);
+  GIGGLE->renderer->gl_claim(texmem, sizeof(float) * nverts * 2);
 
   GLfloat* verts = (GLfloat*)vertmem->data;
   GLfloat* texs = (GLfloat*)texmem->data;
@@ -482,8 +465,8 @@ void BaseSpriteListRenderer::render(void* _list) {
 
   GLMemory verts;
   GLMemory texs;
-  gl_bufinit(&verts);
-  gl_bufinit(&texs);
+  GIGGLE->renderer->gl_bufinit(&verts);
+  GIGGLE->renderer->gl_bufinit(&texs);
 
   int nverts = basespritelist_set(list, &verts, &texs);
 
@@ -501,8 +484,11 @@ int spritelist_set_texs_and_verts(BaseSprite list) {
 
   GLMemory vertmem;
   GLMemory texmem;
-  gl_claim(gl_bufinit(&vertmem), sizeof(float) * nverts * 3);
-  gl_claim(gl_bufinit(&texmem), sizeof(float) * nverts * 2);
+  GIGGLE->renderer->gl_bufinit(&vertmem);
+  GIGGLE->renderer->gl_claim(&vertmem, sizeof(float) * nverts * 3);
+  GIGGLE->renderer->gl_bufinit(&texmem);
+  GIGGLE->renderer->gl_claim(&texmem, sizeof(float) * nverts * 2);
+
   GLfloat* verts = (GLfloat*)vertmem.data;
   GLfloat* texs = (GLfloat*)texmem.data;
 
@@ -622,7 +608,10 @@ void ColoredSpriteListRenderer::render(void* _list) {
   int ncolors = nverts * 4;
 
   GLMemory colmem;
-  GLfloat* colors = (GLfloat*)gl_claim(gl_bufinit(&colmem), sizeof(float) * ncolors)->data;
+  GIGGLE->renderer->gl_bufinit(&colmem);
+  GIGGLE->renderer->gl_claim(&colmem, sizeof(float) * ncolors);
+
+  GLfloat* colors = (GLfloat*)colmem.data;
 
   BaseSprite _sprite;
   int color_idx = 0;
@@ -670,7 +659,7 @@ void ColoredSpriteListRenderer::render(void* _list) {
   gl_check(glEnableVertexAttribArray(GLPARAM_OTHER0));
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, colmem.buffer));
   gl_check(glVertexAttribPointer(GLPARAM_OTHER0, 4, GL_FLOAT, GL_FALSE, 0, 0));
-  gl_unclaim(&colmem);
+  GIGGLE->renderer->gl_unclaim(&colmem);
 
   list->texture->bind();
 
