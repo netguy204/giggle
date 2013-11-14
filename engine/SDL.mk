@@ -24,8 +24,6 @@ $(SDL_LIBS):
 	cd $(SDL_BASE) && ./configure --prefix=$(SDL_ROOT) $(SDL_DISABLES) && make install
 	rm -f $(SDL_ROOT)/lib/*.dll.a
 
-SDL_INJECT=-include "SDL2/SDL.h"
-
 ifeq ($(PLATFORM), Darwin)
 	LDFLAGS+= -Fvender/ $(SDL_LIBS_FLAGS) -dead_strip
 	CFLAGS+= -DBUILD_SDL -mmacosx-version-min=10.5

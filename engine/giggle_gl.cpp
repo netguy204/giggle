@@ -76,16 +76,24 @@ GLMemory* gl_bufinit(GLMemory* mem) {
 GLMemory* gl_claim(GLMemory* mem, size_t sz) {
   mem->size = sz;
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, mem->buffer));
+#ifdef EMSCRIPTEN
+  mem->data = GIGGLE->renderer->renderer_alloc(sz);
+#else
   gl_check(glBufferData(GL_ARRAY_BUFFER, sz, NULL, GL_DYNAMIC_DRAW));
   mem->data = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
   gl_check_("glMapBuffer");
+#endif
   return mem;
 }
 
 void gl_unclaim(GLMemory* mem) {
   if(mem->data) {
     gl_check(glBindBuffer(GL_ARRAY_BUFFER, mem->buffer));
+#ifdef EMSCRIPTEN
+    gl_check(glBufferData(GL_ARRAY_BUFFER, mem->size, mem->data, GL_DYNAMIC_DRAW));
+#else
     gl_check(glUnmapBuffer(GL_ARRAY_BUFFER));
+#endif
     mem->data = NULL;
   }
 }
@@ -101,7 +109,7 @@ int renderer_load_shader(const char* src, GLenum kind) {
     shader_buffer = (char*)malloc(max_shader);
   }
 
-#ifndef ANDROID
+#if !defined(ANDROID) && !defined(EMSCRIPTEN)
   snprintf(shader_buffer, max_shader, "#version 120\n%s", src);
 #else
   snprintf(shader_buffer, max_shader, "%s", src);
@@ -304,6 +312,7 @@ void Renderer::initializer() {
   float b = 225.0f / 255.0f;
   glClearColor(r, g, b, 1.0f);
 
+#ifndef EMSCRIPTEN
   // build a vao that we'll use for everything
   GLuint vao;
 #ifdef __APPLE__
@@ -317,6 +326,7 @@ void Renderer::initializer() {
 #ifndef WINDOWS
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
+#endif
 #endif
 #endif
 #endif

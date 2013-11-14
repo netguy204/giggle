@@ -1432,21 +1432,33 @@ Animation* Game::animation(const char* filename, const char* atlasname, const ch
 OBJECT_METHOD(Game, animation, Animation*, (const char*, const char*, const char*));
 
 Sound* Game::get_sound(const char* name, float scale) {
+#ifdef EMSCRIPTEN
+  return NULL;
+#else
   return sound.get_sync(name, scale);
+#endif
 }
 OBJECT_METHOD(Game, get_sound, Sound*, (const char*, float));
 
 AudioHandle* Game::play_sound(Sound* s, int channel)  {
+#ifdef EMSCRIPTEN
+  return NULL;
+#else
   AudioHandle* handle = sound.play(s, channel);
   long_to_handle.insert(std::make_pair(handle->handle, handle));
   return handle;
+#endif
 }
 OBJECT_METHOD(Game, play_sound, AudioHandle*, (Sound*, int));
 
 AudioHandle* Game::stream_sound(const char* fname, long start_sample) {
+#ifdef EMSCRIPTEN
+  return NULL;
+#else
   AudioHandle* handle = sound.stream(fname, start_sample);
   long_to_handle.insert(std::make_pair(handle->handle, handle));
   return handle;
+#endif
 }
 OBJECT_METHOD(Game, stream_sound, AudioHandle*, (const char*, long));
 

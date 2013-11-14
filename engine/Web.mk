@@ -16,13 +16,13 @@ PLATFORM=linux
 
 EMFLAGS+=-s TOTAL_MEMORY=67108864 # -s LEGACY_GL_EMULATION=1
 
-main.js: webmain.bc
-	$(CC) $< -o $@ $(CFLAGS) $(LDFLAGS) $(EMFLAGS)
+include Common.mk
+
+main.js: $(OGG_HEADER) webmain.bc
+	$(CC) webmain.bc -o $@ $(CFLAGS) $(LDFLAGS) $(EMFLAGS)
 
 main.html: webmain.bc
 	$(CC) $< -o $@ $(CFLAGS) $(LDFLAGS) $(EMFLAGS)
 
 webmain.bc: webmain.bin
 	cp $< $@
-
-include Common.mk

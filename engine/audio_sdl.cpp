@@ -14,7 +14,14 @@
  *  You should have received a copy of the GNU General Public License
  *  along with GambitGameLib.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#ifdef EMSCRIPTEN
+// happily, no api changes here
+#include <SDL/SDL_audio.h>
+#else
 #include <SDL2/SDL_audio.h>
+#endif
+
 #include <unistd.h>
 #include <assert.h>
 #include <string.h>
@@ -22,6 +29,7 @@
 #include "audio.h"
 #include "memlib.h"
 #include "threadlib.h"
+#include "utils.h"
 
 #define NUM_SAMPLES 4096
 
@@ -123,11 +131,13 @@ void native_audio_init() {
   wanted.callback = fill_audio;
   wanted.userdata = NULL;
 
+#ifndef EMSCRIPTEN
   // Open the audio device, forcing the desired format
   if ( SDL_OpenAudio(&wanted, NULL) < 0 ) {
-    fprintf(stderr, "Couldn't open audio: %s\n", SDL_GetError());
+    fail_exit("Couldn't open audio: %s\n", SDL_GetError());
     exit(-1);
   }
 
   SDL_PauseAudio(0);
+#endif
 }
