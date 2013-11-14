@@ -457,6 +457,9 @@ void CTire::update(float dt) {
 
 class DefaultGameLogic : public GameLogic {
 protected:
+
+  float last_frame_ms;
+
   virtual void initializer() {
     char buffer[1024];
     snprintf(buffer, sizeof(buffer), "resources/?.lua;%sengine_resources/?.lua", GIGGLE->libbase);
@@ -470,9 +473,9 @@ protected:
     GIGGLE->renderer->begin_frame();
     game = new Game(buffer);
     GIGGLE->renderer->end_frame();
-  }
 
-  float last_frame_ms;
+    last_frame_ms = GIGGLE->renderer->time_millis();
+  }
 
 public:
   DefaultGameLogic(Giggle* giggle)
@@ -480,21 +483,23 @@ public:
   }
 
   virtual bool step() {
+    float start_ms = GIGGLE->renderer->time_millis();
+    float step_ms = start_ms - last_frame_ms;
+    last_frame_ms = start_ms;
+
+    step_ms = MAX(min_time, MIN(max_time, step_ms));
+
     struct InputState_ state;
     inputstate_latest(&state);
     if(state.quit_requested) {
       return 0;
     }
 
-    float start_ms = GIGGLE->renderer->time_millis();
     GIGGLE->renderer->begin_frame();
 
-    game->update(last_frame_ms);
+    game->update(step_ms);
 
     GIGGLE->renderer->end_frame();
-
-    last_frame_ms = GIGGLE->renderer->time_millis() - start_ms;
-    last_frame_ms = MAX(min_time, MIN(max_time, last_frame_ms));
 
     return true;
   }
