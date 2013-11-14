@@ -1,25 +1,28 @@
-CPP_SRC=testlib_sdl.cpp audio_sdl.cpp
-BIN=sdlmain
+CPP_SRC=webmain.cpp audio_sdl.cpp
+BIN=webmain.bin
 
-CFLAGS+=-Ivender #--js-library browser.js
+CC=emcc
+CXX=em++
+
+EMFLAGS?=-s FORCE_ALIGNED_MEMORY=1 -s DOUBLE_MODE=0 -s OUTLINING_LIMIT=100000
+CFLAGS?=-O2
+
+CFLAGS+=#--js-library browser.js
 
 LDFLAGS+= -lGL -lm -lutil -ldl
-CFLAGS+=-DBUILD_SDL
-SDL_INJECT=-include "SDL/SDL.h"
+CFLAGS+=-DBUILD_SDL -DEMSCRIPTEN
+
 PLATFORM=linux
 
-main.html: sdlmain.bc
-	$(CC) $< -o $@
+EMFLAGS+=-s TOTAL_MEMORY=67108864 # -s LEGACY_GL_EMULATION=1
 
-main.js: sdlmain.bc
-	$(CC) $< -o $@
+main.js: webmain.bc
+	$(CC) $< -o $@ $(CFLAGS) $(LDFLAGS) $(EMFLAGS)
 
-sdlmain.bc: sdlmain
+main.html: webmain.bc
+	$(CC) $< -o $@ $(CFLAGS) $(LDFLAGS) $(EMFLAGS)
+
+webmain.bc: webmain.bin
 	cp $< $@
 
 include Common.mk
-
-# force include of SDL header so that it can do it's main redirection
-# magic
-gambitmain.o: gambitmain.cpp
-	$(CXX) -c $< $(SDL_INJECT)
