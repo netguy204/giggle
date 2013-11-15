@@ -227,8 +227,8 @@ int SystemDefinition::supports_feature(ParticleFeature feature) {
 }
 
 Program* p_es_program_loader() {
-  Program *program = renderer_link_shader("engine_resources/p_es.vert",
-                                          "engine_resources/p_es.frag",
+  Program *program = renderer_link_shader("p_es.vert",
+                                          "p_es.frag",
                                           GLPARAM_VERTEX, "vertex",
                                           GLPARAM_DONE);
   program_bind_uniforms(program,
@@ -336,8 +336,8 @@ void P_ESSystemRenderer::render(void *args) {
 }
 
 Program* pc_es2_program_loader() {
-  Program *program = renderer_link_shader("engine_resources/pc_es2.vert",
-                                          "engine_resources/pc_es2.frag",
+  Program *program = renderer_link_shader("pc_es2.vert",
+                                          "pc_es2.frag",
                                           GLPARAM_VERTEX, "vertex",
                                           GLPARAM_TEXCOORD0, "tex_coord0",
                                           GLPARAM_COLOR0, "color",
@@ -528,8 +528,8 @@ void PSC_E2SystemRenderer::render(void *args) {
 /* p_es2 renders a quad instead of a point sprite. This lets us scale
    beyond the point size limit of opengl (usually 64, apparently) */
 Program* p_es2_program_loader() {
-  Program *program = renderer_link_shader("engine_resources/p_es2.vert",
-                                          "engine_resources/p_es2.frag",
+  Program *program = renderer_link_shader("p_es2.vert",
+                                          "p_es2.frag",
                                           GLPARAM_VERTEX, "vertex",
                                           GLPARAM_TEXCOORD0, "tex_coord0",
                                           GLPARAM_DONE);

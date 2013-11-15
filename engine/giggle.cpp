@@ -154,8 +154,7 @@ long Clock::seconds_to_cycles(float seconds) {
 }
 
 
-Giggle::Giggle(const char* base) {
-  libbase = strdup(base);
+Giggle::Giggle() {
   clock_allocator = new FixedAllocator(sizeof(Clock), MAX_NUM_CLOCKS, "clock");
   image_resource_allocator = new FixedAllocator(sizeof(ImageResource_), MAX_NUM_IMAGES, "image_resource");
 }
@@ -224,13 +223,7 @@ Sprite Giggle::make_sprite() {
 Giggle* GIGGLE;
 
 Giggle* lib_init(int argc, char** argv) {
-  // won't work on android, need to decide what to do here instead
-  char* dir = dirname(strdup(argv[0]));
-  int nbuffer = strlen(dir) + 32;
-  char* buffer = (char*)malloc(nbuffer);
-  snprintf(buffer, nbuffer, "%s/../", dir);
-  GIGGLE = new Giggle(buffer);
-  free(buffer);
+  GIGGLE = new Giggle();
 
   input_init();
 

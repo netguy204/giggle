@@ -241,10 +241,7 @@ public:
   FixedAllocator* image_resource_allocator;
   DLL_DECLARE(ImageResource_, node) image_resources;
 
-  const char* libbase;
-
-
-  Giggle(const char* game_base);
+  Giggle();
 
   ImageResource image_load(const char* file);
   void image_free(ImageResource resource);

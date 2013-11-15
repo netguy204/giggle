@@ -462,7 +462,7 @@ protected:
 
   virtual void initializer() {
     char buffer[1024];
-    snprintf(buffer, sizeof(buffer), "resources/?.lua;%sengine_resources/?.lua", GIGGLE->libbase);
+    snprintf(buffer, sizeof(buffer), "resources/?.lua;giggle/engine_resources/?.lua");
 
     // initialize globals
     color_init();

@@ -99,7 +99,7 @@ const char* filename_resolve(const char* filename) {
     return filename;
   }
 
-  snprintf(resolve_buffer, sizeof(resolve_buffer), "%s/%s", GIGGLE->libbase, filename);
+  snprintf(resolve_buffer, sizeof(resolve_buffer), "giggle/engine_resources/%s", filename);
   return resolve_buffer;
 }
 
