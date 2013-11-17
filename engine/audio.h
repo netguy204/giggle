@@ -21,6 +21,7 @@
 #include "listlib.h"
 #include "ooc.h"
 #include "memlib.h"
+#include "giggle.h"
 
 class PlayListSample {
  public:
@@ -55,29 +56,23 @@ class PlayList {
   long* mix_buffer;
 };
 
+class SAudioHandle : public AudioHandle {
+ public:
+  OBJECT_PROTO(SAudioHandle);
+  SAudioHandle(void* _);
+  SAudioHandle(const SAudioHandle& other);
+
+  virtual int isCurrent();
+  virtual void terminate();
+  virtual void destroy();
+};
+
 /* high level api */
 void audio_init();
 long audio_current_sample();
 
-class AudioHandle : public Object {
- public:
-  OBJECT_PROTO(AudioHandle);
-  AudioHandle(void* sample);
-  AudioHandle(const AudioHandle& other);
-
-  int isCurrent();
-
-  void terminate();
-  virtual void destroy();
-
-  long handle;
-  long last_sample;
-};
-
 AudioHandle* audio_enqueue(Sampler* sampler);
 void audio_fill_buffer(int16_t* buffer, int nsamples);
-
-/* provided by the system specific library */
-void native_audio_init();
+void stream_audio_init();
 
 #endif

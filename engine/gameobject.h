@@ -315,7 +315,6 @@ class GOHandle : public Object {
 
 typedef std::map<const char*, SpriteAtlas, cmp_str> NameToAtlas;
 typedef std::map<const char*, Entity*, cmp_str> NameToEntity;
-typedef std::map<long, AudioHandle*> LongToHandle;
 
 struct Cone {
   Vector_ point;
@@ -461,15 +460,12 @@ class Game : public Object {
   FixedAllocator cmd_alloc;
   CommandQueue command_queue;
 
-  SoundMgr sound;
-
   lua_State* L;
   LString* stash;
   LString* lua_path;
 
   NameToAtlas name_to_atlas;
   NameToEntity name_to_entity;
-  LongToHandle long_to_handle;
 
   DLL_DECLARE(World, node) worlds;
   DLL_DECLARE(LuaKeyBinding, node) keybindings;

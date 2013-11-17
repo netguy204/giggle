@@ -43,9 +43,9 @@ enum SoundChannels {
   CHANNEL_MAX,
 };
 
-class Sound {
+class MSound : public Sound {
 public:
-  ~Sound();
+  virtual ~MSound();
 
   long nsamples;
   int16_t* buffer;

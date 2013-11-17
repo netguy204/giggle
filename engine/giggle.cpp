@@ -153,6 +153,63 @@ long Clock::seconds_to_cycles(float seconds) {
   return roundf(seconds * 1000.0f);
 }
 
+Sound::~Sound() {
+}
+
+OBJECT_IMPL(AudioHandle, Object);
+OBJECT_PROPERTY(AudioHandle, handle);
+OBJECT_PROPERTY(AudioHandle, last_sample);
+
+AudioHandle::AudioHandle(void* _)
+  : handle(0), last_sample(0) {
+}
+
+AudioHandle::AudioHandle(const AudioHandle& other)
+  : handle(other.handle) {
+}
+
+int AudioHandle::isCurrent() {
+  return 1;
+}
+
+void AudioHandle::terminate() {
+}
+
+AudioSystem::AudioSystem(Giggle* giggle)
+  : giggle(giggle) {
+  mutex = mutex_create();
+}
+
+AudioHandle* AudioSystem::sound_handle(long handle) {
+  AudioHandle* result;
+  mutex_lock(mutex);
+  LongToHandle::const_iterator iter = long_to_handle.find(handle);
+  if(iter == long_to_handle.end()) {
+    result = NULL;
+  } else {
+    result = iter->second;
+  }
+  mutex_unlock(mutex);
+  return result;
+}
+
+bool AudioSystem::step() {
+  // free any expired handles
+  mutex_lock(mutex);
+  LongToHandle::iterator iter = long_to_handle.begin();
+  while(iter != long_to_handle.end()) {
+    long handle_name = iter->first;
+    AudioHandle* handle = iter->second;
+    ++iter;
+
+    if(!handle->isCurrent()) {
+      handle->release();
+      long_to_handle.erase(handle_name);
+    }
+  }
+  mutex_unlock(mutex);
+  return true;
+}
 
 Giggle::Giggle() {
   clock_allocator = new FixedAllocator(sizeof(Clock), MAX_NUM_CLOCKS, "clock");
@@ -227,8 +284,6 @@ Giggle* lib_init(int argc, char** argv) {
 
   input_init();
 
-  // kick off the audio system
-  audio_init();
   return GIGGLE;
 }
 

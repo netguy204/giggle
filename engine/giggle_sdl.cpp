@@ -216,3 +216,44 @@ void update_input_state() {
 void inputstate_latest(InputState state) {
   *state = pstate;
 }
+
+#include "soundmgr.h"
+
+class SDLStreamingAudioSystem : public AudioSystem {
+protected:
+  SoundMgr soundmgr;
+
+  virtual void initializer() {
+    stream_audio_init();
+  }
+
+public:
+  SDLStreamingAudioSystem(Giggle* giggle)
+    : AudioSystem(giggle) {
+  }
+
+  virtual Sound* get_sound(const char* name, float scale) {
+    return soundmgr.get_sync(name, scale);
+  }
+
+  virtual AudioHandle* play_sound(Sound* sound, int channel) {
+    AudioHandle* handle = soundmgr.play(sound, channel);
+    long_to_handle.insert(std::make_pair(handle->handle, handle));
+    return handle;
+  }
+
+  virtual AudioHandle* stream_sound(const char* fname, long start) {
+    AudioHandle* handle = soundmgr.stream(fname, start);
+    long_to_handle.insert(std::make_pair(handle->handle, handle));
+    return handle;
+  }
+
+  virtual long current_sample() const {
+    return audio_current_sample();
+  }
+};
+
+
+AudioSystem* sdl_streaming_audio(Giggle* giggle) {
+  return new SDLStreamingAudioSystem(giggle);
+}

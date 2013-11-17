@@ -1,4 +1,4 @@
-CPP_SRC=giggle_sdl.cpp audio_sdl.cpp
+CPP_SRC=giggle_sdl.cpp audio_sdl.cpp sampler.cpp audio.cpp
 BINS=sdlmain.bin sdlmain_nt.bin
 
 SDL_BASE=$(PWD)/vender/SDL2-2.0.1

@@ -1,6 +1,6 @@
 GAME_SRC=\
 	threadlib.cpp memlib.cpp listlib.cpp giggle.cpp \
-	sampler.cpp audio.cpp game.cpp vector.cpp giggle_gl.cpp \
+	game.cpp vector.cpp giggle_gl.cpp \
 	rect.cpp steering.cpp spriteatlas.cpp \
 	tiles.cpp random.cpp brain.cpp \
 	perlin.cpp heapvector.cpp mesh.cpp light.cpp \

@@ -18,7 +18,7 @@
 #include "giggle.h"
 #include "utils.h"
 
-Sound::~Sound() {
+MSound::~MSound() {
   free(buffer);
 }
 
@@ -47,7 +47,7 @@ Sound* SoundMgr::get_sync(const char* filename, float scale) {
     fail_exit("sound file `%s' couldn't be opened as vorbis\n", filename);
   }
 
-  Sound* sound = new Sound();
+  MSound* sound = new MSound();
   const size_t temp_buffer_size = 4096;
   int16_t* temp_buffer = (int16_t*)malloc(temp_buffer_size);
 
@@ -90,8 +90,9 @@ Sound* SoundMgr::get_sync(const char* filename, float scale) {
 
 AudioHandle* SoundMgr::play(Sound* sound, int channel) {
   // ignore channel for now
-  return audio_enqueue(new BufferSampler(sound->buffer, audio_current_sample(),
-                                         sound->nsamples));
+  MSound* msound = (MSound*)sound;
+  return audio_enqueue(new BufferSampler(msound->buffer, audio_current_sample(),
+                                         msound->nsamples));
 }
 
 AudioHandle* SoundMgr::stream(const char* sound, long start_sample) {

@@ -33,8 +33,10 @@ int main(int argc, char ** argv) {
   Giggle* giggle = lib_init(argc, argv);
   giggle->renderer = sdl_renderer(giggle);
   giggle->logic = default_gamelogic(giggle);
+  giggle->audio = sdl_streaming_audio(giggle);
 
   giggle->renderer->initialize();
+  giggle->audio->initialize();
   giggle->logic->start();
 
   // renderer claims main thread

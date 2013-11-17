@@ -30,7 +30,6 @@
 #include "memlib.h"
 #include "listlib.h"
 #include "rect.h"
-#include "audio.h"
 #include "config.h"
 #include "texture.h"
 #include "random.h"
@@ -217,25 +216,52 @@ public:
   virtual bool step() = 0;
 };
 
-/*
+class AudioHandle : public Object {
+ public:
+  OBJECT_PROTO(AudioHandle);
+  AudioHandle(void* _);
+  AudioHandle(const AudioHandle& other);
+
+  virtual int isCurrent();
+  virtual void terminate();
+
+  long handle;
+  long last_sample;
+};
+
+class Sound {
+ public:
+  virtual ~Sound();
+};
+
 class AudioSystem : public Task {
 protected:
+  typedef std::map<long, AudioHandle*> LongToHandle;
+  Mutex mutex;
+
   Giggle* giggle;
+  LongToHandle long_to_handle;
 
   virtual void initializer() = 0;
 
 public:
   AudioSystem(Giggle* giggle);
 
-  virtual bool step() = 0;
+  virtual Sound* get_sound(const char* name, float scale) = 0;
+  virtual AudioHandle* play_sound(Sound* sound, int channel) = 0;
+  virtual AudioHandle* stream_sound(const char* fname, long start) = 0;
+  virtual long current_sample() const = 0;
+
+  virtual AudioHandle* sound_handle(long handle);
+  virtual bool step();
 };
-*/
+
 
 class Giggle {
 public:
   Renderer* renderer;
   GameLogic* logic;
-  //AudioSystem* audio;
+  AudioSystem* audio;
 
   FixedAllocator* clock_allocator;
   FixedAllocator* image_resource_allocator;

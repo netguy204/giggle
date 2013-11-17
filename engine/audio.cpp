@@ -19,8 +19,12 @@
 #include "memlib.h"
 #include "giggle.h"
 
+#include <SDL2/SDL.h>
+
 #include <limits>
 #include <new>
+
+#define NUM_SAMPLES 4096
 
 const int int16_min = std::numeric_limits<int16_t>::min();
 const int int16_max = std::numeric_limits<int16_t>::max();
@@ -151,19 +155,6 @@ PlayListSample* PlayList::find_sample(long handle) {
   return result;
 }
 
-void audio_init() {
-  sampler_init();
-
-  cmd_allocator = new FixedAllocator(sizeof(Command), MAX_NUM_SAMPLERS,
-                                     "audio_cmd_allocator");
-
-  playlist = new PlayList();
-  audio_queue = new CommandQueue();
-  global_filter = lowpass_make(0, 0);
-
-  native_audio_init();
-}
-
 /* another version of this exists in testlib.cpp but we use a
    different allocator */
 static Command* command_make(CommandFunction func, void* data) {
@@ -180,7 +171,7 @@ static void command_insert_sample(PlayListSample* sample) {
 
 AudioHandle* audio_enqueue(Sampler* sampler) {
   PlayListSample* sample = new PlayListSample(sampler);
-  AudioHandle* handle = new AudioHandle(sample);
+  SAudioHandle* handle = new SAudioHandle(sample);
 
   Command* command = command_make((CommandFunction)command_insert_sample, sample);
   audio_queue->enqueue(command);
@@ -202,21 +193,20 @@ void audio_fill_buffer(int16_t* buffer, int nsamples) {
   playlist->fill_buffer(buffer, nsamples);
 }
 
-OBJECT_IMPL(AudioHandle, Object);
-OBJECT_PROPERTY(AudioHandle, last_sample);
-OBJECT_PROPERTY(AudioHandle, handle);
+OBJECT_IMPL(SAudioHandle, AudioHandle);
 
-AudioHandle::AudioHandle(void* _sample) {
+SAudioHandle::SAudioHandle(void* _sample)
+  : AudioHandle(_sample) {
   PlayListSample* sample = (PlayListSample*)_sample;
   handle = sample->handle;
   last_sample = END(sample->sampler);
 }
 
-AudioHandle::AudioHandle(const AudioHandle& other)
-  : handle(other.handle), last_sample(other.last_sample) {
+SAudioHandle::SAudioHandle(const SAudioHandle& other)
+  : AudioHandle(other) {
 }
 
-int AudioHandle::isCurrent() {
+int SAudioHandle::isCurrent() {
   return audio_current_sample() < last_sample;
 }
 
@@ -228,7 +218,7 @@ static void command_terminate(AudioHandle* handle) {
   delete sample;
 }
 
-void AudioHandle::terminate() {
+void SAudioHandle::terminate() {
   Command* command = command_make((CommandFunction)command_terminate, this);
   audio_queue->enqueue(command);
 }
@@ -237,7 +227,47 @@ static void command_destroy(AudioHandle* handle) {
   delete handle;
 }
 
-void AudioHandle::destroy() {
+void SAudioHandle::destroy() {
   Command* command = command_make((CommandFunction)command_destroy, this);
   audio_queue->enqueue(command);
+}
+
+
+static void fill_audio(void *udata, Uint8 *stream, int len) {
+  audio_fill_buffer((int16_t*)stream, len / 2);
+}
+
+
+void stream_audio_init() {
+  // twice the number of samples in the sdl buffer (2 bytes per
+  // channel per sample)
+  int buffer_size = NUM_SAMPLES * 2 * 2 * 2;
+
+  SDL_AudioSpec wanted;
+
+  // Set the audio format
+  wanted.freq = SAMPLE_FREQ;
+  wanted.format = AUDIO_S16SYS;
+  wanted.channels = 2;    // 1 = mono, 2 = stereo
+  wanted.samples = NUM_SAMPLES;  // Good low-latency value for callback
+  wanted.padding = 0;
+  wanted.callback = &fill_audio;
+  wanted.userdata = NULL;
+
+  // Open the audio device, forcing the desired format
+  if ( SDL_OpenAudio(&wanted, NULL) < 0 ) {
+    fail_exit("Couldn't open audio: %s\n", SDL_GetError());
+    exit(-1);
+  }
+
+  SDL_PauseAudio(0);
+
+  sampler_init();
+
+  cmd_allocator = new FixedAllocator(sizeof(Command), MAX_NUM_SAMPLERS,
+                                     "audio_cmd_allocator");
+
+  playlist = new PlayList();
+  audio_queue = new CommandQueue();
+  global_filter = lowpass_make(0, 0);
 }

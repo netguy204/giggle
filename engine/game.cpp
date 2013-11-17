@@ -501,6 +501,9 @@ public:
 
     GIGGLE->renderer->end_frame();
 
+    // give audio a chance to run
+    GIGGLE->audio->step();
+
     return true;
   }
 };
