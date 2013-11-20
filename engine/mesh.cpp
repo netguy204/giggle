@@ -35,8 +35,8 @@ const Color& Mesh::get_color(long idx) const {
 OBJECT_METHOD(Mesh, get_color, Color, (long));
 
 Program* vertcolor_program_loader() {
-  Program *program = renderer_link_shader("engine_resources/vertcolor.vert",
-                                          "engine_resources/vertcolor.frag",
+  Program *program = renderer_link_shader("vertcolor.vert",
+                                          "vertcolor.frag",
                                           GLPARAM_VERTEX, "vertex",
                                           GLPARAM_COLOR0, "color",
                                           GLPARAM_DONE);
