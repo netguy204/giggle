@@ -132,14 +132,16 @@ public:
   int validindex(const TilePosition& pos) const;
   int size() const;
 
-  void tileposition(TilePosition& pos, int index) const;
+  TilePosition tileposition(int index) const;
 
   int nspecs() const;
   const TileSpec& get_spec(int idx) const;
   void set_spec(int idx, const TileSpec& spec);
   void add_spec(const TileSpec& spec);
 
-  int vector_index(Vector vector) const;
+  int vector_index(const Vector_&) const;
+  TilePosition vector_tileposition(const Vector_& vector) const;
+
   void tilecenter(Vector v, int idx) const;
   int tile_bitmask(TilePosition pos) const;
   Rect_ tile_rect(TilePosition pos) const;

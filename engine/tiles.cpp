@@ -101,9 +101,11 @@ int TileMap::size() const {
   return width_IT * height_IT;
 }
 
-void TileMap::tileposition(TilePosition& pos, int index) const {
+TilePosition TileMap::tileposition(int index) const {
+  TilePosition pos;
   pos.x = index % width_IT;
   pos.y = index / width_IT;
+  return pos;
 }
 
 int TileMap::nspecs() const {
@@ -126,16 +128,21 @@ void TileMap::add_spec(const TileSpec& spec) {
 }
 OBJECT_METHOD(TileMap, add_spec, void, (TileSpec));
 
-int TileMap::vector_index(Vector vector) const {
-  float x = vector->x / tile_width_IP;
-  float y = vector->y / tile_height_IP;
+int TileMap::vector_index(const Vector_& vector) const {
+  float x = vector.x / tile_width_IP;
+  float y = vector.y / tile_height_IP;
 
   return (int)floorf(x) + (int)floorf(y) * width_IT;
 }
 
+TilePosition TileMap::vector_tileposition(const Vector_& vector) const {
+  int idx = vector_index(vector);
+  return tileposition(idx);
+}
+OBJECT_METHOD(TileMap, vector_tileposition, TilePosition, (Vector_));
+
 void TileMap::tilecenter(Vector v, int idx) const {
-  TilePosition pos;
-  tileposition(pos, idx);
+  TilePosition pos = tileposition(idx);
 
   v->x = tile_width_IP * pos.x + tile_width_IP / 2;
   v->y = tile_height_IP * pos.y + tile_height_IP / 2;

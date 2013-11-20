@@ -34,9 +34,8 @@ PathElement::PathElement(PathElement* parent, int heuristic, int id)
 }
 
 int pathfinder_heuristic(TileMap* map, int p1, int p2) {
-  TilePosition tp1, tp2;
-  map->tileposition(tp1, p1);
-  map->tileposition(tp2, p2);
+  TilePosition tp1 = map->tileposition(p1);
+  TilePosition tp2 = map->tileposition(p2);
 
   int dx = tp1.x - tp2.x;
   int dy = tp1.y - tp2.y;
@@ -97,13 +96,12 @@ void pathfinder_simplifypath(TileMap* map, int* steps, int *nsteps) {
 
     // always include the first
     if(read_idx == 0) {
-      map->tileposition(last_tp, step);
+      last_tp = map->tileposition(step);
       ++write_idx;
       continue;
     }
 
-    TilePosition current_tp;
-    map->tileposition(current_tp, step);
+    TilePosition current_tp = map->tileposition(step);
 
     int result = map->trace_line(last_tp, current_tp,
                                  pathfinder_visibility_callback, NULL);
@@ -163,8 +161,8 @@ Path* TileMapPathfinder::findpath(TileMap* map, Vector_ v1, Vector_ v2) {
 
   TileMapPathfinderIfc mapifc(map);
 
-  int p1 = map->vector_index(&v1);
-  int p2 = map->vector_index(&v2);
+  int p1 = map->vector_index(v1);
+  int p2 = map->vector_index(v2);
   PathElement* result = pathfinder_findpath2(mapifc, p1, p2, candidates);
 
   int* path = NULL;
@@ -193,8 +191,8 @@ Path* TileMapPathfinder::findpath(TileMap* map, Vector_ v1, Vector_ v2) {
   Path* result_path = new Path(map);
   result_path->steps = path;
   result_path->nsteps = nelems;
-  map->tileposition(result_path->start, p1);
-  map->tileposition(result_path->end, p2);
+  result_path->start = map->tileposition(p1);
+  result_path->end = map->tileposition(p2);
   result_path->reference_count = 0; // disown
 
   return result_path;
