@@ -141,8 +141,6 @@ class FilledRectRenderer : public Renderable {
   Program *program;
 };
 
-#define GL_CHECK_ERRORS
-
 void gl_check_(const char * msg);
 
 #define STRINGIZE(x) STRINGIZE2(x)
