@@ -126,6 +126,9 @@ Mesh* CMesh::get_mesh() {
 void CMesh::render(Camera* camera) {
   if(!mesh) return;
 
+  Vector_ pos;
+  go->pos(&pos);
+
   // convert the mesh into arguments
   long nverts = mesh->nverts();
   size_t vsize = sizeof(Vector_) * nverts;
@@ -137,7 +140,9 @@ void CMesh::render(Camera* camera) {
   marg->verts = (Vector_*)&mem[sizeof(MeshRendererArgs)];
   marg->colors = (Color*)&mem[sizeof(MeshRendererArgs) + vsize];
 
-  memcpy(marg->verts, &mesh->points[0], vsize);
+  for(long ii = 0; ii < nverts; ++ii) {
+    vector_add(&marg->verts[ii], &pos, &mesh->points[ii]);
+  }
   memcpy(marg->colors, &mesh->colors[0], csize);
   marg->nverts = nverts;
   marg->type = mesh->type;

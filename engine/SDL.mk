@@ -57,7 +57,7 @@ echoecho:
 
 include Common.mk
 
-$(BINS): $(SDL_LIBS)
+$(C_OBJS): $(SDL_LIBS)
 
 audio_test: audio_test.cpp sampler.cpp
 	gcc -g -o audio_test sampler.cpp audio_test.cpp `sdl2-config --libs` `sdl2-config --cflags`
