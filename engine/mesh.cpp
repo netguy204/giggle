@@ -107,9 +107,11 @@ void MeshRenderer::render(void* args) {
 OBJECT_IMPL(CMesh, Component);
 OBJECT_ACCESSOR(CMesh, mesh, get_mesh, set_mesh);
 OBJECT_PROPERTY(CMesh, layer);
+OBJECT_PROPERTY(CMesh, tform);
 
 CMesh::CMesh(void* _go)
-  : Component((GO*)_go, PRIORITY_SHOW), mesh(NULL), layer(LAYER_FOREGROUND) {
+  : Component((GO*)_go, PRIORITY_SHOW), mesh(NULL),
+    tform(NULL), layer(LAYER_FOREGROUND) {
   renderer = new MeshRenderer(NULL);
 }
 
@@ -140,9 +142,20 @@ void CMesh::render(Camera* camera) {
   marg->verts = (Vector_*)&mem[sizeof(MeshRendererArgs)];
   marg->colors = (Color*)&mem[sizeof(MeshRendererArgs) + vsize];
 
-  for(long ii = 0; ii < nverts; ++ii) {
-    vector_add(&marg->verts[ii], &pos, &mesh->points[ii]);
+  if(tform) {
+    // apply the transform to the un-modified point
+    Vector_ r;
+    for(long ii = 0; ii < nverts; ++ii) {
+      tform->vmult(&r, &mesh->points[ii]);
+      vector_add(&marg->verts[ii], &pos, &r);
+    }
+  } else {
+    // just add our offset
+    for(long ii = 0; ii < nverts; ++ii) {
+      vector_add(&marg->verts[ii], &pos, &mesh->points[ii]);
+    }
   }
+
   memcpy(marg->colors, &mesh->colors[0], csize);
   marg->nverts = nverts;
   marg->type = mesh->type;

@@ -58,6 +58,7 @@ public:
 
   MeshRenderer* renderer;
   Mesh* mesh;
+  Matrix44* tform;
   int layer;
 };
 

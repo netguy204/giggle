@@ -45,12 +45,20 @@ function M.__mul(a, s)
    return M.new{ a[1] * s, a[2] * s }
 end
 
+function M.__div(a, s)
+   return M.new{ a[1] / s, a[2] / s }
+end
+
 function M.dot(a, b)
    return a[1] * b[1] + a[2] * b[2]
 end
 
 function M.angle(a)
    return math.atan2(a[2], a[1])
+end
+
+function M.new_from_angle(a)
+   return M.new({math.cos(a), math.sin(a)})
 end
 
 -- util depends on us so we can't pull this in from there like we'd
