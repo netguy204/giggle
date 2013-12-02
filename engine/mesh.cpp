@@ -2,9 +2,10 @@
 
 OBJECT_IMPL(Mesh, Object);
 OBJECT_PROPERTY(Mesh, type);
+OBJECT_PROPERTY(Mesh, entry);
 
 Mesh::Mesh(void* _game)
-  : type(MESH_TRIS) {
+  : type(MESH_TRIS), entry(NULL) {
 }
 
 void Mesh::add_point(const Vector_& point, const Color& color) {
@@ -12,6 +13,12 @@ void Mesh::add_point(const Vector_& point, const Color& color) {
   colors.push_back(color);
 }
 OBJECT_METHOD(Mesh, add_point, void, (Vector_, Color));
+
+void Mesh::add_point_and_tcoord(const Vector_& point, const Color& color, const Vector_& tcoord) {
+  add_point(point, color);
+  tcoords.push_back(tcoord);
+}
+OBJECT_METHOD(Mesh, add_point_and_tcoord, void, (Vector_, Color, Vector_));
 
 long Mesh::nverts() const {
   return points.size();
@@ -34,6 +41,11 @@ const Color& Mesh::get_color(long idx) const {
 }
 OBJECT_METHOD(Mesh, get_color, Color, (long));
 
+const Vector_& Mesh::get_tcoord(long idx) const {
+  return tcoords[idx];
+}
+OBJECT_METHOD(Mesh, get_tcoord, Vector_, (long));
+
 Program* vertcolor_program_loader() {
   Program *program = renderer_link_shader("vertcolor.vert",
                                           "vertcolor.frag",
@@ -46,28 +58,54 @@ Program* vertcolor_program_loader() {
   return program;
 }
 
+Program* vertcolortex_program_loader() {
+  Program *program = renderer_link_shader("vertcolortex.vert",
+                                          "vertcolortex.frag",
+                                          GLPARAM_VERTEX, "vertex",
+                                          GLPARAM_COLOR0, "color",
+                                          GLPARAM_TEXCOORD0, "tex_coord0",
+                                          GLPARAM_DONE);
+  program_bind_uniforms(program,
+                        UNIFORM_TEX0, "textureUnit0",
+                        UNIFORM_MVP, "mvpMatrix",
+                        UNIFORM_DONE);
+  return program;
+}
+
 struct MeshRendererArgs {
   Vector_* verts;
   Color* colors;
+  Vector_* tcoords;
+  Texture* texture;
   long nverts;
   int type;
 };
 
 OBJECT_IMPL(MeshRenderer, Renderable);
 MeshRenderer::MeshRenderer(void* empty)
-  : Renderable(empty), program(NULL) {
+  : Renderable(empty) {
 }
 
 void MeshRenderer::render(void* args) {
   MeshRendererArgs* mesh = (MeshRendererArgs*)args;
-  if(!program) program = get_program(vertcolor_program_loader);
+  Program* program;
+  bool tex = false;
+  if(mesh->tcoords) {
+    program = get_program(vertcolortex_program_loader);
+    tex = true;
+  } else {
+    program = get_program(vertcolor_program_loader);
+  }
 
   gl_check(program->use());
 
   GLMemory verts;
   GLMemory colors;
+  GLMemory texs;
+
   GIGGLE->renderer->gl_bufinit(&verts);
   GIGGLE->renderer->gl_bufinit(&colors);
+  if(tex) GIGGLE->renderer->gl_bufinit(&texs);
 
   size_t vsize = sizeof(Vector_) * mesh->nverts;
   GIGGLE->renderer->gl_claim(&verts, vsize);
@@ -76,6 +114,12 @@ void MeshRenderer::render(void* args) {
   size_t csize = sizeof(Color) * mesh->nverts;
   GIGGLE->renderer->gl_claim(&colors, csize);
   memcpy(colors.data, mesh->colors, csize);
+
+  if(tex) {
+    size_t tsize = sizeof(Vector_) * mesh->nverts;
+    GIGGLE->renderer->gl_claim(&texs, tsize);
+    memcpy(texs.data, mesh->tcoords, tsize);
+  }
 
   gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, verts.buffer));
@@ -86,6 +130,15 @@ void MeshRenderer::render(void* args) {
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, colors.buffer));
   gl_check(glVertexAttribPointer(GLPARAM_COLOR0, 4, GL_FLOAT, GL_FALSE, sizeof(Color), 0));
   GIGGLE->renderer->gl_unclaim(&colors);
+
+  if(tex) {
+    gl_check(glEnableVertexAttribArray(GLPARAM_TEXCOORD0));
+    gl_check(glBindBuffer(GL_ARRAY_BUFFER, texs.buffer));
+    gl_check(glVertexAttribPointer(GLPARAM_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, sizeof(Vector_), 0));
+    GIGGLE->renderer->gl_unclaim(&texs);
+    gl_check(glUniform1i(program->requireUniform(UNIFORM_TEX0), 0));
+    mesh->texture->bind();
+  }
 
   gl_check(glUniformMatrix4fv(program->requireUniform(UNIFORM_MVP),
                               1, GL_FALSE,
@@ -132,15 +185,22 @@ void CMesh::render(Camera* camera) {
   go->pos(&pos);
 
   // convert the mesh into arguments
+  bool tex = !mesh->tcoords.empty();
   long nverts = mesh->nverts();
   size_t vsize = sizeof(Vector_) * nverts;
   size_t csize = sizeof(Color) * nverts;
-
+  size_t tsize = sizeof(Vector_) * (tex ? nverts : 0);
   // allocate enough space in one go
-  char* mem = (char*)GIGGLE->renderer->alloc(sizeof(MeshRendererArgs) + vsize + csize);
+  char* mem = (char*)GIGGLE->renderer->alloc(sizeof(MeshRendererArgs) + vsize + csize + tsize);
   MeshRendererArgs* marg = (MeshRendererArgs*)mem;
   marg->verts = (Vector_*)&mem[sizeof(MeshRendererArgs)];
   marg->colors = (Color*)&mem[sizeof(MeshRendererArgs) + vsize];
+  if(tex) {
+    marg->tcoords = (Vector_*)&mem[sizeof(MeshRendererArgs) + vsize + csize];
+    marg->texture = mesh->entry->atlas->image->texture;
+  } else {
+    marg->tcoords = NULL;
+  }
 
   if(tform) {
     // apply the transform to the un-modified point
@@ -157,6 +217,21 @@ void CMesh::render(Camera* camera) {
   }
 
   memcpy(marg->colors, &mesh->colors[0], csize);
+  if(tex) {
+    // adjust the tcoords given the atlas entry
+    float u0 = mesh->entry->u0;
+    float u1 = mesh->entry->u1;
+    float v0 = mesh->entry->v0;
+    float v1 = mesh->entry->v1;
+
+    float du = u1 - u0;
+    float dv = v1 - v0;
+    for(long ii = 0; ii < nverts; ++ii) {
+      marg->tcoords[ii].x = u0 + mesh->tcoords[ii].x * du;
+      marg->tcoords[ii].y = v0 + mesh->tcoords[ii].y * dv;
+    }
+  }
+
   marg->nverts = nverts;
   marg->type = mesh->type;
 

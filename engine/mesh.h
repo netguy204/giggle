@@ -27,14 +27,19 @@ public:
   Mesh(void* _game);
 
   void add_point(const Vector_& point, const Color& color);
+  void add_point_and_tcoord(const Vector_& point, const Color& color, const Vector_& tcoord);
+
   long nverts() const;
   void clear();
 
   const Vector_& get_point(long idx) const;
   const Color& get_color(long idx) const;
+  const Vector_& get_tcoord(long idx) const;
 
   Points points;
   Colors colors;
+  Points tcoords;
+  SpriteAtlasEntry entry;
   int type;
 };
 
@@ -43,8 +48,6 @@ public:
   OBJECT_PROTO(MeshRenderer);
   MeshRenderer(void* empty);
   virtual void render(void* args);
-
-  Program* program;
 };
 
 class CMesh : public Component {

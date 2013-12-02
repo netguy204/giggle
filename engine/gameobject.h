@@ -650,6 +650,14 @@ inline void LCpush<SpriteAtlasEntry>(lua_State* L, SpriteAtlasEntry entry) {
   lua_setfield(L, -2, "w");
   lua_pushinteger(L, entry->h);
   lua_setfield(L, -2, "h");
+  lua_pushinteger(L, entry->u0);
+  lua_setfield(L, -2, "u0");
+  lua_pushinteger(L, entry->u1);
+  lua_setfield(L, -2, "u1");
+  lua_pushinteger(L, entry->v0);
+  lua_setfield(L, -2, "v0");
+  lua_pushinteger(L, entry->v1);
+  lua_setfield(L, -2, "v1");
 }
 
 template<>
