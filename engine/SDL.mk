@@ -23,6 +23,8 @@ endif
 $(SDL_LIBS):
 	cd $(SDL_BASE) && ./configure --prefix=$(SDL_ROOT) $(SDL_DISABLES) && make install
 	rm -f $(SDL_ROOT)/lib/*.dll.a
+	rm -f $(SDL_ROOT)/lib/*.so*
+	rm -f $(SDL_ROOT)/lib/*.dylib*
 
 ifeq ($(PLATFORM), Darwin)
 # Mac build flags
