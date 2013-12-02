@@ -32,6 +32,10 @@ function Indicator:update(msg, ...)
    self.text:message(msg)
 end
 
+function Indicator:color(color)
+   self.text:color(color)
+end
+
 function Indicator:terminate()
    Indicator.reg:unregister(self)
    self.text:delete_me(1)

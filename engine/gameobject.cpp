@@ -959,6 +959,8 @@ World::~World() {
   GIGGLE->clock_free(clock);
 
   delete contact_listener;
+
+  game->worlds.remove(this);
 }
 
 void World::update(long delta) {

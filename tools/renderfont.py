@@ -37,7 +37,7 @@ if __name__ == '__main__':
     face.set_char_size(ptsz * 64)
     height = face.height / 64
 
-    chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.!?,\'"'
+    chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.!?,\'"\\/'
 
     sheet_path, font_name = os.path.split(outprefix)
     _, sheet_name = os.path.split(sheet_path)
@@ -50,8 +50,8 @@ if __name__ == '__main__':
 local function %s_font(scale)
    scale = scale or 1
    local characters = %s
-   local font = world:create_object('Font')
-   font:load(world:atlas('resources/%s'), '%s', characters)
+   local font = game:create_object('Font')
+   font:load(game:atlas('resources/%s'), '%s', characters)
    font:scale(scale)
    font:line_separation(%d)
     """ % (font_name, repr(chars), sheet_name, font_name, height))

@@ -17,6 +17,8 @@
 #include "matrix.h"
 #include "giggle.h"
 
+#include <math.h>
+
 OBJECT_IMPL(Matrix44, Object);
 
 Matrix44::Matrix44(void* _empty) {

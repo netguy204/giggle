@@ -368,7 +368,7 @@ inline void LCcheck<SystemDefinition*>(lua_State* L, SystemDefinition** def, int
 
   // delete the old system if there is one
   if(*def) {
-    delete *def;
+    (*def)->release();
   }
 
   *def = new SystemDefinition(n);

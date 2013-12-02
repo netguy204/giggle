@@ -431,7 +431,9 @@ function M.install_basic_keymap()
       K_JOY1 = M.button_fn('action1'),
       K_JOY2 = M.button_fn('action2'),
       K_JOY3 = M.button_fn('action3'),
-      K_JOY4 = M.button_fn('action4')
+      K_JOY4 = M.button_fn('action4'),
+      K_ENTER = M.button_fn('action2'),
+      K_SPACE = M.button_fn('action1')
    }
 
    M.install_keymap(keymap)

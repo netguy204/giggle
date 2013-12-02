@@ -644,6 +644,7 @@ OBJECT_IMPL(ParticleSystemComponent, Object);
 
 ParticleSystemComponent::ParticleSystemComponent(void* _def)
   : def((SystemDefinition*)_def) {
+  def->retain();
 }
 
 ParticleSystemComponent::~ParticleSystemComponent() {
@@ -660,6 +661,7 @@ ParticleSystemComponent::~ParticleSystemComponent() {
   } else {
     // we're not in a list. that's fine (ParticleActivators)
   }
+  def->release();
 }
 
 unsigned int ParticleSystemComponent::required_features() {
@@ -704,7 +706,7 @@ CParticleSystem::CParticleSystem(void* _go)
 }
 
 CParticleSystem::~CParticleSystem() {
-  delete def;
+  def->release();
 }
 
 void CParticleSystem::init() {
