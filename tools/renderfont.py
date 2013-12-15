@@ -37,7 +37,7 @@ if __name__ == '__main__':
     face.set_char_size(ptsz * 64)
     height = face.height / 64
 
-    chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.!?,\'"\\/'
+    chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.!?,\'"\\/+-*/%'
 
     sheet_path, font_name = os.path.split(outprefix)
     _, sheet_name = os.path.split(sheet_path)

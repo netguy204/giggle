@@ -22,6 +22,10 @@ function M.sign(val)
    end
 end
 
+function M.backtrace()
+   print(debug.traceback())
+end
+
 function M.protect(fn)
    local err = false
    local onerr = function(er)
@@ -267,6 +271,10 @@ function M.names_to_objects(names, objs)
    return result
 end
 
+function M.isnumber(o)
+   return type(o) == "number"
+end
+
 function M.serialize(o, show_unprintables)
    if type(o) == "number" or type(o) == "nil" or type(o) == "boolean" then
       return tostring(o)
@@ -312,10 +320,7 @@ function M.reverse(tbl)
 end
 
 function M.empty(tbl)
-   for ii, v in ipairs(tbl) do
-      return false
-   end
-   return true
+   return #tbl == 0
 end
 
 function M.curry1(fn, arg1)

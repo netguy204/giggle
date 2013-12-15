@@ -22,6 +22,11 @@ function M.__tostring(a)
    return string.format("<%f, %f>", a[1], a[2])
 end
 
+function M.equals(a, b, thresh)
+   thresh = thresh or 0
+   return math.abs(a[1] - b[1]) <= thresh and math.abs(a[2] - b[2]) <= thresh
+end
+
 function M.negate(a)
    return M.new{-a[1], -a[2]}
 end
