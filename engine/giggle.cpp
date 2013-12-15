@@ -65,6 +65,10 @@ Renderer::Renderer(Giggle* giggle, int depth, size_t sz)
     char buffer[128];
     snprintf(buffer, sizeof(buffer), "frame_allocator%d", ii + 1);
     render_reply_queue.enqueue(stack_allocator_make(sz, strdup(buffer)));
+
+    char* sizestr = filename_slurp("screen_size.conf");
+    sscanf(sizestr, "%d %d", &screen_width, &screen_height);
+    free(sizestr);
   }
 }
 

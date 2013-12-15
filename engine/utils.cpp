@@ -99,6 +99,14 @@ const char* filename_resolve(const char* filename) {
     return filename;
   }
 
+  snprintf(resolve_buffer, sizeof(resolve_buffer), "resources/%s", filename);
+  f = fopen(resolve_buffer, "r");
+  if(f) {
+    fclose(f);
+    return resolve_buffer;
+  }
+
+  // last resort
   snprintf(resolve_buffer, sizeof(resolve_buffer), "giggle/engine_resources/%s", filename);
   return resolve_buffer;
 }
