@@ -1,10 +1,24 @@
 local oo = require 'oo'
 local util = require 'util'
 
+local all = {}
 local Sequence = oo.class(oo.Object)
 function Sequence:init()
    self.queue = {}
    self.running = false
+   table.insert(all, self)
+end
+
+function Sequence:terminate()
+   util.table_remove(all, self)
+   self.running = false
+   self.comp:delete_me(1)
+end
+
+function Sequence.terminate_all()
+   for ii=1,#all do
+      all[ii]:terminate()
+   end
 end
 
 local function lerp(start, stop, dt, rdt)
@@ -71,14 +85,14 @@ function Sequence:start()
       if not item.fn(item.arg) then
          table.remove(self.queue, 1)
          if util.empty(self.queue) then
-            comp:delete_me(1)
-            self.running = false
+            self:terminate()
             return
          end
       end
    end
 
    comp = stage:add_component('CScripted', {update_thread=util.fthread(thread)})
+   self.comp = comp
 end
 
 return Sequence
