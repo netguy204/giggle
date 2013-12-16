@@ -430,10 +430,11 @@ void PSC_E2SystemRenderer::render(void *args) {
   for(int ii = 0; ii < params->n; ++ii) {
     if(!valids[ii]) continue;
 
-    float hs = (scales[ii] / 2.0f) * entry->w;
+    float ws = (scales[ii] / 2.0f) * entry->w;
+    float hs = (scales[ii] / 2.0f) * entry->h;
 
-    float minx = positions[ii].x - hs;
-    float maxx = positions[ii].x + hs;
+    float minx = positions[ii].x - ws;
+    float maxx = positions[ii].x + ws;
     float miny = positions[ii].y - hs;
     float maxy = positions[ii].y + hs;
 
