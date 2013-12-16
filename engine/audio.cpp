@@ -242,6 +242,13 @@ void stream_audio_init() {
   // twice the number of samples in the sdl buffer (2 bytes per
   // channel per sample)
   int buffer_size = NUM_SAMPLES * 2 * 2 * 2;
+  cmd_allocator = new FixedAllocator(sizeof(Command), MAX_NUM_SAMPLERS,
+                                     "audio_cmd_allocator");
+  playlist = new PlayList();
+  audio_queue = new CommandQueue();
+  sampler_init();
+
+  global_filter = lowpass_make(0, 0);
 
   SDL_AudioSpec wanted;
 
@@ -261,13 +268,4 @@ void stream_audio_init() {
   }
 
   SDL_PauseAudio(0);
-
-  sampler_init();
-
-  cmd_allocator = new FixedAllocator(sizeof(Command), MAX_NUM_SAMPLERS,
-                                     "audio_cmd_allocator");
-
-  playlist = new PlayList();
-  audio_queue = new CommandQueue();
-  global_filter = lowpass_make(0, 0);
 }
