@@ -81,11 +81,15 @@ function Sequence:start()
    local comp
 
    local thread = function()
-      local item = self.queue[1]
-      if not item.fn(item.arg) then
-         table.remove(self.queue, 1)
-         if util.empty(self.queue) then
-            self:terminate()
+      while true do
+         local item = self.queue[1]
+         if not item.fn(item.arg) then
+            table.remove(self.queue, 1)
+            if util.empty(self.queue) then
+               self:terminate()
+               return
+            end
+         else
             return
          end
       end

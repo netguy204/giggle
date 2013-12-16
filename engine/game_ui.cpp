@@ -273,8 +273,8 @@ static Sprite ui_make_sprite(SpriteAtlasEntry entry, int x, int y,
                              Color* c) {
   Sprite sprite = GIGGLE->make_sprite();
   sprite_fillfromentry(sprite, entry);
-  sprite->displayX = x;
-  sprite->displayY = y;
+  sprite->displayX = floor(x);
+  sprite->displayY = floor(y);
   sprite->originX = 0;
   sprite->originY = 0;
   sprite->angle = 0;

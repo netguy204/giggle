@@ -803,6 +803,27 @@ unsigned int PSFireColorUpdater::required_features() {
   return PF_TIME | PF_COLOR;
 }
 
+OBJECT_IMPL(PSVelocityAngleUpdater, ParticleSystemUpdater);
+OBJECT_PROPERTY(PSVelocityAngleUpdater, angle_offset);
+
+PSVelocityAngleUpdater::PSVelocityAngleUpdater(void* _def)
+  : ParticleSystemUpdater(_def), angle_offset(0) {
+}
+
+void PSVelocityAngleUpdater::update(float dt) {
+  float* angles = def->system_featuref(PF_ANGLE);
+  Vector vels = def->system_featurev(PF_VELOCITY);
+
+  for(int ii = 0; ii < def->n; ++ii) {
+    angles[ii] = vector_angle(&vels[ii]);
+  }
+}
+
+unsigned int PSVelocityAngleUpdater::required_features() {
+  return PF_ANGLE | PF_VELOCITY;
+}
+
+
 OBJECT_IMPL(PSBoxInitializer, ParticleSystemInitializer);
 OBJECT_PROPERTY(PSBoxInitializer, initial);
 OBJECT_PROPERTY(PSBoxInitializer, refresh);

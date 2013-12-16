@@ -15,6 +15,12 @@ function Rect:init(minx, miny, maxx, maxy)
       self.maxx = minx[3]
       self.maxy = minx[4]
    end
+
+   -- mirror so we can hand this to C
+   self[1] = self.minx
+   self[2] = self.miny
+   self[3] = self.maxx
+   self[4] = self.maxy
 end
 
 -- rect is minx, miny, maxx, maxy

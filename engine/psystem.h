@@ -236,6 +236,18 @@ class PSFireColorUpdater : public ParticleSystemUpdater {
   float end_temperature;
 };
 
+class PSVelocityAngleUpdater : public ParticleSystemUpdater {
+ public:
+  OBJECT_PROTO(PSVelocityAngleUpdater);
+
+  PSVelocityAngleUpdater(void* def);
+
+  virtual void update(float dt);
+  virtual unsigned int required_features();
+
+  float angle_offset;
+};
+
 class PSBoxInitializer : public ParticleSystemInitializer {
  public:
   OBJECT_PROTO(PSBoxInitializer);
