@@ -21,40 +21,59 @@ function Sequence.terminate_all()
    end
 end
 
-local function lerp(start, stop, dt, rdt)
+local function saturate(x)
+   if x > 1 then
+      return 1
+   elseif x < 0 then
+      return 0
+   else
+      return x
+   end
+end
+
+function Sequence.lerp(start, stop, dt, rdt)
    local s = (1 - rdt / dt)
    local dx = stop - start
    return start + dx * s
 end
 
-function Sequence:animate_between(go, start, stop, dt)
-   local animate_between = function(item)
-      local x = lerp(item.start, item.stop, item.dt, item.rdt)
-      item.go:pos(x)
-      item.rdt = item.rdt - world:dt()
-      if item.rdt <= 0 then
-         item.go:pos(item.stop)
-         return false
-      else
-         return true
-      end
-   end
-   self:next(animate_between, {go=go, start=start, stop=stop, dt=dt, rdt=dt})
+function Sequence.smoothstep(start, stop, dt, rdt)
+   local s = (1 - rdt / dt)
+   local dx = stop - start
+   return start + dx * (s * s * (3 - 2 * s))
 end
 
-function Sequence:rotate_between(go, start, stop, dt)
-   local rotate_between = function(item)
-      local a = lerp(item.start, item.stop, item.dt, item.rdt)
-      item.go:angle(a)
+function Sequence.smootherstep(start, stop, dt, rdt)
+   local s = (1 - rdt / dt)
+   local dx = stop - start
+   return start + dx * (s * s * s * (s * (s * 6 - 15) + 10))
+end
+
+function Sequence:transition(obj, method, start, stop, dt, interp)
+   local interp_between = function(item)
       item.rdt = item.rdt - world:dt()
+
       if item.rdt <= 0 then
-         item.go:angle(stop)
+         obj[method](obj, item.stop)
          return false
       else
+         local x = interp(item.start, item.stop, item.dt, item.rdt)
+         obj[method](obj, x)
          return true
       end
    end
-   self:next(rotate_between, {go=go, start=start, stop=stop, dt=dt, rdt=dt})
+
+   self:next(interp_between, {start=start, stop=stop, dt=dt, rdt=dt})
+end
+
+function Sequence:animate_between(go, start, stop, dt, method)
+   method = method or Sequence.smootherstep
+   self:transition(go, 'pos', start, stop, dt, method)
+end
+
+function Sequence:rotate_between(go, start, stop, dt, method)
+   method = method or Sequence.smootherstep
+   self:transition(go, 'angle', start, stop, dt, method)
 end
 
 function Sequence:wait(dt)
