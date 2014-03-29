@@ -65,7 +65,7 @@ function M.class(base)
 
       return obj
    end
-   c.init = init
+
    c.class = function(self)
       return getmetatable(self)
    end
@@ -81,7 +81,7 @@ function M.class(base)
    return c
 end
 
-Object = M.class()
+local Object = M.class()
 M.Object = Object
 
 function Object:bind(fname)

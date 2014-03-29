@@ -188,7 +188,7 @@ function M.stage_drawrect(r)
 end
 
 function M.rising_edge_trigger(state)
-   trigger = function(input)
+   local trigger = function(input)
       local result = false
       if input ~= state and input then
          result = true
@@ -200,7 +200,7 @@ function M.rising_edge_trigger(state)
 end
 
 function M.falling_edge_trigger(state)
-   trigger = function(input)
+   local trigger = function(input)
       local result = false
       if input ~= state and (not input) then
          result = true

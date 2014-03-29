@@ -17,7 +17,7 @@ M.PLAYER_JUMP = 101
 M.PLAYER_JUMP_ABORT = 102
 
 local function __make_ephemeral_counter()
-   next_message = 1000
+   local next_message = 1000
    local fn = function()
       local message = next_message
       next_message = next_message + 1
